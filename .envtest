@@ -1,3 +1,0 @@
-# Backend API URL — set this to your AWS/backend server URL
-# In local dev, leave blank (Vite proxy in vite.config.js handles it)
-VITE_API_URL=https://mir.onesmarter.com
