@@ -16,6 +16,7 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
       const { res, data } = await safeFetchJson("/accounts/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password, isAdminRoute }),
       });
 
