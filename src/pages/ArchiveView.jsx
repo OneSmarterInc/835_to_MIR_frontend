@@ -70,26 +70,52 @@ export default function ArchiveView({
     }
   };
 
-  const handleDownloadMir = (fileName, mirText) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/api/download/";
+  const handleDownloadMir = async (fileName, mirText, fileId) => {
+    const textToDownload = mirText;
+    const nameToSave = fileName || "output.mir";
 
-    const inputContent = document.createElement("input");
-    inputContent.type = "hidden";
-    inputContent.name = "mir_content";
-    inputContent.value = mirText || "";
-    form.appendChild(inputContent);
+    if (textToDownload) {
+      const blob = new Blob([textToDownload], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1000);
+      return;
+    }
 
-    const inputName = document.createElement("input");
-    inputName.type = "hidden";
-    inputName.name = "file_name";
-    inputName.value = fileName;
-    form.appendChild(inputName);
+    try {
+      const formData = new FormData();
+      if (fileId) formData.append("file_id", fileId);
+      formData.append("file_name", nameToSave);
 
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+      const res = await fetch("/api/download/", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Download failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1000);
+    } catch (err) {
+      alert("Download error: " + err.message);
+    }
   };
 
   const handleSortHeader = (key) => {
