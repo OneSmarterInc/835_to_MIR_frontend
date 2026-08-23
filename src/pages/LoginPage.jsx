@@ -45,24 +45,25 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
   const title = isAdminRoute ? "Admin Sign In" : "Sign In";
   const subtitle = isAdminRoute
     ? "Administrator access to client onboarding, compliance evidence, and integrations."
-    : "MIR Relay · EDI 835 Conversion Operations";
+    : "MIR Relay - EDI 835 Conversion Operations";
+
+  const emailLabel = isAdminRoute ? "Work email" : "Email Address";
 
   return (
-    <div className="auth-wrap">
+    <div className="auth-wrapper">
+      {brandLabel}
       <div className="auth-card">
-        {brandLabel}
-        <h2>{title}</h2>
-        <p className="auth-sub">{subtitle}</p>
+        <h1>{title}</h1>
+        <p className="sub">{subtitle}</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" style={{ color: "#ef4444", marginBottom: "16px", fontSize: "14px" }}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="auth-field">
-            <label>Work Email</label>
+            <label>{emailLabel}</label>
             <input
               type="email"
               required
-              placeholder="user@onesmarter.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -73,25 +74,35 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
             <input
               type="password"
               required
-              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? "Signing in..." : title}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? "Continuing..." : "Continue"}
           </button>
         </form>
 
-        <div className="auth-foot">
+        <div className="auth-footer" style={{ textAlign: "center" }}>
           {isAdminRoute ? (
-            <a href="/" style={{ color: "inherit" }}>← Back to Client Portal</a>
+            <>
+              Access is restricted to authorized OneSmarter administrative staff.
+              <div style={{ marginTop: "12px" }}>
+                <a href="/" style={{ color: "#475569", textDecoration: "none" }}>← Back to Client Portal</a>
+              </div>
+            </>
           ) : (
-            <a href="/administrator" style={{ color: "inherit" }}>Administrator? Sign in here →</a>
+            <>
+              Access is restricted to authorized OneSmarter client users.
+              <div style={{ marginTop: "12px" }}>
+                <a href="/administrator" style={{ color: "#475569", textDecoration: "none" }}>Administrator? Sign in here →</a>
+              </div>
+            </>
           )}
         </div>
       </div>
     </div>
   );
 }
+
