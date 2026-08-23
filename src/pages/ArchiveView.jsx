@@ -90,27 +90,26 @@ export default function ArchiveView({
     }
 
     try {
-      const formData = new FormData();
-      if (fileId) formData.append("file_id", fileId);
-      formData.append("file_name", nameToSave);
+      const query = new URLSearchParams();
+      if (fileId) query.append("file_id", fileId);
+      if (nameToSave) query.append("file_name", nameToSave);
 
-      const res = await fetch("/api/download/", {
-        method: "POST",
-        body: formData,
+      const res = await fetch(`/api/download/?${query.toString()}`, {
+        method: "GET",
         credentials: "include",
       });
 
       if (!res.ok) throw new Error("Download failed");
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const urlObj = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = urlObj;
       a.download = nameToSave;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(urlObj);
         a.remove();
       }, 1000);
     } catch (err) {
@@ -595,7 +594,7 @@ export default function ArchiveView({
                             type="button"
                             className="btn-download"
                             title="Download .mir File"
-                            onClick={() => handleDownloadMir(mirName)}
+                            onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
                           >
                             <svg viewBox="0 0 24 24">
                               <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
