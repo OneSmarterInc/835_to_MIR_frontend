@@ -164,16 +164,23 @@ export async function fetchStepUploadFile(clientId, stepKey) {
 }
 
 export async function uploadStepFile(clientId, stepKey, file) {
+  const safeFilename = encodeURIComponent(file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/upload/`, {
     method: 'POST',
+    credentials: 'include',
     headers: getAuthHeaders({
-      'X-Filename': file.name
+      'X-Filename': safeFilename
     }),
     body: file
   });
-  const data = await res.json();
-  if (!res.ok) {
-    const err = new Error(data.error || 'Upload failed');
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error('Server returned non-JSON response.');
+  }
+  if (!res.ok || data.success === false) {
+    const err = new Error(data.error || 'Validation failed');
     err.checks = data.checks || [];
     throw err;
   }
@@ -181,15 +188,22 @@ export async function uploadStepFile(clientId, stepKey, file) {
 }
 
 export async function validateStaged835(clientId, file) {
+  const safeFilename = file ? encodeURIComponent(file.name) : '';
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/step_7_835_val/validate-uploaded/`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'X-Filename': file.name
-    }),
+    credentials: 'include',
+    headers: getAuthHeaders(file ? {
+      'X-Filename': safeFilename
+    } : {}),
     body: file
   });
-  const data = await res.json();
-  if (!res.ok) {
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error('Server returned non-JSON response.');
+  }
+  if (!res.ok || data.success === false) {
     const err = new Error(data.error || '835 validation failed');
     err.checks = data.checks || [];
     throw err;
@@ -289,17 +303,20 @@ export async function fetchClientEdiFiles(clientId) {
 }
 
 export async function uploadClientDocument(clientId, file, docName = '', docType = 'General Document') {
+  const safeFilename = encodeURIComponent(file.name);
+  const safeDocName = encodeURIComponent(docName || file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/documents/upload/`, {
     method: 'POST',
+    credentials: 'include',
     headers: getAuthHeaders({
-      'X-Filename': file.name,
-      'X-Doc-Name': docName || file.name,
+      'X-Filename': safeFilename,
+      'X-Doc-Name': safeDocName,
       'X-Doc-Type': docType
     }),
     body: file
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Document upload failed');
+  if (!res.ok || data.success === false) throw new Error(data.error || 'Document upload failed');
   return data;
 }
 
@@ -390,15 +407,17 @@ export async function fetchGoLiveState(clientId) {
 }
 
 export async function uploadGoLiveDoc(clientId, stepNum, file) {
+  const safeFilename = encodeURIComponent(file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/${stepNum}/upload/`, {
     method: 'POST',
+    credentials: 'include',
     headers: getAuthHeaders({
-      'X-Filename': file.name
+      'X-Filename': safeFilename
     }),
     body: file
   });
   const data = await res.json();
-  if (!res.ok) {
+  if (!res.ok || data.success === false) {
     const err = new Error(data.error || 'Go Live document upload failed');
     err.checks = data.checks || [];
     throw err;
