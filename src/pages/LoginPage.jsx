@@ -13,7 +13,7 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
     setLoading(true);
 
     try {
-      const { res, data } = await safeFetchJson("https://mir.onesmarter.com/accounts/api/login/", {
+      const { res, data } = await safeFetchJson("/accounts/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
