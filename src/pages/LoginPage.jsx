@@ -24,7 +24,7 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
         throw new Error(data.error || "Sign in failed.");
       }
 
-      await onLoginSuccess(data);
+      onLoginSuccess(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -47,55 +47,44 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
     ? "Administrator access to client onboarding, compliance evidence, and integrations."
     : "MIR Relay · EDI 835 Conversion Operations";
 
-  const emailLabel = isAdminRoute ? "Work email" : "Email Address";
-  const footerText = isAdminRoute
-    ? "Access is restricted to authorized OneSmarter administrative staff."
-    : "Access is restricted to authorized OneSmarter client users.";
-
   return (
-    <div className="auth-wrapper">
-      {brandLabel}
+    <div className="auth-wrap">
       <div className="auth-card">
-        <h1>{title}</h1>
-        <p className="sub">{subtitle}</p>
+        {brandLabel}
+        <h2>{title}</h2>
+        <p className="auth-sub">{subtitle}</p>
 
-        {error && (
-          <div className="error-msg" style={{ marginBottom: "20px" }}>
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>{emailLabel}</label>
+          <div className="auth-field">
+            <label>Work Email</label>
             <input
-              type="text"
+              type="email"
+              required
+              placeholder="user@onesmarter.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. admin"
-              required
-              autoFocus
             />
           </div>
-          <div className="field">
+
+          <div className="auth-field">
             <label>Password</label>
             <input
               type="password"
+              required
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
             />
           </div>
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? "Continuing..." : "Continue"}
+
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? "Signing in..." : title}
           </button>
         </form>
 
-        <div className="auth-footer">{footerText}</div>
-
-        {/* Cross-link between admin and client portals */}
-        <div style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", opacity: 0.6 }}>
+        <div className="auth-foot">
           {isAdminRoute ? (
             <a href="/" style={{ color: "inherit" }}>← Back to Client Portal</a>
           ) : (
@@ -106,4 +95,3 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
     </div>
   );
 }
-
