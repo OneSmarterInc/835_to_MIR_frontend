@@ -115,7 +115,6 @@ export default function ArchiveView({
     } catch (err) {
       alert("Download error: " + err.message);
     }
-<<<<<<< HEAD
   };
 
   const handleDownloadZip = async (type) => {
@@ -139,9 +138,8 @@ export default function ArchiveView({
     } catch (err) {
       alert("ZIP Download error: " + err.message);
     }
-=======
->>>>>>> 55dd7e96da69bd7a8792fbcd2d6709fc8cd114c4
   };
+
 
   const handleSortHeader = (key) => {
     if (sortKey === key) {
