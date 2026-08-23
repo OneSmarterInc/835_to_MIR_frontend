@@ -109,6 +109,30 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const waitingFailed = ediFiles.filter(f => f.status === 'PROCESSING').length;
   const valFailed = ediFiles.filter(f => f.status === 'ERROR').length;
 
+  const handleDownloadZip = async (type) => {
+    setShowZipMenu(false);
+    try {
+      const url = selectedClientId 
+        ? `/api/download-zip/?type=${type}&client=${encodeURIComponent(selectedClientId)}`
+        : `/api/download-zip/?type=${type}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to generate ZIP archive");
+      const blob = await res.blob();
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = urlObj;
+      a.download = `EDI_Archive_${type}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(urlObj);
+        a.remove();
+      }, 1000);
+    } catch (err) {
+      alert("ZIP Download error: " + err.message);
+    }
+  };
+
   return (
     <section className="view on" id="v-files">
       {/* HEADER ROW */}
@@ -170,27 +194,27 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
               borderRadius: '6px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
               zIndex: 200, minWidth: '210px', overflow: 'hidden',
             }}>
-              <a
-                href={`/api/download-zip/?type=mir&client=${selectedClientId}`}
-                style={{ display: 'block', padding: '10px 14px', fontSize: '12px', color: '#1e293b', textDecoration: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
-                onClick={() => setShowZipMenu(false)}
+              <button
+                type="button"
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
+                onClick={() => handleDownloadZip('mir')}
               >
                 Download all MIR (.mir)
-              </a>
-              <a
-                href={`/api/download-zip/?type=835&client=${selectedClientId}`}
-                style={{ display: 'block', padding: '10px 14px', fontSize: '12px', color: '#1e293b', textDecoration: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
-                onClick={() => setShowZipMenu(false)}
+              </button>
+              <button
+                type="button"
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
+                onClick={() => handleDownloadZip('835')}
               >
                 Download all 835 (.x12 / .835)
-              </a>
-              <a
-                href={`/api/download-zip/?type=both&client=${selectedClientId}`}
-                style={{ display: 'block', padding: '10px 14px', fontSize: '12px', color: 'var(--teal, #0d9488)', fontWeight: 700, textDecoration: 'none' }}
-                onClick={() => setShowZipMenu(false)}
+              </button>
+              <button
+                type="button"
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: 'var(--teal, #0d9488)', fontWeight: 700, cursor: 'pointer' }}
+                onClick={() => handleDownloadZip('both')}
               >
                 Download Both (MIR &amp; 835)
-              </a>
+              </button>
             </div>
           )}
         </div>

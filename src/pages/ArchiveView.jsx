@@ -70,26 +70,74 @@ export default function ArchiveView({
     }
   };
 
-  const handleDownloadMir = (fileName, mirText) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/api/download/";
+  const handleDownloadMir = async (fileName, mirText, fileId) => {
+    const textToDownload = mirText;
+    const nameToSave = fileName || "output.mir";
 
-    const inputContent = document.createElement("input");
-    inputContent.type = "hidden";
-    inputContent.name = "mir_content";
-    inputContent.value = mirText || "";
-    form.appendChild(inputContent);
+    if (textToDownload) {
+      const blob = new Blob([textToDownload], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1000);
+      return;
+    }
 
-    const inputName = document.createElement("input");
-    inputName.type = "hidden";
-    inputName.name = "file_name";
-    inputName.value = fileName;
-    form.appendChild(inputName);
+    try {
+      const query = new URLSearchParams();
+      if (fileId) query.append("file_id", fileId);
+      if (nameToSave) query.append("file_name", nameToSave);
 
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+      const res = await fetch(`/api/download/?${query.toString()}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Download failed");
+
+      const blob = await res.blob();
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = urlObj;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(urlObj);
+        a.remove();
+      }, 1000);
+    } catch (err) {
+      alert("Download error: " + err.message);
+    }
+  };
+
+  const handleDownloadZip = async (type) => {
+    setShowZipMenu(false);
+    try {
+      const res = await fetch(`/api/download-zip/?type=${type}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to generate ZIP archive");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `EDI_Archive_${type}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1000);
+    } catch (err) {
+      alert("ZIP Download error: " + err.message);
+    }
   };
 
   const handleSortHeader = (key) => {
@@ -118,32 +166,26 @@ export default function ArchiveView({
 
   filtered.sort((a, b) => {
     const mult = sortOrder === "asc" ? 1 : -1;
-    let valA, valB;
     if (sortKey === "date") {
-      valA = new Date(a.uploaded_at || 0).getTime();
-      valB = new Date(b.uploaded_at || 0).getTime();
-    } else if (sortKey === "id") {
-      valA = (a.id || "").toLowerCase();
-      valB = (b.id || "").toLowerCase();
-    } else if (sortKey === "filename") {
-      valA = (a.original_filename || "").toLowerCase();
-      valB = (b.original_filename || "").toLowerCase();
-    } else if (sortKey === "claims") {
-      valA = a.claims_count || 0;
-      valB = b.claims_count || 0;
-    } else if (sortKey === "status") {
-      valA = (a.status || "").toLowerCase();
-      valB = (b.status || "").toLowerCase();
-    } else if (sortKey === "sftp") {
-      valA = a.present_in_sftp ? 1 : 0;
-      valB = b.present_in_sftp ? 1 : 0;
-    } else {
-      valA = 0;
-      valB = 0;
+      return (
+        (new Date(a.uploaded_at || 0) - new Date(b.uploaded_at || 0)) * mult
+      );
     }
-
-    if (valA < valB) return -1 * mult;
-    if (valA > valB) return 1 * mult;
+    if (sortKey === "id") {
+      return ((a.id || "").localeCompare(b.id || "")) * mult;
+    }
+    if (sortKey === "filename") {
+      return (
+        (a.original_filename || "").localeCompare(b.original_filename || "") *
+        mult
+      );
+    }
+    if (sortKey === "claims") {
+      return ((a.claims_count || 0) - (b.claims_count || 0)) * mult;
+    }
+    if (sortKey === "status") {
+      return ((a.status || "").localeCompare(b.status || "")) * mult;
+    }
     return 0;
   });
 
@@ -222,50 +264,62 @@ export default function ArchiveView({
                 overflow: "hidden",
               }}
              >
-              <a
-                href="/api/download-zip/?type=mir"
+              <button
+                type="button"
                 style={{
                   display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
                   padding: "10px 14px",
                   fontSize: "12px",
                   color: "#1e293b",
-                  textDecoration: "none",
+                  cursor: "pointer",
                   borderBottom: "1px solid #f1f5f9",
                   fontWeight: 500,
                 }}
-                onClick={() => setShowZipMenu(false)}
+                onClick={() => handleDownloadZip("mir")}
               >
                 Download all MIR (.mir)
-              </a>
-              <a
-                href="/api/download-zip/?type=835"
+              </button>
+              <button
+                type="button"
                 style={{
                   display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
                   padding: "10px 14px",
                   fontSize: "12px",
                   color: "#1e293b",
-                  textDecoration: "none",
+                  cursor: "pointer",
                   borderBottom: "1px solid #f1f5f9",
                   fontWeight: 500,
                 }}
-                onClick={() => setShowZipMenu(false)}
+                onClick={() => handleDownloadZip("835")}
               >
                 Download all 835 (.x12 / .835)
-              </a>
-              <a
-                href="/api/download-zip/?type=both"
+              </button>
+              <button
+                type="button"
                 style={{
                   display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
                   padding: "10px 14px",
                   fontSize: "12px",
                   color: "var(--teal, #0d9488)",
                   fontWeight: 700,
-                  textDecoration: "none",
+                  cursor: "pointer",
                 }}
-                onClick={() => setShowZipMenu(false)}
+                onClick={() => handleDownloadZip("both")}
               >
-                Download Both (MIR & 835)
-              </a>
+                Download Complete Set (.zip)
+              </button>
             </div>
           )}
         </div>
@@ -569,7 +623,7 @@ export default function ArchiveView({
                             type="button"
                             className="btn-download"
                             title="Download .mir File"
-                            onClick={() => handleDownloadMir(mirName)}
+                            onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
                           >
                             <svg viewBox="0 0 24 24">
                               <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />

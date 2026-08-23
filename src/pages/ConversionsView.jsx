@@ -230,38 +230,52 @@ export default function ConversionsView({
   };
 
   // Download MIR File
-  const handleDownloadMir = (fileName, content, fileId) => {
+  const handleDownloadMir = async (fileName, content, fileId) => {
     const textToDownload = content || mirOutputText;
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/api/download/";
+    const nameToSave = fileName || currentFileName.replace(/\.[^/.]+$/, "") + ".mir";
 
     if (textToDownload) {
-      const inputContent = document.createElement("input");
-      inputContent.type = "hidden";
-      inputContent.name = "mir_content";
-      inputContent.value = textToDownload;
-      form.appendChild(inputContent);
+      const blob = new Blob([textToDownload], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1000);
+      return;
     }
 
-    if (fileId || activeValidatedFileId) {
-      const inputId = document.createElement("input");
-      inputId.type = "hidden";
-      inputId.name = "file_id";
-      inputId.value = fileId || activeValidatedFileId;
-      form.appendChild(inputId);
+    try {
+      const query = new URLSearchParams();
+      const targetId = fileId || activeValidatedFileId;
+      if (targetId) query.append("file_id", targetId);
+      if (nameToSave) query.append("file_name", nameToSave);
+
+      const res = await fetch(`/api/download/?${query.toString()}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Download failed");
+
+      const blob = await res.blob();
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = urlObj;
+      a.download = nameToSave;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(urlObj);
+        a.remove();
+      }, 1000);
+    } catch (err) {
+      alert("Download error: " + err.message);
     }
-
-    const inputName = document.createElement("input");
-    inputName.type = "hidden";
-    inputName.name = "file_name";
-    inputName.value = fileName || currentFileName.replace(/\.[^/.]+$/, "") + ".mir";
-    form.appendChild(inputName);
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
   };
 
   // Start Automated SFTP Inbound Batch Pipeline
