@@ -1224,7 +1224,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       onChange={(e) => setS13Notes(e.target.value)}
                     />
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       type="button"
                       className="btn tiny primary"
@@ -1233,24 +1233,67 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     >
                       Save Schedule &amp; Complete
                     </button>
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      title="Skip this step — Go Live scheduling is optional"
+                      onClick={async () => {
+                        try {
+                          await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_13_schedule/save/`, {
+                            scheduled_date: '',
+                            scheduled_time: '',
+                            timezone: 'Eastern (ET)',
+                            notes: 'Skipped — Go Live scheduling is optional.'
+                          });
+                          await onRefresh();
+                        } catch (err) {
+                          setFeedback({ isOpen: true, kind: 'bad', title: 'Skip Error', content: err.message, checks: [] });
+                        }
+                      }}
+                      style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
+                    >
+                      Skip (Optional)
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
             {step.actionType === 'golive_redirect' && (
-              <div className="step-custom-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                <div><b>Go-Live Administration:</b> Manage cutover authorization, endpoints, and exceptions.</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button 
-                    type="button" 
-                    className={`btn tiny ${step.done ? 'success' : 'primary'}`} 
-                    onClick={() => {
-                      window.location.href = `?nav=promote&client=${encodeURIComponent(clientId)}`;
-                    }}
-                  >
-                    Setup Go Live ↗
-                  </button>
+              <div className="step-custom-box" style={{ background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)', padding: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '3px', padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Optional</span>
+                  <span style={{ fontSize: '12px', color: 'var(--ink-2)' }}>This step can be skipped if Go Live is not yet applicable.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div><b>Go-Live Administration:</b> Manage cutover authorization, endpoints, and exceptions.</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button 
+                      type="button" 
+                      className={`btn tiny ${step.done ? 'success' : 'primary'}`} 
+                      onClick={() => {
+                        window.location.href = `?nav=promote&client=${encodeURIComponent(clientId)}`;
+                      }}
+                    >
+                      Setup Go Live ↗
+                    </button>
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      title="Skip Go Live — this section is optional"
+                      onClick={async () => {
+                        try {
+                          await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, { notes: 'Skipped — Go Live is optional.' });
+                          await onRefresh();
+                        } catch (err) {
+                          setFeedback({ isOpen: true, kind: 'bad', title: 'Skip Error', content: err.message, checks: [] });
+                        }
+                      }}
+                      style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
+                    >
+                      Skip (Optional)
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
