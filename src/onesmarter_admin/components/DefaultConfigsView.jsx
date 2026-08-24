@@ -44,6 +44,7 @@ export default function DefaultConfigsView() {
             setSftpHost(cfg.host || '');
             setSftpPort(String(cfg.port || '22'));
             setSftpUser(cfg.username || '');
+            setSftpPass(cfg.password || '');
             setSftpInbound835(cfg.inbound_835_folder || '');
             setSftpInbound837(cfg.inbound_837_folder || '');
             setSftpOutboundMir(cfg.outbound_mir_folder || '');
@@ -64,6 +65,7 @@ export default function DefaultConfigsView() {
           setSmtpHost(cfg.smtp_host || '');
           setSmtpPort(String(cfg.smtp_port || '587'));
           setSmtpUser(cfg.smtp_username || '');
+          setSmtpPass(cfg.smtp_password || '');
           setSmtpSecurity(cfg.security || 'STARTTLS');
           setSmtpReplyTo(cfg.reply_to || '');
           setSmtpStatus('Loaded SMTP configuration from database.');
@@ -148,7 +150,6 @@ export default function DefaultConfigsView() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSftpConnected(true);
-        setSftpPass('');
         setSftpStatus(`✓ Default SFTP Saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`);
       } else {
         setSftpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
@@ -181,7 +182,6 @@ export default function DefaultConfigsView() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSmtpPass('');
         setSmtpStatus('✓ Default SMTP configuration saved successfully.');
       } else {
         setSmtpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
