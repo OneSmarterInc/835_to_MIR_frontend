@@ -66,7 +66,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
   // Step 4 Real-time inline field validations
   const s4Existing = step.extra?.contacts || [];
-  
+
   const s4NameError = (() => {
     if (!s4Touched.name && !s4Name) return '';
     const trimmed = s4Name.trim();
@@ -115,7 +115,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [s6SftpVerified, setS6SftpVerified] = useState(false);
   const [s6SftpConfig, setS6SftpConfig] = useState(null);
 
-  // Step 6 HTTPS API validation
+  // Step 7 HTTPS API validation
   const s6ApiError = (() => {
     if (s6Method !== 'HTTPS API') return '';
     if (!s6ApiTouched && !s6ApiUrl) return '';
@@ -142,6 +142,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [s11Loaded, setS11Loaded] = useState(false);
   const [s11HasPassword, setS11HasPassword] = useState(false);
 
+  const [s6UseDefaultSftp, setS6UseDefaultSftp] = useState(false);
+  const [s11UseDefaultSmtp, setS11UseDefaultSmtp] = useState(false);
+  const [s9MirFormat, setS9MirFormat] = useState(step.extra?.mir_filename_format || 'MIROUT_YYYY_MMDD_.MIR');
+
   const [s9Name, setS9Name] = useState('');
   const [s9Email, setS9Email] = useState('');
   const [s9Password, setS9Password] = useState('');
@@ -150,26 +154,47 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const datePickerRef = useRef(null);
   const [s13Date, setS13Date] = useState(() => formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || '');
 
-  // Load existing SMTP config for Step 11 on mount
+  // Load existing SFTP config for Step 7 on mount
   useEffect(() => {
-    if (step.actionType !== 'send_ftp_action') return;
+    if (step.actionType !== 'transfer_config') return;
+    fetch(`/edi835/api/sftp/get/?client_id=${clientId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && data.configs && data.configs.length > 0) {
+          const cfg = data.configs[0];
+          setS6SftpConfig(cfg);
+          if (cfg.status === 'CONNECTED') {
+            setS6SftpVerified(true);
+          }
+          if (cfg.use_default) {
+            setS6UseDefaultSftp(true);
+            setS6SftpVerified(true);
+          }
+        }
+      })
+      .catch(err => console.error("Failed to load SFTP config", err));
+  }, [clientId, step.actionType]);
+
+  // Load existing SMTP config for Step 6 on mount
+  useEffect(() => {
+    if (step.actionType !== 'smtp_config') return;
     fetchClientSmtpConfig(clientId)
       .then(cfg => {
         if (cfg) {
-          if (cfg.sender_name)  setS11SenderName(cfg.sender_name);
+          if (cfg.sender_name) setS11SenderName(cfg.sender_name);
           if (cfg.sender_email) setS11SenderEmail(cfg.sender_email);
-          if (cfg.smtp_host)    setS11SmtpHost(cfg.smtp_host);
-          if (cfg.smtp_port)    setS11SmtpPort(String(cfg.smtp_port));
-          if (cfg.smtp_username)setS11SmtpUsername(cfg.smtp_username);
-          if (cfg.security)     setS11Security(cfg.security);
-          if (cfg.reply_to)     setS11ReplyTo(cfg.reply_to);
+          if (cfg.smtp_host) setS11SmtpHost(cfg.smtp_host);
+          if (cfg.smtp_port) setS11SmtpPort(String(cfg.smtp_port));
+          if (cfg.smtp_username) setS11SmtpUsername(cfg.smtp_username);
+          if (cfg.security) setS11Security(cfg.security);
+          if (cfg.reply_to) setS11ReplyTo(cfg.reply_to);
           setS11HasPassword(Boolean(cfg.has_password));
-          // password is never returned from the server
+          if (cfg.use_default) setS11UseDefaultSmtp(true);
         }
         setS11Loaded(true);
       })
       .catch(() => setS11Loaded(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, step.actionType]);
   const [s13Time, setS13Time] = useState(step.extra?.schedule?.scheduled_time || '10:00');
   const [s13Notes, setS13Notes] = useState(step.extra?.schedule?.notes || '');
@@ -222,7 +247,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Structural Validation Passed',
-        content: 'Step 7 Complete: Deep X12 835 structural and balance checks passed.',
+        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
         checks: res.checks || []
       });
       await onRefresh();
@@ -248,7 +273,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Structural Validation Passed',
-        content: 'Step 7 Complete: Deep X12 835 structural and balance checks passed.',
+        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
         checks: res.checks || []
       });
       await onRefresh();
@@ -290,34 +315,34 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setS4Touched({ name: false, email: false, phone: false });
       setS4SubmitError('');
       await onRefresh();
-    } catch (err) { 
+    } catch (err) {
       setS4SubmitError(err.message || 'Failed to save contact.');
     }
   };
 
   const handleStep5Save = async () => {
-    if (!s5Text.trim()) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] }); 
-      return; 
+    if (!s5Text.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] });
+      return;
     }
     try {
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_5_claim_sys/save/`, { verification_text: s5Text });
       await onRefresh();
-    } catch (err) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] }); 
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] });
     }
   };
 
   const handleStep10Save = async () => {
-    if (!s10Notes.trim()) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] }); 
-      return; 
+    if (!s10Notes.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] });
+      return;
     }
     try {
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_10_test_review/save/`, { verification_text: s10Notes });
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: s10Notes });
       await onRefresh();
-    } catch (err) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] }); 
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] });
     }
   };
 
@@ -342,7 +367,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         ? `SFTP Direction: ${s6SftpMode}${finalConfig ? ` | Host: ${finalConfig.host} | 835: ${finalConfig.inbound_835_folder} | 837: ${finalConfig.inbound_837_folder} | MIR: ${finalConfig.outbound_mir_folder}` : ''}`
         : (s6Method === 'HTTPS API' ? s6ApiUrl.trim() : 'Manual Upload Direct');
 
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_6_transfer_method/save/`, {
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
         method: s6Method,
         setup_status: 'Configured',
         watched_folder_sftp: s6Watched,
@@ -351,8 +376,23 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         notes: notesPayload
       });
       await onRefresh();
-    } catch (err) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Save Failed', content: err.message, checks: [] }); 
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Save Failed', content: err.message, checks: [] });
+    }
+  };
+
+  const handleStep9NamingSave = async () => {
+    if (!s9MirFormat.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Naming format cannot be empty.', checks: [] });
+      return;
+    }
+    try {
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, { mir_filename_format: s9MirFormat.trim() });
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});
+      setFeedback({ isOpen: true, kind: 'ok', title: 'Naming Format Saved', content: `MIR filename format saved as ${s9MirFormat.trim()}.`, checks: [] });
+      await onRefresh();
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Save Failed', content: err.message, checks: [] });
     }
   };
 
@@ -370,8 +410,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         role: 'User',
         clients: [clientId]
       });
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_9_sftp/complete/`, {});
-      setFeedback({ isOpen: true, kind: 'ok', title: 'User Created', content: `Successfully created user ${s9Email} and linked to ${clientId}. Step 9 completed.`, checks: [] });
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});
+      setFeedback({ isOpen: true, kind: 'ok', title: 'User Created', content: `Successfully created user ${s9Email} and linked to ${clientId}. Step completed.`, checks: [] });
       setS9Name('');
       setS9Email('');
       setS9Password('');
@@ -383,33 +423,33 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const handleStep13Save = async () => {
-    if (!s13Date.trim() || !s13Time.trim()) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please select scheduled date and time.', checks: [] }); 
-      return; 
+    if (!s13Date.trim() || !s13Time.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please select scheduled date and time.', checks: [] });
+      return;
     }
     try {
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_13_schedule/save/`, {
+      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
         scheduled_date: s13Date.trim(),
         scheduled_time: s13Time.trim(),
         timezone: 'Eastern (ET)',
         notes: s13Notes.trim()
       });
       await onRefresh();
-    } catch (err) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Schedule Error', content: err.message, checks: [] }); 
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Schedule Error', content: err.message, checks: [] });
     }
   };
 
   const handleTextSubmission = async () => {
-    if (!stText.trim()) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter required details.', checks: [] }); 
-      return; 
+    if (!stText.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter required details.', checks: [] });
+      return;
     }
     try {
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: stText });
       await onRefresh();
-    } catch (err) { 
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] }); 
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] });
     }
   };
 
@@ -466,7 +506,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
           </div>
         )}
 
-        {step.latestNote && step.id !== 5 && step.id !== 10 && step.id !== 11 && step.id !== 13 && step.id !== 14 && step.id !== 15 && (
+        {step.latestNote && step.id !== 5 && step.id !== 10 && step.id !== 11 && step.id !== 12 && step.id !== 13 && step.id !== 14 && step.id !== 15 && (
           <div className="ev" style={{ color: 'var(--ochre)' }}>
             Note: "{step.latestNote.note_text}" — <i>{step.latestNote.author}</i>
           </div>
@@ -494,7 +534,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       {(showAllContacts ? step.extra.contacts : step.extra.contacts.slice(0, 2)).map((c, idx) => (
                         <div key={c.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllContacts ? step.extra.contacts.length : Math.min(2, step.extra.contacts.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
                           <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
-                            <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                            <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                           </svg>
                           <span style={{ fontWeight: 600 }}>{c.employee_name || c.name}</span>
                           <span style={{ marginLeft: '12px', padding: '3px 8px', background: '#E2E8F0', color: '#64748B', fontSize: '10px', borderRadius: '3px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
@@ -503,14 +543,14 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                           <div style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', color: '#64748B', fontSize: '13px', gap: '8px' }}>
                             {c.email && (
                               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z"/></svg>
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z" /></svg>
                                 {c.email}
                               </span>
                             )}
                             {c.email && c.phone && <span>·</span>}
                             {c.phone && (
                               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328z"/></svg>
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328z" /></svg>
                                 {c.phone}
                               </span>
                             )}
@@ -524,7 +564,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'flex-start' }}>
                   <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
                     <div style={{ display: 'flex', gap: '3px' }}>
-                      <select 
+                      <select
                         style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: 'var(--surface)', color: 'var(--ink)' }}
                         value={s4Role}
                         onChange={(e) => setS4Role(e.target.value)}
@@ -544,15 +584,15 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   </div>
 
                   <div style={{ flex: '1 1 145px', minWidth: '145px' }}>
-                    <input 
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px 8px', 
-                        border: s4NameError ? '1px solid var(--brick)' : '1px solid var(--line)', 
+                    <input
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        border: s4NameError ? '1px solid var(--brick)' : '1px solid var(--line)',
                         background: s4NameError ? 'var(--brick-bg)' : 'var(--surface)',
-                        borderRadius: '3px', 
-                        fontSize: '12px', 
-                        color: 'var(--ink)' 
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        color: 'var(--ink)'
                       }}
                       placeholder="Contact Name *"
                       value={s4Name}
@@ -571,15 +611,15 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   </div>
 
                   <div style={{ flex: '1 1 175px', minWidth: '175px' }}>
-                    <input 
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px 8px', 
-                        border: s4EmailError ? '1px solid var(--brick)' : '1px solid var(--line)', 
+                    <input
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        border: s4EmailError ? '1px solid var(--brick)' : '1px solid var(--line)',
                         background: s4EmailError ? 'var(--brick-bg)' : 'var(--surface)',
-                        borderRadius: '3px', 
-                        fontSize: '12px', 
-                        color: 'var(--ink)' 
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        color: 'var(--ink)'
                       }}
                       type="email"
                       placeholder="Email address"
@@ -599,7 +639,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
                   <div style={{ flex: '1 1 185px', minWidth: '185px' }}>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <select 
+                      <select
                         style={{ padding: '6px 4px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '11.5px', background: 'var(--surface)', color: 'var(--ink)' }}
                         value={s4CountryCode}
                         onChange={(e) => setS4CountryCode(e.target.value)}
@@ -609,16 +649,16 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         <option value="+91">+91 (IN)</option>
                         <option value="+61">+61 (AU)</option>
                       </select>
-                      <input 
-                        style={{ 
-                          flex: 1, 
-                          padding: '6px 8px', 
-                          border: s4PhoneError ? '1px solid var(--brick)' : '1px solid var(--line)', 
+                      <input
+                        style={{
+                          flex: 1,
+                          padding: '6px 8px',
+                          border: s4PhoneError ? '1px solid var(--brick)' : '1px solid var(--line)',
                           background: s4PhoneError ? 'var(--brick-bg)' : 'var(--surface)',
-                          borderRadius: '3px', 
-                          fontSize: '12px', 
-                          color: 'var(--ink)', 
-                          minWidth: '60px' 
+                          borderRadius: '3px',
+                          fontSize: '12px',
+                          color: 'var(--ink)',
+                          minWidth: '60px'
                         }}
                         placeholder="Phone number"
                         value={s4Phone}
@@ -637,9 +677,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   </div>
 
                   <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'flex-start' }}>
-                    <button 
-                      type="button" 
-                      className="btn tiny primary" 
+                    <button
+                      type="button"
+                      className="btn tiny primary"
                       onClick={handleStep4Save}
                       style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                     >
@@ -681,9 +721,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'flex-start' }}>
                   <div style={{ width: '135px' }}>
-                    <select 
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: 'var(--surface)', color: 'var(--ink)' }} 
-                      value={s6Method} 
+                    <select
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: 'var(--surface)', color: 'var(--ink)' }}
+                      value={s6Method}
                       onChange={(e) => {
                         setS6Method(e.target.value);
                         setS6ApiTouched(false);
@@ -697,9 +737,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
                   {s6Method === 'SFTP' && (
                     <div style={{ width: '95px' }}>
-                      <select 
-                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: 'var(--surface)', color: 'var(--ink)' }} 
-                        value={s6SftpMode} 
+                      <select
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: 'var(--surface)', color: 'var(--ink)' }}
+                        value={s6SftpMode}
                         onChange={(e) => setS6SftpMode(e.target.value)}
                       >
                         <option value="Push">Push</option>
@@ -709,15 +749,42 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   )}
 
                   {s6Method === 'SFTP' && (
-                    <div>
-                      <button 
-                        type="button" 
-                        className="btn tiny primary" 
-                        onClick={() => setShowSftpModal(true)} 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button
+                        type="button"
+                        className="btn tiny primary"
+                        onClick={() => setShowSftpModal(true)}
+                        disabled={s6UseDefaultSftp}
                         style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                       >
                         {s6SftpVerified ? '✓ SFTP Configured' : 'Configure SFTP'}
                       </button>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={s6UseDefaultSftp}
+                          onChange={async (e) => {
+                            const checked = e.target.checked;
+                            setS6UseDefaultSftp(checked);
+                            if (checked) {
+                              try {
+                                await fetch('/edi835/api/sftp/save/', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ use_default: true, client_id: clientId, connection_type: 'UNIFIED' })
+                                });
+                                setS6SftpVerified(true);
+                                setFeedback({ isOpen: true, kind: 'ok', title: 'Default SFTP Settings Enabled', content: 'Using default SFTP server connection details.', checks: [] });
+                              } catch (err) {
+                                alert("Failed to set default SFTP: " + err.message);
+                              }
+                            } else {
+                              setS6SftpVerified(false);
+                            }
+                          }}
+                        />
+                        Use Default SFTP Settings
+                      </label>
                     </div>
                   )}
 
@@ -725,15 +792,15 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   {s6Method === 'HTTPS API' && (
                     <>
                       <div style={{ width: '270px', maxWidth: '100%' }}>
-                        <input 
-                          style={{ 
-                            width: '100%', 
-                            padding: '6px 8px', 
-                            border: s6ApiError ? '1px solid var(--brick)' : '1px solid var(--line)', 
+                        <input
+                          style={{
+                            width: '100%',
+                            padding: '6px 8px',
+                            border: s6ApiError ? '1px solid var(--brick)' : '1px solid var(--line)',
                             background: s6ApiError ? 'var(--brick-bg)' : 'var(--surface)',
-                            borderRadius: '3px', 
-                            fontSize: '12px', 
-                            color: 'var(--ink)' 
+                            borderRadius: '3px',
+                            fontSize: '12px',
+                            color: 'var(--ink)'
                           }}
                           placeholder="https://api.client.com/v1/claims"
                           value={s6ApiUrl}
@@ -750,9 +817,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         )}
                       </div>
                       <div>
-                        <button 
-                          type="button" 
-                          className="btn tiny primary" 
+                        <button
+                          type="button"
+                          className="btn tiny primary"
                           onClick={handleStep6Save}
                           disabled={Boolean(s6ApiError) || !s6ApiUrl.trim()}
                           style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
@@ -765,13 +832,13 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
                   {s6Method === 'Manual Upload' && (
                     <div>
-                      <button 
-                        type="button" 
-                        className="btn tiny primary" 
+                      <button
+                        type="button"
+                        className="btn tiny primary"
                         onClick={handleStep6Save}
                         style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                       >
-                        ✓ Complete Step 6
+                        ✓ Complete Step 7
                       </button>
                     </div>
                   )}
@@ -807,9 +874,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               <div className="step-custom-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                 <div><b>Mapping Application:</b> Launch rules engine to configure 835 mapping.</div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button 
-                    type="button" 
-                    className="btn tiny primary" 
+                  <button
+                    type="button"
+                    className="btn tiny primary"
                     onClick={() => {
                       window.location.href = `/mapping?client=${encodeURIComponent(clientId)}`;
                     }}
@@ -820,100 +887,121 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               </div>
             )}
 
-            {step.actionType === 'sftp_redirect' && (
-              <div className="step-custom-box" style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                {step.extra?.users && step.extra.users.length > 0 && (
-                  <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Recorded Users ({step.extra.users.length})</span>
-                      {step.extra.users.length > 2 && (
-                        <button
-                          type="button"
-                          style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => setShowAllUsers(!showAllUsers)}
-                        >
-                          {showAllUsers ? '▲ Show Less' : `▼ Show More (${step.extra.users.length - 2} more)`}
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {(showAllUsers ? step.extra.users : step.extra.users.slice(0, 2)).map((u, idx) => (
-                        <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? step.extra.users.length : Math.min(2, step.extra.users.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
-                          <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
-                            <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                          </svg>
-                          <span style={{ fontWeight: 600 }}>{u.name}</span>
-                          <span style={{ marginLeft: '12px', padding: '3px 8px', background: '#E2E8F0', color: '#64748B', fontSize: '10px', borderRadius: '3px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                            {u.role}
-                          </span>
-                          <div style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', color: '#64748B', fontSize: '13px', gap: '8px' }}>
-                            {u.email && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z"/></svg>
-                                {u.email}
-                              </span>
-                            )}
-                            {u.email && u.mobile && <span>·</span>}
-                            {u.mobile && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328z"/></svg>
-                                {u.mobile}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Create User:
+            {step.actionType === 'naming_config' && (
+              <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
+                <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--ink-2)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  MIR Output Filename Format
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                  <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
-                    <input 
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
-                      type="text"
-                      placeholder="Name *"
-                      value={s9Name}
-                      onChange={(e) => setS9Name(e.target.value)}
-                    />
+                <div style={{ fontSize: '11.5px', color: 'var(--ink)', marginBottom: '12px', lineHeight: 1.5 }}>
+                  Define the naming convention format for generated MIR output files. Placeholders like <b>YYYY</b> (4-digit Year), <b>MM</b> (2-digit Month), and <b>DD</b> (2-digit Day) will be dynamically resolved.
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+                  <input
+                    style={{ flex: 1, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                    type="text"
+                    value={s9MirFormat}
+                    onChange={(e) => setS9MirFormat(e.target.value)}
+                    placeholder="MIROUT_YYYY_MMDD_.MIR"
+                  />
+                  <button className="btn tiny primary" onClick={handleStep9NamingSave}>
+                    ✓ Save Naming Format &amp; Complete Step 10
+                  </button>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '15px' }}>
+                  {step.extra?.users && step.extra.users.length > 0 && (
+                    <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
+                      <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Recorded Users ({step.extra.users.length})</span>
+                        {step.extra.users.length > 2 && (
+                          <button
+                            type="button"
+                            style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => setShowAllUsers(!showAllUsers)}
+                          >
+                            {showAllUsers ? '▲ Show Less' : `▼ Show More (${step.extra.users.length - 2} more)`}
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {(showAllUsers ? step.extra.users : step.extra.users.slice(0, 2)).map((u, idx) => (
+                          <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? step.extra.users.length : Math.min(2, step.extra.users.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
+                            <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
+                              <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                            </svg>
+                            <span style={{ fontWeight: 600 }}>{u.name}</span>
+                            <span style={{ marginLeft: '12px', padding: '3px 8px', background: '#E2E8F0', color: '#64748B', fontSize: '10px', borderRadius: '3px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                              {u.role}
+                            </span>
+                            <div style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', color: '#64748B', fontSize: '13px', gap: '8px' }}>
+                              {u.email && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z" /></svg>
+                                  {u.email}
+                                </span>
+                              )}
+                              {u.email && u.mobile && <span>·</span>}
+                              {u.mobile && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328z" /></svg>
+                                  {u.mobile}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Create User:
                   </div>
-                  <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
-                    <input 
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
-                      type="email"
-                      placeholder="Email Address *"
-                      value={s9Email}
-                      onChange={(e) => setS9Email(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
-                    <input 
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
-                      type="password"
-                      placeholder="Password *"
-                      value={s9Password}
-                      onChange={(e) => setS9Password(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
-                    <input 
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
-                      type="tel"
-                      placeholder="Mobile"
-                      value={s9Mobile}
-                      onChange={(e) => setS9Mobile(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'flex-start' }}>
-                    <button 
-                      className="btn tiny primary" 
-                      onClick={handleStep9CreateUser}
-                      style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
-                    >
-                      ✓ {step.extra?.users && step.extra.users.length > 0 ? 'Create Additional User' : 'Create User & Complete'}
-                    </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                      <input
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        type="text"
+                        placeholder="Name *"
+                        value={s9Name}
+                        onChange={(e) => setS9Name(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                      <input
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        type="email"
+                        placeholder="Email Address *"
+                        value={s9Email}
+                        onChange={(e) => setS9Email(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                      <input
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        type="password"
+                        placeholder="Password *"
+                        value={s9Password}
+                        onChange={(e) => setS9Password(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                      <input
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        type="tel"
+                        placeholder="Mobile"
+                        value={s9Mobile}
+                        onChange={(e) => setS9Mobile(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'flex-start' }}>
+                      <button
+                        className="btn tiny primary"
+                        onClick={handleStep9CreateUser}
+                        style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
+                      >
+                        ✓ Create User &amp; Complete Step 10
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -931,13 +1019,31 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 )}
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Side-by-Side 835 Conversion Review Notes</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s10Notes} onChange={(e) => setS10Notes(e.target.value)} placeholder="e.g. Verified side-by-side 835 conversion claim totals CLP, BPR, and TRN against MIR format." />
-                <div style={{ marginTop: 6, textAlign: 'right' }}>
-                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit &amp; Complete Step 10</button>
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    className="btn tiny"
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm("Do you want to transmit the verified test MIR payload to client SFTP/FTP server now?")) {
+                        try {
+                          const res = await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: "Test File Transmitted via SFTP/FTP successfully. " + s10Notes });
+                          alert("✓ Test payload transmitted successfully via SFTP/FTP!");
+                          await onRefresh();
+                        } catch (err) {
+                          alert("Transmission failed: " + err.message);
+                        }
+                      }
+                    }}
+                    style={{ background: '#f59e0b', color: '#fff', border: 'none', fontWeight: 600 }}
+                  >
+                    ⚡ Transmit Test File to FTP
+                  </button>
+                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit &amp; Complete Step 11</button>
                 </div>
               </div>
             )}
 
-            {step.actionType === 'send_ftp_action' && (
+            {step.actionType === 'smtp_config' && (
               <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
                 {step.done && step.latestNote && (
                   <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
@@ -947,8 +1053,18 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     </div>
                   </div>
                 )}
-                <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--ink-2)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  SMTP / Email Configuration
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    SMTP / Email Configuration
+                  </div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={s11UseDefaultSmtp}
+                      onChange={(e) => setS11UseDefaultSmtp(e.target.checked)}
+                    />
+                    Use Default SMTP Settings
+                  </label>
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--ink)', marginBottom: '12px', lineHeight: 1.5 }}>
                   Configure the sender email account for this client's onboarding notification. These settings are saved to the client record and will be used for all future emails to this client.
@@ -959,7 +1075,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Sender Name</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="text"
                       value={s11SenderName}
                       onChange={e => setS11SenderName(e.target.value)}
@@ -969,7 +1086,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Sender Email</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="email"
                       value={s11SenderEmail}
                       onChange={e => setS11SenderEmail(e.target.value)}
@@ -983,7 +1101,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '2 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>SMTP Host</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="text"
                       value={s11SmtpHost}
                       onChange={e => setS11SmtpHost(e.target.value)}
@@ -993,7 +1112,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 80px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Port</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="text"
                       value={s11SmtpPort}
                       onChange={e => setS11SmtpPort(e.target.value)}
@@ -1007,7 +1127,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>SMTP Username</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="text"
                       autoComplete="off"
                       value={s11SmtpUsername}
@@ -1018,7 +1139,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>SMTP Password</div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="password"
                       autoComplete="new-password"
                       value={s11Password}
@@ -1033,7 +1155,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '1 1 140px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Security</div>
                     <select
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box', cursor: 'pointer' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box', cursor: 'pointer' }}
                       value={s11Security}
                       onChange={e => setS11Security(e.target.value)}
                     >
@@ -1045,7 +1168,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <div style={{ flex: '2 1 200px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Reply-To Email <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span></div>
                     <input
-                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
+                      disabled={s11UseDefaultSmtp}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: s11UseDefaultSmtp ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
                       type="email"
                       value={s11ReplyTo}
                       onChange={e => setS11ReplyTo(e.target.value)}
@@ -1053,7 +1177,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     />
                   </div>
                 </div>
-                
+
                 {/* Row 5: Notes */}
                 <div style={{ marginBottom: '12px' }}>
                   <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.05em' }}>Verification Notes / Comments <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span></div>
@@ -1070,26 +1194,37 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     className="btn tiny primary"
-                    disabled={!s11SenderEmail.trim() || !s11SmtpHost.trim() || !s11SmtpUsername.trim() || s11Sending}
+                    disabled={s11Sending || (!s11UseDefaultSmtp && (!s11SenderEmail.trim() || !s11SmtpHost.trim() || !s11SmtpUsername.trim()))}
                     onClick={async () => {
                       setS11Sending(true);
                       try {
                         // 1. Save SMTP config to DB
-                        const smtpPayload = {
-                          sender_name:   s11SenderName.trim(),
-                          sender_email:  s11SenderEmail.trim(),
-                          smtp_host:     s11SmtpHost.trim(),
-                          smtp_port:     parseInt(s11SmtpPort, 10) || 587,
+                        const smtpPayload = s11UseDefaultSmtp ? {
+                          use_default: true,
+                          sender_name: 'Default Sender',
+                          sender_email: 'default@onesmarter.com',
+                          smtp_host: 'localhost',
+                          smtp_port: 587,
+                          smtp_username: 'default',
+                          smtp_password: '',
+                          security: 'STARTTLS',
+                          reply_to: null,
+                        } : {
+                          use_default: false,
+                          sender_name: s11SenderName.trim(),
+                          sender_email: s11SenderEmail.trim(),
+                          smtp_host: s11SmtpHost.trim(),
+                          smtp_port: parseInt(s11SmtpPort, 10) || 587,
                           smtp_username: s11SmtpUsername.trim(),
                           smtp_password: s11Password.trim(),
-                          security:      s11Security,
-                          reply_to:      s11ReplyTo.trim() || null,
+                          security: s11Security,
+                          reply_to: s11ReplyTo.trim() || null,
                         };
                         await saveClientSmtpConfig(clientId, smtpPayload);
 
                         // 2. Trigger email notification + mark step complete
                         const res = await postStepData(
-                          `/clients/${encodeURIComponent(clientId)}/steps/step_11_send_ftp/send/`,
+                          `/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/send/`,
                           { ...smtpPayload, notes: s11Notes.trim() }
                         );
                         setFeedback({
@@ -1268,9 +1403,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <div><b>Go-Live Administration:</b> Manage cutover authorization, endpoints, and exceptions.</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button 
-                      type="button" 
-                      className={`btn tiny ${step.done ? 'success' : 'primary'}`} 
+                    <button
+                      type="button"
+                      className={`btn tiny ${step.done ? 'success' : 'primary'}`}
                       onClick={() => {
                         window.location.href = `?nav=promote&client=${encodeURIComponent(clientId)}`;
                       }}
@@ -1341,7 +1476,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 '…'
               ) : (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                 </svg>
               )}
             </button>
@@ -1356,7 +1491,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               aria-label={`Download Template (${step.downloadName || step.title})`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
               </svg>
             </button>
           )}
@@ -1369,7 +1504,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               aria-label="Upload File"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-                <path d="M5 20h14v-2H5v2zm0-10h4v6h6v-6h4l-7-7-7 7z"/>
+                <path d="M5 20h14v-2H5v2zm0-10h4v6h6v-6h4l-7-7-7 7z" />
               </svg>
               <input
                 type="file"
@@ -1388,7 +1523,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
             aria-label="Notes"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
             </svg>
           </button>
 
@@ -1401,8 +1536,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               aria-label={`Redo Step ${step.id}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
               </svg>
             </button>
           )}
@@ -1425,7 +1560,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         content={feedback.content}
         checks={feedback.checks}
       />
-      
+
       {showSftpModal && (
         <ClientSftpModal
           clientId={clientId}

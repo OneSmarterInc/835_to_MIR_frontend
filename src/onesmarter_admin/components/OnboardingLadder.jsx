@@ -115,18 +115,8 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
 
   let currentPhase = null;
 
-  // Reorder: move step id=11 (SMTP config) to display position 6 (after step id=5)
-  const reorderedSteps = (() => {
-    const step11 = steps.find(s => s.id === 11);
-    if (!step11) return steps;
-    const without11 = steps.filter(s => s.id !== 11);
-    // Insert after the step at original index 4 (5th step, id=5)
-    const insertAfterIdx = without11.findIndex(s => s.id === 5);
-    const insertAt = insertAfterIdx >= 0 ? insertAfterIdx + 1 : 5;
-    const result = [...without11];
-    result.splice(insertAt, 0, step11);
-    return result;
-  })();
+  // Use natural database step sequence
+  const reorderedSteps = steps;
 
   return (
     <section className="view on" id="v-onboard">

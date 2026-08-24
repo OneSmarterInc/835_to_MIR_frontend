@@ -172,6 +172,39 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
           />
         </div>
 
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '16px', borderTop: '1px solid var(--line-soft)', paddingTop: '16px' }}>
+          <button
+            type="button"
+            className="btn"
+            onClick={async () => {
+              if (window.confirm(`Are you sure you want to reset the password for ${user.email} and send a temporary password via email?`)) {
+                setLoading(true);
+                try {
+                  const res = await fetch(`/accounts/api/admin/users/${user.id}/reset-password/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.success) {
+                    alert("✓ Reset successful: " + data.message);
+                    handleCloseModal();
+                  } else {
+                    setErrorMsg(data.error || "Failed to reset password.");
+                  }
+                } catch (err) {
+                  setErrorMsg(err.message || "Failed to reset password.");
+                } finally {
+                  setLoading(false);
+                }
+              }
+            }}
+            disabled={loading}
+            style={{ width: '100%', fontWeight: 600, background: '#f59e0b', color: '#fff', border: 'none' }}
+          >
+            ⚡ Generate &amp; Email Temporary Password
+          </button>
+        </div>
+
         <div className="modal-actions" style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button 
             type="button" 

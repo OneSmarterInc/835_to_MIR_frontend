@@ -4,7 +4,10 @@ export default function ConversionsView({
   trackedFiles,
   onRefreshData,
   onOpenFileModal,
+  clients = [],
+  isAdmin = false,
 }) {
+  const [selectedClientId, setSelectedClientId] = useState("");
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
   const [ediText, setEdiText] = useState("");
@@ -108,10 +111,12 @@ export default function ConversionsView({
 
     setValidating(true);
     try {
-      const payload =
-        selectedFilesList.length > 1
+      const payload = {
+        ...(selectedFilesList.length > 1
           ? { files: selectedFilesList }
-          : { edi_text: ediText.trim(), original_filename: currentFileName };
+          : { edi_text: ediText.trim(), original_filename: currentFileName }),
+        client_id: selectedClientId || undefined
+      };
 
       const res = await fetch("/api/validate/", {
         method: "POST",
@@ -159,14 +164,16 @@ export default function ConversionsView({
     setValidationError(null);
 
     try {
-      const payload =
-        selectedFilesList.length > 1
+      const payload = {
+        ...(selectedFilesList.length > 1
           ? { files: selectedFilesList }
           : {
               edi_text: ediText.trim(),
               original_filename: currentFileName,
               file_id: activeValidatedFileId,
-            };
+            }),
+        client_id: selectedClientId || undefined
+      };
 
       const res = await fetch("/api/convert/", {
         method: "POST",
@@ -204,7 +211,7 @@ export default function ConversionsView({
       const res = await fetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_id: fileId }),
+        body: JSON.stringify({ file_id: fileId, client_id: selectedClientId || undefined }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -379,6 +386,29 @@ export default function ConversionsView({
 
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
+        {isAdmin && clients && clients.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC' }}>
+            <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              style={{
+                padding: "6px 10px",
+                border: "1px solid var(--line, #e2e8f0)",
+                borderRadius: "4px",
+                fontSize: "12.5px",
+                background: "#fff",
+                color: "var(--ink, #000)",
+                minWidth: "220px"
+              }}
+            >
+              <option value="">-- None (Global System Default) --</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="start-conversion-header">
           <h2>Start a conversion</h2>
           <div className="step-pills">

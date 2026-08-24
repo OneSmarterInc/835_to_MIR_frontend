@@ -7,6 +7,7 @@ import DocumentsView from './components/DocumentsView';
 import FilesView from './components/FilesView';
 import GoLiveView from './components/GoLiveView';
 import AccessView from './components/AccessView';
+import DefaultConfigsView from './components/DefaultConfigsView';
 import AddClientModal from './components/modals/AddClientModal';
 import NotesModal from './components/modals/NotesModal';
 import AddRoleModal from './components/modals/AddRoleModal';
@@ -15,6 +16,8 @@ import RevokeClientModal from './components/modals/RevokeClientModal';
 import FeedbackModal from './components/modals/FeedbackModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
+import ConversionsView from '../pages/ConversionsView';
+import FileViewerModal from '../components/FileViewerModal';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -86,6 +89,9 @@ export default function App({ user, onLogout }) {
   const [auditModuleFilter, setAuditModuleFilter] = useState('');
   const [auditSortField, setAuditSortField] = useState('timestamp');
   const [auditSortDirection, setAuditSortDirection] = useState('desc');
+  const [adminTrackedFiles, setAdminTrackedFiles] = useState([]);
+
+  const [adminViewerFileId, setAdminViewerFileId] = useState(null);
 
   // Modal states
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
@@ -142,6 +148,26 @@ export default function App({ user, onLogout }) {
       loadAuditLogs(auditClientFilter, auditModuleFilter);
     }
   }, [isAuthenticated, auditClientFilter, auditModuleFilter]);
+
+  const loadAdminTrackedFiles = async () => {
+    try {
+      const res = await fetch('/edi835/api/tracked-files/');
+      const data = await res.json();
+      if (data && data.success) {
+        setAdminTrackedFiles(data.files || []);
+      }
+    } catch (err) {
+      console.error("Failed to load admin tracked files", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && activeNav === 'conversions') {
+      loadAdminTrackedFiles();
+      const interval = setInterval(loadAdminTrackedFiles, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, activeNav]);
 
   // Sync state to URL for persistence on refresh
   useEffect(() => {
@@ -404,6 +430,9 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
             <span>Files</span>
           </button>
+          <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
+            <span>Conversions</span>
+          </button>
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>
           <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
@@ -416,6 +445,9 @@ export default function App({ user, onLogout }) {
           </button>
           <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
             <span>Access</span>
+          </button>
+          <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
+            <span>Default Configs</span>
           </button>
           <button className={`navitem ${activeNav === 'audit' ? 'on' : ''}`} onClick={() => setActiveNav('audit')}>
             <span>Audit Log</span>
@@ -470,6 +502,16 @@ export default function App({ user, onLogout }) {
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
+            />
+          )}
+
+          {activeNav === 'conversions' && (
+            <ConversionsView
+              trackedFiles={adminTrackedFiles}
+              onRefreshData={loadAdminTrackedFiles}
+              onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
+              clients={clients}
+              isAdmin={true}
             />
           )}
 
@@ -565,6 +607,10 @@ export default function App({ user, onLogout }) {
 
           {activeNav === 'access' && (
             <AccessView currentUser={currentUser} />
+          )}
+
+          {activeNav === 'defaults' && (
+            <DefaultConfigsView />
           )}
 
           {activeNav === 'audit' && (
@@ -788,6 +834,11 @@ export default function App({ user, onLogout }) {
         client={revokeTarget}
         onConfirm={handleConfirmRevoke}
         loading={revokeLoading}
+      />
+
+      <FileViewerModal
+        fileId={adminViewerFileId}
+        onClose={() => setAdminViewerFileId(null)}
       />
 
       <FeedbackModal
