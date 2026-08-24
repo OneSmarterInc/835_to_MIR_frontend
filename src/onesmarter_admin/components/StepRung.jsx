@@ -4,6 +4,13 @@ import FeedbackModal from './modals/FeedbackModal';
 import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
 
+function getAuthHeaders(extra = {}) {
+  const token = localStorage.getItem('onesmarter_admin_token');
+  const headers = { ...extra };
+  if (token) headers['Authorization'] = `Token ${token}`;
+  return headers;
+}
+
 function formatDateTime(dateVal) {
   if (!dateVal) return 'N/A';
   const d = new Date(dateVal);
@@ -774,7 +781,22 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                                   body: JSON.stringify({ use_default: true, client_id: clientId, connection_type: 'UNIFIED' })
                                 });
                                 setS6SftpVerified(true);
-                                setFeedback({ isOpen: true, kind: 'ok', title: 'Default SFTP Settings Enabled', content: 'Using default SFTP server connection details.', checks: [] });
+                                
+                                let detailsStr = 'Using default SFTP server connection details.';
+                                try {
+                                  const resSftp = await fetch('/edi835/api/sftp/get/');
+                                  const sftpData = await resSftp.json();
+                                  if (sftpData && sftpData.success && sftpData.configs) {
+                                    const defCfg = sftpData.configs.find(c => !c.client_id && !c.client);
+                                    if (defCfg) {
+                                      detailsStr = `Using default SFTP server: ${defCfg.host}:${defCfg.port} (user: ${defCfg.username}). Inbound 835 folder: ${defCfg.inbound_835_folder}`;
+                                    }
+                                  }
+                                } catch (sftpErr) {
+                                  console.error('Failed to get default SFTP details', sftpErr);
+                                }
+
+                                setFeedback({ isOpen: true, kind: 'ok', title: 'Default SFTP Settings Enabled', content: detailsStr, checks: [] });
                               } catch (err) {
                                 alert("Failed to set default SFTP: " + err.message);
                               }
@@ -1061,7 +1083,30 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     <input
                       type="checkbox"
                       checked={s11UseDefaultSmtp}
-                      onChange={(e) => setS11UseDefaultSmtp(e.target.checked)}
+                      onChange={async (e) => {
+                        const checked = e.target.checked;
+                        setS11UseDefaultSmtp(checked);
+                        if (checked) {
+                          try {
+                            const res = await fetch('/admin-panel/api/default-smtp/', { headers: getAuthHeaders() });
+                            const data = await res.json();
+                            if (data && data.success && data.config) {
+                              const cfg = data.config;
+                              setS11SenderName(cfg.sender_name || '');
+                              setS11SenderEmail(cfg.sender_email || '');
+                              setS11SmtpHost(cfg.smtp_host || '');
+                              setS11SmtpPort(String(cfg.smtp_port || '587'));
+                              setS11SmtpUsername(cfg.smtp_username || '');
+                              setS11Security(cfg.security || 'STARTTLS');
+                              setS11ReplyTo(cfg.reply_to || '');
+                              setS11HasPassword(true);
+                              setS11Password(''); // clear visual typing password
+                            }
+                          } catch (err) {
+                            console.error('Failed to load default SMTP settings', err);
+                          }
+                        }
+                      }}
                     />
                     Use Default SMTP Settings
                   </label>
@@ -1201,14 +1246,14 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         // 1. Save SMTP config to DB
                         const smtpPayload = s11UseDefaultSmtp ? {
                           use_default: true,
-                          sender_name: 'Default Sender',
-                          sender_email: 'default@onesmarter.com',
-                          smtp_host: 'localhost',
-                          smtp_port: 587,
-                          smtp_username: 'default',
-                          smtp_password: '',
-                          security: 'STARTTLS',
-                          reply_to: null,
+                          sender_name: s11SenderName.trim() || 'Default Sender',
+                          sender_email: s11SenderEmail.trim() || 'default@onesmarter.com',
+                          smtp_host: s11SmtpHost.trim() || 'localhost',
+                          smtp_port: parseInt(s11SmtpPort, 10) || 587,
+                          smtp_username: s11SmtpUsername.trim() || 'default',
+                          smtp_password: s11Password.trim() || '',
+                          security: s11Security,
+                          reply_to: s11ReplyTo.trim() || null,
                         } : {
                           use_default: false,
                           sender_name: s11SenderName.trim(),
