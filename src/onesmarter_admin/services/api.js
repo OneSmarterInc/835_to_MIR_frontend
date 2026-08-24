@@ -227,7 +227,13 @@ export async function postStepData(endpoint, body) {
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned an unexpected response (HTTP ${res.status}). The endpoint may not exist or the server is misconfigured.`);
+  }
   if (!res.ok) throw new Error(data.error || 'Action failed');
   return data;
 }
@@ -621,7 +627,13 @@ export async function fetchClientSmtpConfig(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/smtp/`, {
     headers: getAuthHeaders()
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned an unexpected response (HTTP ${res.status}) while fetching SMTP config. The endpoint may not exist yet.`);
+  }
   if (!res.ok) throw new Error(data.error || 'Failed to fetch SMTP config');
   return data.config; // null if not yet configured
 }
@@ -632,7 +644,13 @@ export async function saveClientSmtpConfig(clientId, payload) {
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Server returned an unexpected response (HTTP ${res.status}) while saving SMTP config. The endpoint may not exist yet on the backend.`);
+  }
   if (!res.ok) throw new Error(data.error || 'Failed to save SMTP config');
   return data;
 }
