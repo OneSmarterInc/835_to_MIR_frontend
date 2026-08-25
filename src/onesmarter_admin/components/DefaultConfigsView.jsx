@@ -9,6 +9,7 @@ function getAuthHeaders(extra = {}) {
 }
 
 export default function DefaultConfigsView() {
+  
   const [sftpHost, setSftpHost] = useState('');
   const [sftpPort, setSftpPort] = useState('22');
   const [sftpUser, setSftpUser] = useState('');
@@ -54,7 +55,7 @@ export default function DefaultConfigsView() {
             setSftpInbound835(cfg.inbound_835_folder || '');
             setSftpInbound837(cfg.inbound_837_folder || '');
             setSftpOutboundMir(cfg.outbound_mir_folder || '');
-            if (cfg.host && cfg.username) setSftpConnected(true);
+            setSftpConnected(cfg.status === 'CONNECTED');
             setSftpStatus(`Loaded — Status: ${cfg.status || 'PENDING'}`);
           }
         }
