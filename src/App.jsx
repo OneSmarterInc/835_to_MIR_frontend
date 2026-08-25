@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import Topbar from "./components/Topbar";
 import Drawer from "./components/Drawer";
@@ -26,6 +26,7 @@ export default function App() {
 
   const [userState,setUserState] = useState(null);
   const [loadingUser,setLoadingUser] = useState(true);
+  const [authNext,setAuthNext] = useState(null);
 
 
   const [isAdminRoute,setIsAdminRoute] = useState(()=>{
@@ -388,6 +389,19 @@ export default function App() {
 
     });
 
+    setAuthNext(null);
+
+
+  };
+
+
+  // Preserve the backend's authentication decision. This prevents a stale
+  // user-info response from sending a new user directly to TOTP verification.
+  const handleLoginSuccess = async(loginData)=>{
+
+    setAuthNext(loginData?.next || null);
+
+    await checkUserStatus();
 
   };
 
@@ -436,7 +450,7 @@ export default function App() {
 
         isAdminRoute={isAdminRoute}
 
-        onLoginSuccess={checkUserStatus}
+        onLoginSuccess={handleLoginSuccess}
 
       />
 
@@ -486,14 +500,22 @@ export default function App() {
 
 
 
-    if(!user.totp_enabled){
+    const needsTotpSetup =
+      authNext === "totp_setup" ||
+      user.totp_enabled !== true;
+
+
+    if(needsTotpSetup){
 
 
       return (
 
         <TotpSetupPage
 
-          onSetupSuccess={checkUserStatus}
+          onSetupSuccess={()=>{
+            setAuthNext(null);
+            checkUserStatus();
+          }}
 
           onLogout={handleLogout}
 
@@ -506,14 +528,24 @@ export default function App() {
 
 
 
-    if(!user.totp_verified){
+    if(
+      authNext === "totp_verify" ||
+      !user.totp_verified
+    ){
 
 
       return (
 
         <TotpVerifyPage
 
-          onVerifySuccess={checkUserStatus}
+          onVerifySuccess={()=>{
+            setAuthNext(null);
+            checkUserStatus();
+          }}
+
+          onSetupRequired={()=>
+            setAuthNext("totp_setup")
+          }
 
           onLogout={handleLogout}
 
