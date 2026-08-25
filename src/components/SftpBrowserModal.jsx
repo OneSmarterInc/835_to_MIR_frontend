@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 
+function getAuthHeaders(extra = {}) {
+  const token = localStorage.getItem("onesmarter_admin_token");
+  const headers = { ...extra };
+  if (token) headers.Authorization = `Token ${token}`;
+  return headers;
+}
+
 export default function SftpBrowserModal({
   isOpen,
   initialPath,
   configId,
-  sftpUniHost,
-  sftpUniPort,
-  sftpUniUser,
-  sftpUniPass,
-  sftpUniSshKey,
-  sftpUniAuth,
   onSelectFolder,
   onClose,
 }) {
@@ -24,7 +25,7 @@ export default function SftpBrowserModal({
   const cacheRef = useRef({});
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && configId) {
       cacheRef.current = {};
       const p = initialPath || ".";
       setCurrentPath(p);
@@ -32,7 +33,7 @@ export default function SftpBrowserModal({
       setNavIndex(0);
       fetchDirectory(p, false);
     }
-  }, [isOpen, initialPath]);
+  }, [isOpen, initialPath, configId]);
 
   if (!isOpen) return null;
 
@@ -61,27 +62,19 @@ export default function SftpBrowserModal({
     }
 
     try {
-      const payload = {
-        path: p,
-      };
-      if (configId) payload.config_id = configId;
-      if (sftpUniHost && sftpUniUser) {
-        payload.host = sftpUniHost;
-        payload.port = parseInt(sftpUniPort || "22", 10);
-        payload.username = sftpUniUser;
-        if (sftpUniPass) payload.password = sftpUniPass;
-        if (sftpUniSshKey) payload.ssh_key = sftpUniSshKey;
-        if (sftpUniAuth) payload.auth_method = sftpUniAuth;
+      if (!configId) {
+        throw new Error("SFTP configuration is not saved.");
       }
+      const payload = { config_id: configId, path: p };
 
       const res = await fetch("/edi835/api/sftp/browse/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (!data.success) {
+      if (!res.ok || !data.success) {
         setError(data.error || "Failed to list directory");
         setFolders([]);
         setFiles([]);
