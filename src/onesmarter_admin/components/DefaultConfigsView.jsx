@@ -33,18 +33,20 @@ export default function DefaultConfigsView() {
   const [smtpStatus, setSmtpStatus] = useState('');
   const [smtpLoading, setSmtpLoading] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [smtpHasPassword, setSmtpHasPassword] = useState(false);
 
   useEffect(() => {
     fetch('/edi835/api/sftp/get/')
       .then(res => res.json())
       .then(data => {
-        if (data && data.success && data.configs) {
-          const cfg = data.configs.find(c => !c.client_id && !c.client);
+        if (data && data.configurations) {
+          const cfg = data.configurations[0] || data.active_config;
           if (cfg) {
             setSftpHost(cfg.host || '');
             setSftpPort(String(cfg.port || '22'));
             setSftpUser(cfg.username || '');
-            setSftpPass(cfg.password || '');
+            // Password is never returned. Blank means preserve the saved secret.
+            setSftpPass('');
             setSftpInbound835(cfg.inbound_835_folder || '');
             setSftpInbound837(cfg.inbound_837_folder || '');
             setSftpOutboundMir(cfg.outbound_mir_folder || '');
@@ -65,7 +67,9 @@ export default function DefaultConfigsView() {
           setSmtpHost(cfg.smtp_host || '');
           setSmtpPort(String(cfg.smtp_port || '587'));
           setSmtpUser(cfg.smtp_username || '');
-          setSmtpPass(cfg.smtp_password || '');
+          // Password is never returned. Blank means preserve the saved secret.
+          setSmtpPass('');
+          setSmtpHasPassword(Boolean(cfg.has_password));
           setSmtpSecurity(cfg.security || 'STARTTLS');
           setSmtpReplyTo(cfg.reply_to || '');
           setSmtpStatus('Loaded SMTP configuration from database.');
@@ -150,7 +154,8 @@ export default function DefaultConfigsView() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSftpConnected(true);
-        setSftpStatus(`✓ Default SFTP Saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`);
+        setSftpPass('');
+        setSftpStatus(`✓ Default SFTP saved securely. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`);
       } else {
         setSftpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
@@ -182,7 +187,9 @@ export default function DefaultConfigsView() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSmtpStatus('✓ Default SMTP configuration saved successfully.');
+        if (smtpPass.trim()) setSmtpHasPassword(true);
+        setSmtpPass('');
+        setSmtpStatus('✓ Default SMTP configuration saved securely.');
       } else {
         setSmtpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
@@ -283,8 +290,8 @@ export default function DefaultConfigsView() {
                 type={showSmtpPass ? 'text' : 'password'}
                 value={smtpPass}
                 onChange={e => setSmtpPass(e.target.value)}
-                placeholder="••••••••"
-                style={{ width: '100%', paddingRight: '34px' }}
+                placeholder={smtpHasPassword ? '●●●●●●●● (saved — enter new to change)' : '••••••••'}
+                style={{ width: '100%', paddingRight: '34px', background: smtpHasPassword && !smtpPass ? '#f8fafc' : '#fff' }}
                 autoComplete="new-password"
               />
               <EyeButton show={showSmtpPass} set={setShowSmtpPass} />
