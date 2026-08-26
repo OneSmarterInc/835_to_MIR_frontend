@@ -104,68 +104,33 @@ export default function ConnectionsView({
   const loadedConfigIdRef = useRef(null);
 
   useEffect(() => {
-    if (!activeConfig) return;
+    if (activeConfig) {
+      // Only populate state if this is a newly loaded config (id changed) or first load
+      const configKey = `${activeConfig.id}_${activeConfig.updated_at || ""}`;
+      if (loadedConfigIdRef.current !== configKey) {
+        loadedConfigIdRef.current = configKey;
+        setSameServer(activeConfig.use_same_server !== false);
+        if (activeConfig.use_same_server !== false) {
+          if (activeConfig.host !== undefined) setUniHost(activeConfig.host || "");
+          if (activeConfig.port !== undefined) setUniPort(activeConfig.port ? String(activeConfig.port) : "22");
+          if (activeConfig.username !== undefined) setUniUser(activeConfig.username || "");
+          if (activeConfig.auth_method !== undefined) setUniAuth(activeConfig.auth_method || "Password");
+          if (activeConfig.inbound_837_folder !== undefined) setUniDir837(activeConfig.inbound_837_folder || "");
+          if (activeConfig.inbound_835_folder !== undefined) setUniDir835(activeConfig.inbound_835_folder || "");
+          if (activeConfig.outbound_mir_folder !== undefined) setUniDirMir(activeConfig.outbound_mir_folder || "");
+        } else {
+          if (activeConfig.host !== undefined) setInHost(activeConfig.host || "");
+          if (activeConfig.port !== undefined) setInPort(activeConfig.port ? String(activeConfig.port) : "22");
+          if (activeConfig.username !== undefined) setInUser(activeConfig.username || "");
+          if (activeConfig.inbound_837_folder !== undefined) setInDir837(activeConfig.inbound_837_folder || "");
+          if (activeConfig.inbound_835_folder !== undefined) setInDir835(activeConfig.inbound_835_folder || "");
 
-    // Populate the client form from the SFTP configuration created on
-    // the Admin side. All non-secret fields remain editable.
-    const configKey = `${activeConfig.id || "active"}_${activeConfig.updated_at || ""}`;
-
-    if (loadedConfigIdRef.current === configKey) return;
-
-    loadedConfigIdRef.current = configKey;
-
-    const unified = activeConfig.use_same_server !== false;
-    setSameServer(unified);
-
-    if (unified) {
-      setUniHost(activeConfig.host || "");
-      setUniPort(
-        activeConfig.port !== undefined && activeConfig.port !== null
-          ? String(activeConfig.port)
-          : "22"
-      );
-      setUniUser(activeConfig.username || "");
-      setUniAuth(activeConfig.auth_method || "Password");
-      setUniDir837(activeConfig.inbound_837_folder || "");
-      setUniDir835(activeConfig.inbound_835_folder || "");
-      setUniDirMir(activeConfig.outbound_mir_folder || "");
-
-      // Never expose stored SFTP secrets from the backend.
-      setUniPass("");
-      setUniSshKey("");
-    } else {
-      setInHost(activeConfig.host || "");
-      setInPort(
-        activeConfig.port !== undefined && activeConfig.port !== null
-          ? String(activeConfig.port)
-          : "22"
-      );
-      setInUser(activeConfig.username || "");
-      setInAuth(activeConfig.auth_method || "Password");
-      setInDir837(activeConfig.inbound_837_folder || "");
-      setInDir835(activeConfig.inbound_835_folder || "");
-
-      setOutHost(activeConfig.outbound_host || activeConfig.host || "");
-      setOutPort(
-        activeConfig.outbound_port !== undefined &&
-        activeConfig.outbound_port !== null
-          ? String(activeConfig.outbound_port)
-          : "22"
-      );
-      setOutUser(
-        activeConfig.outbound_username ||
-        activeConfig.username ||
-        ""
-      );
-      setOutAuth(
-        activeConfig.outbound_auth_method ||
-        activeConfig.auth_method ||
-        "Password"
-      );
-      setOutDirMir(activeConfig.outbound_mir_folder || "");
-
-      setInPass("");
-      setOutPass("");
+          if (activeConfig.outbound_host !== undefined) setOutHost(activeConfig.outbound_host || "");
+          if (activeConfig.outbound_port !== undefined) setOutPort(activeConfig.outbound_port ? String(activeConfig.outbound_port) : "22");
+          if (activeConfig.outbound_username !== undefined) setOutUser(activeConfig.outbound_username || "");
+          if (activeConfig.outbound_mir_folder !== undefined) setOutDirMir(activeConfig.outbound_mir_folder || "");
+        }
+      }
     }
   }, [activeConfig]);
 
@@ -1611,7 +1576,11 @@ export default function ConnectionsView({
                   else if (c.use_same_server) typeStr = "UNIFIED";
                   else typeStr = "DUAL (IN/OUT)";
 
-                  const hostPort = `${c.host}:${c.port}`;
+                  const isOutbound = c.connection_type === "OUTBOUND";
+                  const rowHost = isOutbound ? c.outbound_host : c.host;
+                  const rowPort = isOutbound ? c.outbound_port : c.port;
+                  const rowUsername = isOutbound ? c.outbound_username : c.username;
+                  const hostPort = rowHost ? `${rowHost}:${rowPort || 22}` : "—";
                   const lastTested = c.last_tested_at || "—";
                   const status = c.status || "CONFIGURED";
                   const tagClass =
@@ -1649,7 +1618,7 @@ export default function ConnectionsView({
                       <td className="num" style={{ fontWeight: 600, color: "var(--ink-1)" }}>
                         {hostPort}
                       </td>
-                      <td className="num">{c.username || "anonymous"}</td>
+                      <td className="num">{rowUsername || "anonymous"}</td>
                       <td className="num" style={{ color: "var(--ink-2)", fontSize: "11px" }}>
                         {inPath}
                       </td>
