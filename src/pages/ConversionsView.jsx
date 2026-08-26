@@ -319,16 +319,50 @@ export default function ConversionsView({
         }),
       });
       const data = await readJsonResponse(res);
-      if (res.ok && data.success) {
+      if (!res.ok || !data.success || !data.job_id) {
+        throw new Error(data.error || data.message || "Batch conversion could not be started.");
+      }
+
+      setBatchAlert({
+        type: "success",
+        message: "Batch started. Reading inbound 835 files and creating one combined MIR...",
+      });
+
+      let completedData = null;
+      for (let attempt = 0; attempt < 240; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const statusRes = await fetch(
+          getApiUrl(`/edi835/api/start-batch-conversion/?job_id=${encodeURIComponent(data.job_id)}`),
+          {
+            method: "GET",
+            credentials: "include",
+            headers: getAuthHeaders({ Accept: "application/json" }),
+          }
+        );
+        const statusData = await readJsonResponse(statusRes);
+        if (!statusRes.ok || !statusData.success) {
+          throw new Error(statusData.error || "Unable to read batch status.");
+        }
+        if (statusData.job?.state === "COMPLETED" || statusData.job?.state === "FAILED") {
+          completedData = statusData.job.result || {};
+          break;
+        }
+      }
+
+      if (!completedData) {
+        throw new Error("The batch is still running. Refresh and try again after a few minutes.");
+      }
+
+      if (completedData.success) {
         setBatchAlert({
           type: "success",
-          message: data.message || `✓ Batch processing completed! Processed ${data.processed_count} files.`,
+          message: completedData.message || `✓ Batch processing completed! Processed ${completedData.processed_count} files.`,
         });
         if (onRefreshData) onRefreshData();
       } else {
         setBatchAlert({
           type: "error",
-          message: data.error || data.message || "Batch conversion failed.",
+          message: completedData.error || completedData.message || "Batch conversion failed.",
         });
       }
     } catch (err) {
