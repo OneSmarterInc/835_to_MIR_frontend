@@ -1302,7 +1302,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               </div>
             )}
 
-            {step.actionType === 'schedule_action' && (
+           {step.actionType === 'production_schedule' && (
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)', marginTop: '8px' }}>
                 {step.done && (step.extra?.schedule || step.latestNote) && (
                   <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
