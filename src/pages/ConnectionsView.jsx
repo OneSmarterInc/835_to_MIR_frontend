@@ -245,6 +245,7 @@ export default function ConnectionsView({
       const res = await fetch("/edi835/api/sftp/save/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -270,6 +271,7 @@ export default function ConnectionsView({
       await fetch("/edi835/api/sftp/delete/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ config_id: id }),
       });
       if (onRefreshSftp) onRefreshSftp();
