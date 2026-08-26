@@ -187,8 +187,8 @@ export default function DefaultConfigsView() {
           data.config?.id ??
           data.config?.config_id;
 
-        const normalizedConfigId = Number(savedConfigId);
-        if (!Number.isInteger(normalizedConfigId) || normalizedConfigId <= 0) {
+        const normalizedConfigId = String(savedConfigId ?? '').trim();
+        if (!normalizedConfigId) {
           throw new Error(
             "SFTP was saved, but the server did not return its configuration ID."
           );
