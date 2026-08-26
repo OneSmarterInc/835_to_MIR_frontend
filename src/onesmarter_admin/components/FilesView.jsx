@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import {
   fetchClientEdiFiles,
-  viewEdiFile,
   downloadEdiFile,
   pushEdiFileToSftp
 } from '../services/api';
+
+import FileViewerModal from '../../components/FileViewerModal';
 
 export default function FilesView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
@@ -20,6 +21,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [sortKey, setSortKey] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showZipMenu, setShowZipMenu] = useState(false);
+  const [viewerFileId, setViewerFileId] = useState(null);
 
   const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
 
@@ -139,29 +141,9 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
     }
   };
 
-  const handleViewFile = async (file) => {
-  try {
-    const result = await viewEdiFile(
-      selectedClientId,
-      file.id,
-      'input'
-    );
-
-    window.open(
-      result.fileUrl,
-      '_blank',
-      'noopener,noreferrer'
-    );
-
-    setTimeout(() => {
-      URL.revokeObjectURL(result.fileUrl);
-    }, 60000);
-
-  } catch (err) {
-    console.error('View file error:', err);
-    alert(`Unable to view file: ${err.message}`);
-  }
-};
+  const handleViewFile = (file) => {
+    setViewerFileId(file.id);
+  };
 
 const handleDownloadMir = async (file) => {
   try {
@@ -548,6 +530,13 @@ const handlePushMir = async (file) => {
             <span>&#9632; Physical 835 / 837 / MIR file hashes remain stored individually</span>
           </div>
         </>
+      )}
+
+      {viewerFileId && (
+        <FileViewerModal
+          fileId={viewerFileId}
+          onClose={() => setViewerFileId(null)}
+        />
       )}
     </section>
   );
