@@ -490,11 +490,12 @@ export default function ArchiveView({
                   const mirName = "MIR_" + baseName + ".mir";
                   const isProcessed = f.status === "ARCHIVED";
                   const isSftpSuccess = Boolean(f.present_in_sftp);
+                  const canPushToSftp = isProcessed && !isSftpSuccess;
                   const sftpStatusText = isSftpSuccess
                     ? "Success"
                     : f.status === "ERROR"
                     ? "Failed"
-                    : "Pending";
+                    : "Push to SFTP";
                   const sftpTagClass = isSftpSuccess
                     ? "ok"
                     : f.status === "ERROR"
@@ -571,18 +572,25 @@ export default function ArchiveView({
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`tag ${sftpTagClass}`}
-                          style={{ cursor: "pointer" }}
-                          title={
-                            isSftpSuccess
-                              ? "Uploaded to SFTP: File has been pushed to configured SFTP server."
-                              : "Click to push 835 & MIR to SFTP"
-                          }
-                          onClick={() => handlePushToSftp(f.id)}
-                        >
-                          {pushingId === f.id ? "Pushing..." : sftpStatusText}
-                        </span>
+                        {canPushToSftp ? (
+                          <button
+                            type="button"
+                            className="tag work"
+                            style={{ cursor: "pointer" }}
+                            title="Upload the generated MIR file to the configured SFTP server"
+                            onClick={() => handlePushToSftp(f.id)}
+                            disabled={pushingId === f.id}
+                          >
+                            {pushingId === f.id ? "Pushing..." : "Push to SFTP"}
+                          </button>
+                        ) : (
+                          <span
+                            className={`tag ${sftpTagClass}`}
+                            title={isSftpSuccess ? "MIR uploaded to the configured SFTP server." : undefined}
+                          >
+                            {sftpStatusText}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span
@@ -600,16 +608,16 @@ export default function ArchiveView({
                           {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
-                      <td className="num" style={{ fontSize: "11px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: "8px",
-                          }}
-                        >
-                          <button
+                      <td
+                        className="num"
+                        style={{
+                          fontSize: "11px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <button
                           type="button"
                           className="btn-eye"
                           title="View / Edit Code"
@@ -633,7 +641,6 @@ export default function ArchiveView({
                         ) : (
                           "—"
                         )}
-                        </div>
                       </td>
                     </tr>
                   );
