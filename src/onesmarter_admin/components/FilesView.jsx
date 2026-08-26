@@ -137,6 +137,43 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
     }
   };
 
+  const handleViewFile = async (file) => {
+  try {
+    const result = await viewEdiFile(
+      selectedClientId,
+      file.id,
+      'input'
+    );
+
+    window.open(
+      result.fileUrl,
+      '_blank',
+      'noopener,noreferrer'
+    );
+
+    setTimeout(() => {
+      URL.revokeObjectURL(result.fileUrl);
+    }, 60000);
+
+  } catch (err) {
+    console.error('View file error:', err);
+    alert(`Unable to view file: ${err.message}`);
+  }
+};
+
+const handleDownloadMir = async (file) => {
+  try {
+    await downloadEdiFile(
+      selectedClientId,
+      file.id,
+      'mir'
+    );
+  } catch (err) {
+    console.error('Download MIR error:', err);
+    alert(`Unable to download MIR: ${err.message}`);
+  }
+};
+
   return (
     <section className="view on" id="v-files">
       {/* HEADER ROW */}
@@ -408,6 +445,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                               type="button"
                               className="btn-eye"
                               title="View File"
+                              onClick={() => handleViewFile(f)}
                             >
                               <svg viewBox="0 0 24 24">
                                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
@@ -418,6 +456,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                                 type="button"
                                 className="btn-download"
                                 title="Download .mir File"
+                                onClick={() => handleDownloadMir(f)}
                               >
                                 <svg viewBox="0 0 24 24">
                                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
