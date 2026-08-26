@@ -21,7 +21,9 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [sortOrder, setSortOrder] = useState('desc');
   const [showZipMenu, setShowZipMenu] = useState(false);
 
-  const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
+  const currentClient = selectedClientId
+    ? clients.find(c => c.id === selectedClientId) || null
+    : null;
 
   useEffect(() => {
     if (activeClientId && activeClientId !== selectedClientId) {
@@ -30,13 +32,10 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   }, [activeClientId]);
 
   useEffect(() => {
-    if (selectedClientId) {
-      loadEdiFiles(selectedClientId);
-    }
+    loadEdiFiles(selectedClientId);
   }, [selectedClientId]);
 
   async function loadEdiFiles(clientId) {
-    if (!clientId) return;
     setLoading(true);
     setErrorMessage('');
     try {
@@ -206,10 +205,11 @@ const handlePushMir = async (file) => {
               <ClientSelectDropdown
                 clients={clients}
                 value={selectedClientId}
+                includeGlobal={true}
                 onChange={(val) => {
                   setSelectedClientId(val);
                   setCurrentPage(1);
-                  if (onSelectClient) onSelectClient(val);
+                  if (val && onSelectClient) onSelectClient(val);
                 }}
               />
             </div>
@@ -277,7 +277,7 @@ const handlePushMir = async (file) => {
       </div>
 
       <p className="sub" style={{ marginTop: '4px', marginBottom: '20px' }}>
-        One row represents one 835 conversion set for <b>{currentClient?.name || 'selected client'}</b>. The 835 input(s), optional 837 reference, MIR output, validation result, and processing result stay together.
+        One row represents one 835 conversion set for <b>{currentClient?.name || 'Global System Default'}</b>. The 835 input(s), optional 837 reference, MIR output, validation result, and processing result stay together.
       </p>
 
       {errorMessage && (
@@ -331,7 +331,7 @@ const handlePushMir = async (file) => {
 
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-3)' }}>
-          Loading archive files for {currentClient?.name}...
+          Loading archive files for {currentClient?.name || 'Global System Default'}...
         </div>
       ) : (
         <>
