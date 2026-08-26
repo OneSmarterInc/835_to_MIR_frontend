@@ -407,7 +407,7 @@ const handlePushMir = async (file) => {
                       const isProcessed = f.status === 'ARCHIVED';
                       const isSftpSuccess = Boolean(f.present_in_sftp);
                       const canPushToSftp = isProcessed && !isSftpSuccess;
-                      const sftpStatusText = isSftpSuccess ? 'Success' : f.status === 'ERROR' ? 'Failed' : 'Push to SFTP';
+                      const sftpStatusText = isSftpSuccess ? 'Pushed' : f.status === 'ERROR' ? 'Failed' : 'Push to SFTP';
                       const sftpTagClass = isSftpSuccess ? 'ok' : f.status === 'ERROR' ? 'bad' : 'work';
 
                       let displayStatus = '';
