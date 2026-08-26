@@ -99,8 +99,8 @@ export default function DefaultConfigsView() {
   }, []);
 
   const openBrowser = (currentVal, setter) => {
-    const configId = Number(sftpConfigId);
-    if (!Number.isInteger(configId) || configId <= 0) {
+    const configId = String(sftpConfigId ?? '').trim();
+    if (!configId) {
       setSftpStatus('Please save the SFTP configuration before browsing folders.');
       return;
     }
