@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 
+async function readJsonResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const responseText = await response.text();
+    const detail = responseText.trim().slice(0, 200);
+    throw new Error(
+      detail
+        ? `Server returned ${response.status}: ${detail}`
+        : `Server returned an empty response (${response.status}).`
+    );
+  }
+  return response.json();
+}
+
 export default function ConnectionsView({
   sftpConfigs,
   activeConfig,
@@ -160,20 +174,22 @@ export default function ConnectionsView({
     setUniSshKey("");
 
     try {
-      const res = await fetch("/api/sftp/connect", {
+      const res = await fetch("/edi835/api/sftp/connect/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       setTestResult(data);
 
-      if (data.success) {
+      if (res.ok && data.success) {
         alert("✓ SFTP connection successful");
-        await fetch("/edi835/api/sftp/save/", {
+        const saveRes = await fetch("/edi835/api/sftp/save/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             ...payload,
             password: payload.password,
@@ -182,24 +198,17 @@ export default function ConnectionsView({
             connection_type: "UNIFIED",
           }),
         });
+        const saveData = await readJsonResponse(saveRes);
+        if (!saveRes.ok || !saveData.success) {
+          throw new Error(saveData.error || "SFTP connected, but the configuration could not be saved.");
+        }
         if (onRefreshSftp) onRefreshSftp();
       } else {
         alert("✕ " + (data.error || "SFTP connection failed"));
-        await fetch("/edi835/api/sftp/save/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            password: payload.password,
-            ssh_key: payload.ssh_key,
-            use_same_server: true,
-            connection_type: "UNIFIED",
-          }),
-        });
-        if (onRefreshSftp) onRefreshSftp();
       }
     } catch (e) {
-      alert("✕ Unable to connect to SFTP server");
+      setTestResult({ success: false, error: e.message });
+      alert("✕ " + (e.message || "Unable to connect to SFTP server"));
     } finally {
       setTestingUni(false);
     }
