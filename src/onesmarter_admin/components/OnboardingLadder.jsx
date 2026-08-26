@@ -102,7 +102,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
   const totalSteps = steps.length || 15;
   const doneCount = steps.filter(s => s.done).length;
   const inProgressStep = steps.find(s => s.inProgress);
-  const activeStepNum = inProgressStep ? `Step ${inProgressStep.id}` : (doneCount === totalSteps ? 'Complete' : '—');
+  const activeStepNum = inProgressStep ? `Step ${inProgressStep.displayNumber ?? inProgressStep.id}` : (doneCount === totalSteps ? 'Complete' : '—');
   const activeStepTitle = inProgressStep ? inProgressStep.title : (doneCount === totalSteps ? `All ${totalSteps} Steps Complete` : '—');
   const stageName = (() => {
     const s = (client.stage || '').toLowerCase().replace(/[\s-]/g, '_');
