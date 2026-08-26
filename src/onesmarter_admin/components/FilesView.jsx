@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import {
   fetchClientEdiFiles,
+  viewEdiFile,
   downloadEdiFile,
   pushEdiFileToSftp
 } from '../services/api';
-
-import FileViewerModal from '../../components/FileViewerModal';
 
 export default function FilesView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
@@ -21,7 +20,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [sortKey, setSortKey] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showZipMenu, setShowZipMenu] = useState(false);
-  const [viewerFileId, setViewerFileId] = useState(null);
 
   const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
 
@@ -141,9 +139,29 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
     }
   };
 
-  const handleViewFile = (file) => {
-    setViewerFileId(file.id);
-  };
+  const handleViewFile = async (file) => {
+  try {
+    const result = await viewEdiFile(
+      selectedClientId,
+      file.id,
+      'input'
+    );
+
+    window.open(
+      result.fileUrl,
+      '_blank',
+      'noopener,noreferrer'
+    );
+
+    setTimeout(() => {
+      URL.revokeObjectURL(result.fileUrl);
+    }, 60000);
+
+  } catch (err) {
+    console.error('View file error:', err);
+    alert(`Unable to view file: ${err.message}`);
+  }
+};
 
 const handleDownloadMir = async (file) => {
   try {
@@ -388,7 +406,8 @@ const handlePushMir = async (file) => {
                       const mirName = 'MIR_' + baseName + '.mir';
                       const isProcessed = f.status === 'ARCHIVED';
                       const isSftpSuccess = Boolean(f.present_in_sftp);
-                      const sftpStatusText = isSftpSuccess ? 'Success' : f.status === 'ERROR' ? 'Failed' : 'Pending';
+                      const canPushToSftp = isProcessed && !isSftpSuccess;
+                      const sftpStatusText = isSftpSuccess ? 'Success' : f.status === 'ERROR' ? 'Failed' : 'Push to SFTP';
                       const sftpTagClass = isSftpSuccess ? 'ok' : f.status === 'ERROR' ? 'bad' : 'work';
 
                       let displayStatus = '';
@@ -428,9 +447,22 @@ const handlePushMir = async (file) => {
                             </span>
                           </td>
                           <td>
-                            <span className={`tag ${sftpTagClass}`} style={{ fontSize: '10.5px' }}>
-                              {sftpStatusText}
-                            </span>
+                            {canPushToSftp ? (
+                              <button
+                                type="button"
+                                className="tag work"
+                                style={{ fontSize: '10.5px', cursor: 'pointer' }}
+                                title="Upload the generated MIR file to the configured SFTP server"
+                                onClick={() => handlePushMir(f)}
+                                disabled={pushingId === f.id}
+                              >
+                                {pushingId === f.id ? 'Pushing…' : 'Push to SFTP'}
+                              </button>
+                            ) : (
+                              <span className={`tag ${sftpTagClass}`} style={{ fontSize: '10.5px' }}>
+                                {sftpStatusText}
+                              </span>
+                            )}
                           </td>
                           <td>
                             <span className={`tag ${statusTagClass}`} style={{ fontSize: '10.5px' }}>
@@ -449,29 +481,16 @@ const handlePushMir = async (file) => {
                               </svg>
                             </button>
                             {isProcessed ? (
-                              <>
-                                <button
-                                  type="button"
-                                  className="btn-download"
-                                  title="Download .mir File"
-                                  onClick={() => handleDownloadMir(f)}
-                                >
-                                  <svg viewBox="0 0 24 24">
-                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                                  </svg>
-                                </button>
-                                {!isSftpSuccess && (
-                                  <button
-                                    type="button"
-                                    className="btn tiny primary"
-                                    title="Push generated MIR to SFTP"
-                                    onClick={() => handlePushMir(f)}
-                                    disabled={pushingId === f.id}
-                                  >
-                                    {pushingId === f.id ? 'Pushing…' : 'Push MIR'}
-                                  </button>
-                                )}
-                              </>
+                              <button
+                                type="button"
+                                className="btn-download"
+                                title="Download .mir File"
+                                onClick={() => handleDownloadMir(f)}
+                              >
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                </svg>
+                              </button>
                             ) : '—'}
                           </td>
                         </tr>
@@ -530,13 +549,6 @@ const handlePushMir = async (file) => {
             <span>&#9632; Physical 835 / 837 / MIR file hashes remain stored individually</span>
           </div>
         </>
-      )}
-
-      {viewerFileId && (
-        <FileViewerModal
-          fileId={viewerFileId}
-          onClose={() => setViewerFileId(null)}
-        />
       )}
     </section>
   );
