@@ -153,7 +153,7 @@ export default function MappingApp({ clients = [], activeClientId, currentClient
       
       if (targetClientId) {
         try {
-          await postStepData(`/clients/${encodeURIComponent(targetClientId)}/steps/step_8_mapping/complete/`, {});
+          await postStepData(`/clients/${encodeURIComponent(targetClientId)}/steps/step_9_mapping/complete/`, {});
           localStorage.setItem('cross_tab_refresh', Date.now().toString());
         } catch (stepErr) {
           console.error("Could not complete step automatically:", stepErr);
