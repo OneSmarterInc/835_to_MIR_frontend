@@ -8,6 +8,14 @@ function getAuthHeaders(extra = {}) {
   return headers;
 }
 
+async function readJsonResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Server returned a non-JSON response (${response.status}).`);
+  }
+  return response.json();
+}
+
 export default function DefaultConfigsView() {
   
   const [sftpHost, setSftpHost] = useState('');
@@ -40,7 +48,11 @@ export default function DefaultConfigsView() {
 
   useEffect(() => {
     fetch('/edi835/api/sftp/get/', { headers: getAuthHeaders() })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await readJsonResponse(res);
+        if (!res.ok) throw new Error(data.error || data.detail || `Request failed (${res.status}).`);
+        return data;
+      })
       .then(data => {
         if (data && data.success && data.configs) {
           const cfg = data.configs.find(c => !c.client_id && !c.client);
@@ -63,7 +75,11 @@ export default function DefaultConfigsView() {
       .catch(err => console.error('Failed to load default SFTP', err));
 
     fetch('/admin-panel/api/default-smtp/', { headers: getAuthHeaders() })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await readJsonResponse(res);
+        if (!res.ok) throw new Error(data.error || data.detail || `Request failed (${res.status}).`);
+        return data;
+      })
       .then(data => {
         if (data && data.success && data.config) {
           const cfg = data.config;
@@ -83,13 +99,14 @@ export default function DefaultConfigsView() {
   }, []);
 
   const openBrowser = (currentVal, setter) => {
-    if (!sftpConfigId) {
+    const configId = Number(sftpConfigId);
+    if (!Number.isInteger(configId) || configId <= 0) {
       setSftpStatus('Please save the SFTP configuration before browsing folders.');
       return;
     }
     setBrowserState({
-      configId: sftpConfigId,
-      initialPath: currentVal || '/',
+      configId,
+      initialPath: currentVal?.trim() || '.',
       onSelectFolder: (p) => { setter(p); setBrowserState(null); },
     });
   };
@@ -162,22 +179,23 @@ export default function DefaultConfigsView() {
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       if (res.ok && data.success) {
-        setSftpConnected(true);
         const savedConfigId =
-        data.config_id ??
-        data.id ??
-        data.config?.id ??
-        data.config?.config_id;
+          data.config_id ??
+          data.id ??
+          data.config?.id ??
+          data.config?.config_id;
 
-        if (!savedConfigId) {
+        const normalizedConfigId = Number(savedConfigId);
+        if (!Number.isInteger(normalizedConfigId) || normalizedConfigId <= 0) {
           throw new Error(
             "SFTP was saved, but the server did not return its configuration ID."
           );
         }
 
-      setSftpConfigId(savedConfigId);
+        setSftpConfigId(normalizedConfigId);
+        setSftpConnected(Boolean(data.connected));
         setSftpHasPassword(Boolean(data.has_password || sftpHasPassword || sftpPass.trim()));
         setSftpPass('');
         setShowSftpPass(false);
@@ -214,7 +232,7 @@ export default function DefaultConfigsView() {
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      const data = await readJsonResponse(res);
       if (res.ok && data.success) {
         setSmtpHasPassword(Boolean(data.config?.has_password || smtpHasPassword || smtpPass.trim()));
         setSmtpPass('');
@@ -362,10 +380,10 @@ export default function DefaultConfigsView() {
 
       {browserState && (
         <SftpBrowserModal
-          isOpen={!!browserState}
-          configId={browserState.configId}
-          initialPath={browserState.initialPath}
-          onSelectFolder={browserState.onSelectFolder}
+          isOpen={Boolean(browserState)}
+          configId={browserState?.configId}
+          initialPath={browserState?.initialPath}
+          onSelectFolder={browserState?.onSelectFolder}
           onClose={() => setBrowserState(null)}
         />
       )}

@@ -25,31 +25,33 @@ export default function SftpBrowserModal({
   const cacheRef = useRef({});
 
   useEffect(() => {
-    if (isOpen && configId) {
-      cacheRef.current = {};
-      const p = initialPath || ".";
-      setCurrentPath(p);
-      setNavHistory([p]);
-      setNavIndex(0);
-      fetchDirectory(p, false);
-    }
+    if (!isOpen) return;
+
+    cacheRef.current = {};
+    const p = initialPath?.trim() || ".";
+    setCurrentPath(p);
+    setNavHistory([p]);
+    setNavIndex(0);
+    fetchDirectory(p, false);
   }, [isOpen, initialPath, configId]);
 
   if (!isOpen) return null;
 
   const fetchDirectory = async (targetPath, recordHistory = true) => {
+    const normalizedConfigId = Number(configId);
+    const p = targetPath?.trim() || ".";
+
+    if (!Number.isInteger(normalizedConfigId) || normalizedConfigId <= 0) {
+      setError("SFTP configuration ID is unavailable. Save the SFTP configuration first.");
+      setFolders([]);
+      setFiles([]);
+      setParentPath(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    const p = targetPath || ".";
-
-    if (recordHistory) {
-      setNavHistory((prev) => {
-        const next = prev.slice(0, navIndex + 1);
-        next.push(p);
-        return next;
-      });
-      setNavIndex((prev) => prev + 1);
-    }
 
     if (cacheRef.current[p]) {
       const cached = cacheRef.current[p];
@@ -62,37 +64,50 @@ export default function SftpBrowserModal({
     }
 
     try {
-      if (!configId) {
-        throw new Error("SFTP configuration is not saved.");
-      }
-      const payload = { config_id: configId, path: p };
+      const payload = { config_id: normalizedConfigId, path: p };
 
       const res = await fetch("/edi835/api/sftp/browse/", {
         method: "POST",
-        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        headers: getAuthHeaders({
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }),
         body: JSON.stringify(payload),
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Server returned a non-JSON response (${res.status}).`);
+      }
+
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.error || "Failed to list directory");
-        setFolders([]);
-        setFiles([]);
-        setLoading(false);
-        return;
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || data.detail || `Failed to list directory (${res.status}).`);
       }
 
       const resolvedPwd = data.pwd || p;
       setCurrentPath(resolvedPwd);
-      setFolders(data.folders || []);
-      setFiles(data.files || []);
-      setParentPath(data.parent_path);
+      setFolders(Array.isArray(data.folders) ? data.folders : []);
+      setFiles(Array.isArray(data.files) ? data.files : []);
+      setParentPath(data.parent_path || null);
+
+      if (recordHistory) {
+        setNavHistory((prev) => {
+          const next = prev.slice(0, navIndex + 1);
+          next.push(resolvedPwd);
+          return next;
+        });
+        setNavIndex((prev) => prev + 1);
+      }
 
       cacheRef.current[p] = data;
       cacheRef.current[resolvedPwd] = data;
-      setLoading(false);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Unable to browse the SFTP directory.");
+      setFolders([]);
+      setFiles([]);
+      setParentPath(null);
+    } finally {
       setLoading(false);
     }
   };
@@ -332,6 +347,7 @@ export default function SftpBrowserModal({
               onSelectFolder(currentPath);
               onClose();
             }}
+            disabled={loading || Boolean(error) || !configId}
           >
             Select This Folder
           </button>
