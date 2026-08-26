@@ -254,8 +254,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setFeedback({
         isOpen: true,
         kind: 'ok',
-        title: '835 Structural Validation Passed',
-        content: `Step ${displayStepNumber} Complete: Deep X12 835 structural and balance checks passed.`,
+        title: '835 Validated and MIR Delivered',
+        content: `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, and pushed to outbound SFTP.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -280,8 +280,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setFeedback({
         isOpen: true,
         kind: 'ok',
-        title: '835 Structural Validation Passed',
-        content: `Step ${displayStepNumber} Complete: Deep X12 835 structural and balance checks passed.`,
+        title: '835 Validated and MIR Delivered',
+        content: `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, and pushed to outbound SFTP.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -871,7 +871,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
             {step.actionType === 'x12_835_validate' && (
               <div className="step-custom-box">
-                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 6 }}>Sample 835 EDI Validation:</div>
+                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 6 }}>Validate 835 and Push MIR to SFTP:</div>
                 {latestUp ? (
                   <div style={{ fontSize: 12, marginBottom: 8 }}>📄 File: <b>{latestUp.original_filename}</b> ({latestUp.validation_status || 'PENDING'})</div>
                 ) : (
@@ -882,10 +882,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <label className={`btn tiny ${step.done ? 'success' : 'primary'}`} style={{ cursor: validating835 ? 'not-allowed' : 'pointer' }}>
                     {validating835 ? (
                       <>
-                        <span className="spinner-icon" /> Validating...
+                        <span className="spinner-icon" /> Converting &amp; Pushing...
                       </>
                     ) : (
-                      '⬆ Upload & Validate 835'
+                      '⬆ Validate 835 & Push MIR'
                     )}
                     <input type="file" hidden accept=".835,.x12,.edi,.txt,.dat,.35,.ansi,.rem" onChange={handleStep7Upload} disabled={validating835} />
                   </label>
