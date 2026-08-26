@@ -62,7 +62,7 @@ function renderAuditDetails(details) {
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState(() => {
     return user || { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
@@ -151,15 +151,29 @@ export default function App({ user, onLogout }) {
 
   const loadAdminTrackedFiles = async () => {
     try {
-      const res = await fetch('/edi835/api/tracked-files/');
-      const data = await res.json();
-      if (data && data.success) {
-        setAdminTrackedFiles(data.files || []);
-      }
+        const token = localStorage.getItem('onesmarter_admin_token');
+        const headers = token ? { Authorization: `Token ${token}` } : {};
+        const res = await fetch('/edi835/api/tracked-files/', {
+            credentials: 'include',
+            headers,
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Tracked-files API returned a non-JSON response (${res.status})`);
+        }
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        setAdminTrackedFiles(Array.isArray(data.files) ? data.files : []);
     } catch (err) {
-      console.error("Failed to load admin tracked files", err);
+        console.error("Failed to load admin tracked files:", err);
+        // Preserve the last successful result during a transient refresh error.
     }
-  };
+};
 
   useEffect(() => {
     if (isAuthenticated && activeNav === 'conversions') {
@@ -408,15 +422,14 @@ export default function App({ user, onLogout }) {
   return (
     <>
       <Header
-  onSignOut={handleSignOut}
-  currentUser={currentUser}
-  onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-  isSidebarOpen={isSidebarOpen}
-/>
+        onSignOut={handleSignOut}
+        currentUser={currentUser}
+        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+      />
 
       <div className="shell">
         {/* Left Navigation Sidebar matching POC exactly */}
-        <nav className={`rail ${isSidebarOpen ? 'rail-open' : 'rail-closed'}`}>
+        <nav className="rail" style={{ display: isSidebarOpen ? 'block' : 'none' }}>
           <div className="grp eyebrow">Clients</div>
           <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
             <span>All Clients</span>
