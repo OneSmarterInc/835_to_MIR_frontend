@@ -314,6 +314,15 @@ export async function fetchClientDocuments(clientId) {
 }
 
 export async function fetchClientEdiFiles(clientId) {
+  if (!clientId) {
+    const res = await fetch('/edi835/api/tracked-files/?scope=global', {
+      credentials: 'include',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch global system EDI archive files');
+    const data = await res.json();
+    return data.files || [];
+  }
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/`, {
     headers: getAuthHeaders()
   });
