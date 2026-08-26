@@ -255,7 +255,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Validated and MIR Delivered',
-        content: `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, and pushed to outbound SFTP.`,
+        content: res.email_sent
+          ? `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, pushed to outbound SFTP, and the client was notified by email.`
+          : `Step ${displayStepNumber} Complete: the MIR was delivered to SFTP, but the client email notification could not be sent.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -281,7 +283,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Validated and MIR Delivered',
-        content: `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, and pushed to outbound SFTP.`,
+        content: res.email_sent
+          ? `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, pushed to outbound SFTP, and the client was notified by email.`
+          : `Step ${displayStepNumber} Complete: the MIR was delivered to SFTP, but the client email notification could not be sent.`,
         checks: res.checks || []
       });
       await onRefresh();
