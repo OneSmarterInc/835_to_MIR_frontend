@@ -38,10 +38,10 @@ export default function SftpBrowserModal({
   if (!isOpen) return null;
 
   const fetchDirectory = async (targetPath, recordHistory = true) => {
-    const normalizedConfigId = Number(configId);
+    const normalizedConfigId = String(configId ?? "").trim();
     const p = targetPath?.trim() || ".";
 
-    if (!Number.isInteger(normalizedConfigId) || normalizedConfigId <= 0) {
+    if (!normalizedConfigId) {
       setError("SFTP configuration ID is unavailable. Save the SFTP configuration first.");
       setFolders([]);
       setFiles([]);
