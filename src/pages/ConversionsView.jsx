@@ -8,7 +8,6 @@ function getAuthHeaders(extra = {}) {
 function getApiUrl(path) {
   const configuredBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
   if (configuredBase) return `${configuredBase}${path}`;
-
   return path;
 }
 
@@ -386,6 +385,10 @@ export default function ConversionsView({
   };
 
   let filtered = (trackedFiles || []).filter((item) => {
+    if (isAdmin) {
+      const rowClientId = item.client_id ? String(item.client_id) : "";
+      if (rowClientId !== String(selectedClientId || "")) return false;
+    }
     if (searchText) {
       const query = searchText.toLowerCase();
       const fullStr = (
@@ -419,9 +422,6 @@ export default function ConversionsView({
     } else if (sortKey === "status") {
       valA = (a.status || "").toLowerCase();
       valB = (b.status || "").toLowerCase();
-    } else if (sortKey === "sftp") {
-      valA = a.present_in_sftp ? 1 : 0;
-      valB = b.present_in_sftp ? 1 : 0;
     } else {
       valA = 0;
       valB = 0;
@@ -448,11 +448,14 @@ export default function ConversionsView({
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
         {isAdmin && clients && clients.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC', boxSizing: 'border-box', width: '100%' }}>
             <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
             <select
               value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
+              onChange={(e) => {
+                setSelectedClientId(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{
                 padding: "6px 10px",
                 border: "1px solid var(--line, #e2e8f0)",
@@ -460,7 +463,10 @@ export default function ConversionsView({
                 fontSize: "12.5px",
                 background: "#fff",
                 color: "var(--ink, #000)",
-                minWidth: "220px"
+                width: "min(290px, 100%)",
+                minWidth: "220px",
+                maxWidth: "100%",
+                boxSizing: "border-box"
               }}
             >
               <option value="">-- None (Global System Default) --</option>
@@ -767,16 +773,6 @@ export default function ConversionsView({
                 </th>
                 <th>MIR OUT</th>
                 <th
-                  className={`sortable ${sortKey === "sftp" ? sortOrder : ""}`}
-                  onClick={() => handleSortHeader("sftp")}
-                >
-                  IMPORT MODE{" "}
-                  <span className="sort-arrow">
-                    {sortKey === "sftp" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
-                  </span>
-                </th>
-                <th>SFTP PUSH</th>
-                <th
                   className={`sortable ${sortKey === "status" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("status")}
                 >
@@ -792,7 +788,7 @@ export default function ConversionsView({
               {pageItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="11"
+                    colSpan="9"
                     style={{ padding: "26px", textAlign: "center", color: "var(--ink-3)" }}
                   >
                     No conversion runs match search query.
@@ -806,42 +802,6 @@ export default function ConversionsView({
                   const mirName = f.output_path
                     ? f.output_path.split("/").pop()
                     : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
-
-                  const isSftpSuccess = Boolean(f.present_in_sftp);
-                  const sftpStatusText = isSftpSuccess
-                    ? "Success"
-                    : f.status === "ERROR"
-                    ? "Failed"
-                    : "Pending";
-                  const sftpTagClass = isSftpSuccess
-                    ? "ok"
-                    : f.status === "ERROR"
-                    ? "bad"
-                    : "work";
-
-                  const isSftpSource =
-                    f.ingestion_source === "SFTP" ||
-                    (f.original_filename && f.original_filename.includes(",")) ||
-                    (f.input_path && f.input_path.toLowerCase().includes("sftp"));
-
-                  const sourceLabel = isSftpSource ? "SFTP" : "MANUAL";
-                  const sourceTagClass = isSftpSource ? "ok" : "work";
-                  const sourceTitle = isSftpSource
-                    ? "Ingested automatically from SFTP inbound folder"
-                    : "Uploaded manually via conversion form";
-
-                  let displayStatus = "";
-                  if (f.status === "ARCHIVED") {
-                    displayStatus = isSftpSuccess
-                      ? "Validated & SFTP Success"
-                      : "Validated & SFTP Pending";
-                  } else if (f.status === "PROCESSING") {
-                    displayStatus = "Validated & SFTP Pending";
-                  } else if (f.status === "ERROR") {
-                    displayStatus = "Validation Failed";
-                  } else {
-                    displayStatus = `${f.status} & SFTP ${sftpStatusText}`;
-                  }
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
@@ -877,25 +837,6 @@ export default function ConversionsView({
                       </td>
                       <td>
                         <span
-                          className={`tag ${sourceTagClass}`}
-                          style={{ fontSize: "10.5px" }}
-                          title={sourceTitle}
-                        >
-                          {sourceLabel}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={`tag ${sftpTagClass}`}
-                          style={{ fontSize: "10.5px" }}
-                        >
-                          {sftpStatusText}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
                           className={`tag ${
                             f.status === "ARCHIVED"
                               ? "ok"
@@ -913,42 +854,33 @@ export default function ConversionsView({
                             }
                           }}
                         >
-                          {convertingId === f.id ? "CONVERTING..." : displayStatus}
+                          {convertingId === f.id ? "CONVERTING..." : f.status}
                         </span>
                       </td>
                       <td className="num" style={{ fontSize: "11px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: "8px",
-                          }}
-                        >
-                          <button
-                          type="button"
-                          className="btn-eye"
-                          title="View / Edit Code"
-                          onClick={() => onOpenFileModal(f.id)}
-                        >
-                          <svg viewBox="0 0 24 24">
-                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                          </svg>
-                        </button>
-                        {f.status === "ARCHIVED" ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "32px" }}>
                           <button
                             type="button"
-                            className="btn-download"
-                            title="Download .mir File"
-                            onClick={() => handleDownloadMir(mirName, "", f.id)}
+                            className="btn-eye"
+                            title="View / Edit Code"
+                            onClick={() => onOpenFileModal(f.id)}
                           >
                             <svg viewBox="0 0 24 24">
-                              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                             </svg>
                           </button>
-                        ) : (
-                          "—"
-                        )}
+                          {f.status === "ARCHIVED" && (
+                            <button
+                              type="button"
+                              className="btn-download"
+                              title="Download .mir File"
+                              onClick={() => handleDownloadMir(mirName, "", f.id)}
+                            >
+                              <svg viewBox="0 0 24 24">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
