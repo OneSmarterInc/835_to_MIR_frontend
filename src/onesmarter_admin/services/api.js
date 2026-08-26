@@ -60,6 +60,20 @@ export async function fetchClientState(clientId) {
   return data.state;
 }
 
+export async function pushEdiFileToSftp(fileId) {
+  const res = await fetch('/edi835/api/sftp/push/', {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ file_id: fileId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || data.message || 'Failed to push MIR to SFTP.');
+  }
+  return data;
+}
+
 export async function createClient(clientPayload) {
   const payload = typeof clientPayload === 'string' ? { name: clientPayload } : clientPayload;
   
