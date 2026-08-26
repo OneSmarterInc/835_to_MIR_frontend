@@ -62,7 +62,7 @@ function renderAuditDetails(details) {
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     return user || { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
@@ -151,22 +151,15 @@ export default function App({ user, onLogout }) {
 
   const loadAdminTrackedFiles = async () => {
     try {
-        const res = await fetch('/edi835/api/tracked-files/', {
-            credentials: 'include',
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.error || `HTTP ${res.status}`);
-        }
-
-        setAdminTrackedFiles(Array.isArray(data.files) ? data.files : []);
+      const res = await fetch('/edi835/api/tracked-files/');
+      const data = await res.json();
+      if (data && data.success) {
+        setAdminTrackedFiles(data.files || []);
+      }
     } catch (err) {
-        console.error("Failed to load admin tracked files:", err);
-        setAdminTrackedFiles([]);
+      console.error("Failed to load admin tracked files", err);
     }
-};
+  };
 
   useEffect(() => {
     if (isAuthenticated && activeNav === 'conversions') {
@@ -415,14 +408,15 @@ export default function App({ user, onLogout }) {
   return (
     <>
       <Header
-        onSignOut={handleSignOut}
-        currentUser={currentUser}
-        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-      />
+  onSignOut={handleSignOut}
+  currentUser={currentUser}
+  onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+  isSidebarOpen={isSidebarOpen}
+/>
 
       <div className="shell">
         {/* Left Navigation Sidebar matching POC exactly */}
-        <nav className="rail" style={{ display: isSidebarOpen ? 'block' : 'none' }}>
+        <nav className={`rail ${isSidebarOpen ? 'rail-open' : 'rail-closed'}`}>
           <div className="grp eyebrow">Clients</div>
           <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
             <span>All Clients</span>
