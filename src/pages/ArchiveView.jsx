@@ -600,16 +600,16 @@ export default function ArchiveView({
                           {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
-                      <td
-                        className="num"
-                        style={{
-                          fontSize: "11px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <button
+                      <td className="num" style={{ fontSize: "11px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: "8px",
+                          }}
+                        >
+                          <button
                           type="button"
                           className="btn-eye"
                           title="View / Edit Code"
@@ -633,6 +633,7 @@ export default function ArchiveView({
                         ) : (
                           "—"
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
