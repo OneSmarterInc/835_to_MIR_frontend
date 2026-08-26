@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetchClientEdiFiles } from '../services/api';
+import {
+  fetchClientEdiFiles,
+  viewEdiFile,
+  downloadEdiFile
+} from '../services/api';
 
 export default function FilesView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
