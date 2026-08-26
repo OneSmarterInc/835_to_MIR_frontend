@@ -920,7 +920,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   MIR Output Filename Format
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--ink)', marginBottom: '12px', lineHeight: 1.5 }}>
-                  Define the naming convention format for generated MIR output files. Placeholders like <b>YYYY</b> (4-digit Year), <b>MM</b> (2-digit Month), and <b>DD</b> (2-digit Day) will be dynamically resolved.
+                  Define the naming convention for MIR files delivered to SFTP. Supported placeholders: <b>YYYY</b> (4-digit year), <b>MM</b> (2-digit month), <b>DD</b> (2-digit day), <b>hh</b> (24-hour), <b>mm</b> (minute), and <b>ss</b> (second). Local server copies are automatically prefixed with the client ID to prevent cross-client filename conflicts.
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
                   <input
@@ -928,7 +928,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     type="text"
                     value={s9MirFormat}
                     onChange={(e) => setS9MirFormat(e.target.value)}
-                    placeholder="MIROUT_YYYY_MMDD_.MIR"
+                    placeholder="MIROUT_YYYYMMDD_hhmmss.MIR"
                   />
                   <button className="btn tiny primary" onClick={handleStep9NamingSave}>
                     ✓ Save Naming Format &amp; Complete Step {displayStepNumber}
