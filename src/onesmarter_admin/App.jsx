@@ -151,15 +151,22 @@ export default function App({ user, onLogout }) {
 
   const loadAdminTrackedFiles = async () => {
     try {
-      const res = await fetch('/edi835/api/tracked-files/');
-      const data = await res.json();
-      if (data && data.success) {
-        setAdminTrackedFiles(data.files || []);
-      }
+        const res = await fetch('/edi835/api/tracked-files/', {
+            credentials: 'include',
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        setAdminTrackedFiles(Array.isArray(data.files) ? data.files : []);
     } catch (err) {
-      console.error("Failed to load admin tracked files", err);
+        console.error("Failed to load admin tracked files:", err);
+        setAdminTrackedFiles([]);
     }
-  };
+};
 
   useEffect(() => {
     if (isAuthenticated && activeNav === 'conversions') {
