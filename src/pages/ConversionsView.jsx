@@ -5,6 +5,19 @@ function getAuthHeaders(extra = {}) {
   return token ? { ...extra, Authorization: `Token ${token}` } : extra;
 }
 
+function getApiUrl(path) {
+  const configuredBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  if (configuredBase) return `${configuredBase}${path}`;
+
+  // Production fallback avoids the SPA returning index.html when a Vercel
+  // rewrite has not yet propagated. Local development continues using Vite's
+  // proxy because localhost does not match this condition.
+  if (typeof window !== "undefined" && window.location.hostname.endsWith("vercel.app")) {
+    return `https://mir.onesmarter.com${path}`;
+  }
+  return path;
+}
+
 async function readJsonResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
@@ -303,7 +316,7 @@ export default function ConversionsView({
     setStartingBatch(true);
     setBatchAlert(null);
     try {
-      const res = await fetch("/edi835/api/start-batch-conversion/", {
+      const res = await fetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
         method: "POST",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
