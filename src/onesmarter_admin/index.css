@@ -165,7 +165,11 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border
 .navitem:hover{background:#243244;color:#fff}
 .navitem.on{border-left-color:var(--ochre);background:#243244;color:#fff;font-weight:600}
 .navitem .count{font-family:var(--display);font-size:10px;background:var(--ochre);color:#fff;border-radius:9px;padding:1px 6px}
-.main{flex:1;padding:26px 30px 60px;max-width:100%}
+.main{flex:1;padding:26px 30px 60px;max-width:100%;min-width:0;width:auto;overflow-x:hidden}
+.main .start-conversion-card{max-width:100%;box-sizing:border-box}
+.main .conversion-boxes{min-width:0}
+.main .conversion-boxes>*{min-width:0}
+.main .c-actions{flex-wrap:wrap;justify-content:flex-end}
 .view{display:none}
 .view.on{display:block}
 .hdr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:4px}
