@@ -54,6 +54,7 @@ function formatToMMDDYYYY(val) {
 }
 
 export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
+  const displayStepNumber = step.displayNumber ?? step.id;
   const [feedback, setFeedback] = useState({ isOpen: false, kind: 'ok', title: '', content: '', checks: [] });
   const [viewerFile, setViewerFile] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -217,7 +218,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: 'Evidence Validated & Stored',
-        content: `Uploaded ${file.name} for Step ${step.id}.`,
+        content: `Uploaded ${file.name} for Step ${displayStepNumber}.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -254,7 +255,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Structural Validation Passed',
-        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
+        content: `Step ${displayStepNumber} Complete: Deep X12 835 structural and balance checks passed.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -280,7 +281,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         isOpen: true,
         kind: 'ok',
         title: '835 Structural Validation Passed',
-        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
+        content: `Step ${displayStepNumber} Complete: Deep X12 835 structural and balance checks passed.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -490,7 +491,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const stateClass = step.done ? 'done' : (step.inProgress ? 'now' : 'locked');
-  const markContent = step.done ? '✓' : (step.inProgress ? step.id : '🔒');
+  const markContent = step.done ? '✓' : (step.inProgress ? displayStepNumber : '🔒');
   const statusTag = step.done ? (
     <span className="tag ok">Complete</span>
   ) : step.inProgress ? (
@@ -504,7 +505,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       <div className="mark">{markContent}</div>
 
       <div className="txt">
-        <h3>Step {step.id}: {step.title}</h3>
+        <h3>Step {displayStepNumber}: {step.title}</h3>
         <div className="meta">{step.desc}</div>
 
         {latestUp && (
@@ -926,7 +927,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     placeholder="MIROUT_YYYY_MMDD_.MIR"
                   />
                   <button className="btn tiny primary" onClick={handleStep9NamingSave}>
-                    ✓ Save Naming Format &amp; Complete Step 10
+                    ✓ Save Naming Format &amp; Complete Step {displayStepNumber}
                   </button>
                 </div>
 
@@ -1021,7 +1022,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         onClick={handleStep9CreateUser}
                         style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
                       >
-                        ✓ Create User &amp; Complete Step 10
+                        ✓ Create User &amp; Complete Step {displayStepNumber}
                       </button>
                     </div>
                   </div>
@@ -1496,7 +1497,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} placeholder={step.actionType === 'text_submission_final' ? 'First production file delivered and monitored without error.' : 'All cutover checks and security safeguards passed.'} value={stText} onChange={(e) => setStText(e.target.value)} />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
                   <button className="btn tiny primary" onClick={handleTextSubmission}>
-                    {step.actionType === 'text_submission_final' ? 'Conclude Onboarding' : `Submit & Complete Step ${step.id}`}
+                    {step.actionType === 'text_submission_final' ? 'Conclude Onboarding' : `Submit & Complete Step ${displayStepNumber}`}
                   </button>
                 </div>
               </div>
@@ -1576,9 +1577,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
             <button
               type="button"
               className="btn icon-btn redo-btn"
-              onClick={() => onOpenRedo(step.key, step.id)}
-              title={`Redo Step ${step.id}`}
-              aria-label={`Redo Step ${step.id}`}
+              onClick={() => onOpenRedo(step.key, displayStepNumber)}
+              title={`Redo Step ${displayStepNumber}`}
+              aria-label={`Redo Step ${displayStepNumber}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -1594,7 +1595,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         onClose={() => setIsViewerOpen(false)}
         fileData={viewerFile}
         stepTitle={step.title}
-        stepNum={step.id}
+        stepNum={displayStepNumber}
       />
 
       <FeedbackModal
