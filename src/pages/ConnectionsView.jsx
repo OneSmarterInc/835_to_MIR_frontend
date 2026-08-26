@@ -511,7 +511,7 @@ export default function ConnectionsView({
                       type={showUniPass ? "text" : "password"}
                       value={uniPass}
                       onChange={(e) => setUniPass(e.target.value)}
-                      placeholder="Password"
+                      placeholder={activeConfig?.has_password ? "Saved — enter a new password to change" : "Password"}
                       autoComplete="new-password"
                       style={{
                         width: "100%",
@@ -981,7 +981,7 @@ export default function ConnectionsView({
                       type={showInPass ? "text" : "password"}
                       value={inPass}
                       onChange={(e) => setInPass(e.target.value)}
-                      placeholder="Enter SFTP password"
+                      placeholder={activeConfig?.has_password ? "Saved — enter a new password to change" : "Enter SFTP password"}
                       style={{
                         width: "100%",
                         padding: "7px 9px",
@@ -1291,7 +1291,7 @@ export default function ConnectionsView({
                       type={showOutPass ? "text" : "password"}
                       value={outPass}
                       onChange={(e) => setOutPass(e.target.value)}
-                      placeholder="Enter SFTP password"
+                      placeholder={activeConfig?.has_outbound_password ? "Saved — enter a new password to change" : "Enter SFTP password"}
                       style={{
                         width: "100%",
                         padding: "7px 9px",
