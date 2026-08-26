@@ -361,6 +361,9 @@ export default function ConversionsView({
     } else if (sortKey === "status") {
       valA = (a.status || "").toLowerCase();
       valB = (b.status || "").toLowerCase();
+    } else if (sortKey === "sftp") {
+      valA = a.present_in_sftp ? 1 : 0;
+      valB = b.present_in_sftp ? 1 : 0;
     } else {
       valA = 0;
       valB = 0;
@@ -706,6 +709,16 @@ export default function ConversionsView({
                 </th>
                 <th>MIR OUT</th>
                 <th
+                  className={`sortable ${sortKey === "sftp" ? sortOrder : ""}`}
+                  onClick={() => handleSortHeader("sftp")}
+                >
+                  IMPORT MODE{" "}
+                  <span className="sort-arrow">
+                    {sortKey === "sftp" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
+                  </span>
+                </th>
+                <th>SFTP PUSH</th>
+                <th
                   className={`sortable ${sortKey === "status" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("status")}
                 >
@@ -721,7 +734,7 @@ export default function ConversionsView({
               {pageItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="9"
+                    colSpan="11"
                     style={{ padding: "26px", textAlign: "center", color: "var(--ink-3)" }}
                   >
                     No conversion runs match search query.
@@ -735,6 +748,42 @@ export default function ConversionsView({
                   const mirName = f.output_path
                     ? f.output_path.split("/").pop()
                     : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
+
+                  const isSftpSuccess = Boolean(f.present_in_sftp);
+                  const sftpStatusText = isSftpSuccess
+                    ? "Success"
+                    : f.status === "ERROR"
+                    ? "Failed"
+                    : "Pending";
+                  const sftpTagClass = isSftpSuccess
+                    ? "ok"
+                    : f.status === "ERROR"
+                    ? "bad"
+                    : "work";
+
+                  const isSftpSource =
+                    f.ingestion_source === "SFTP" ||
+                    (f.original_filename && f.original_filename.includes(",")) ||
+                    (f.input_path && f.input_path.toLowerCase().includes("sftp"));
+
+                  const sourceLabel = isSftpSource ? "SFTP" : "MANUAL";
+                  const sourceTagClass = isSftpSource ? "ok" : "work";
+                  const sourceTitle = isSftpSource
+                    ? "Ingested automatically from SFTP inbound folder"
+                    : "Uploaded manually via conversion form";
+
+                  let displayStatus = "";
+                  if (f.status === "ARCHIVED") {
+                    displayStatus = isSftpSuccess
+                      ? "Validated & SFTP Success"
+                      : "Validated & SFTP Pending";
+                  } else if (f.status === "PROCESSING") {
+                    displayStatus = "Validated & SFTP Pending";
+                  } else if (f.status === "ERROR") {
+                    displayStatus = "Validation Failed";
+                  } else {
+                    displayStatus = `${f.status} & SFTP ${sftpStatusText}`;
+                  }
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
@@ -770,6 +819,25 @@ export default function ConversionsView({
                       </td>
                       <td>
                         <span
+                          className={`tag ${sourceTagClass}`}
+                          style={{ fontSize: "10.5px" }}
+                          title={sourceTitle}
+                        >
+                          {sourceLabel}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`tag ${sftpTagClass}`}
+                          style={{ fontSize: "10.5px" }}
+                        >
+                          {sftpStatusText}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
                           className={`tag ${
                             f.status === "ARCHIVED"
                               ? "ok"
@@ -787,7 +855,7 @@ export default function ConversionsView({
                             }
                           }}
                         >
-                          {convertingId === f.id ? "CONVERTING..." : f.status}
+                          {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
                       <td
