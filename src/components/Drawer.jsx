@@ -11,19 +11,7 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
       ></div>
 
       {/* Left-to-Right Drawer Navigation Panel */}
-      <nav className={`client-drawer ${isOpen ? "open" : ""}`} id="navDrawer">
-        <div className="drawer-header">
-          <h3>NAVIGATION</h3>
-          <button
-            type="button"
-            className="drawer-close-btn"
-            id="drawerCloseBtn"
-            title="Close Menu"
-            onClick={onClose}
-          >
-            &times;
-          </button>
-        </div>
+      <nav className={`client-drawer ${isOpen ? "open" : ""}`} id="navDrawer" aria-label="Client navigation">
         <div className="grp eyebrow">Operations</div>
         <button
           className={`navitem ${activeTab === "flow" ? "on" : ""}`}
