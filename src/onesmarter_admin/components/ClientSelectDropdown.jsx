@@ -1,8 +1,11 @@
 import React from 'react';
 import Select from 'react-select';
 
-export default function ClientSelectDropdown({ clients, value, onChange, id }) {
-  const options = clients.map(c => ({ value: c.id, label: c.name }));
+export default function ClientSelectDropdown({ clients, value, onChange, id, includeGlobal = false }) {
+  const options = [
+    ...(includeGlobal ? [{ value: '', label: '-- None (Global System Default) --' }] : []),
+    ...clients.map(c => ({ value: c.id, label: c.name }))
+  ];
   const selectedOption = options.find(o => o.value === value) || null;
 
   const customStyles = {
