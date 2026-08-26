@@ -45,7 +45,7 @@ export default function DefaultConfigsView() {
         if (data && data.success && data.configs) {
           const cfg = data.configs.find(c => !c.client_id && !c.client);
           if (cfg) {
-            setSftpConfigId(cfg.id || null);
+            setSftpConfigId(cfg.id ?? cfg.config_id ?? null);
             setSftpHost(cfg.host || '');
             setSftpPort(String(cfg.port || '22'));
             setSftpUser(cfg.username || '');
@@ -165,7 +165,19 @@ export default function DefaultConfigsView() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSftpConnected(true);
-        if (data.config_id) setSftpConfigId(data.config_id);
+        const savedConfigId =
+        data.config_id ??
+        data.id ??
+        data.config?.id ??
+        data.config?.config_id;
+
+        if (!savedConfigId) {
+          throw new Error(
+            "SFTP was saved, but the server did not return its configuration ID."
+          );
+        }
+
+      setSftpConfigId(savedConfigId);
         setSftpHasPassword(Boolean(data.has_password || sftpHasPassword || sftpPass.trim()));
         setSftpPass('');
         setShowSftpPass(false);
