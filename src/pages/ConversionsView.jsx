@@ -1,5 +1,18 @@
 import React, { useState } from "react";
 
+function getAuthHeaders(extra = {}) {
+  const token = localStorage.getItem("onesmarter_admin_token");
+  return token ? { ...extra, Authorization: `Token ${token}` } : extra;
+}
+
+async function readJsonResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(`Server returned a non-JSON response (${response.status}).`);
+  }
+  return response.json();
+}
+
 export default function ConversionsView({
   trackedFiles,
   onRefreshData,
@@ -290,12 +303,15 @@ export default function ConversionsView({
     setStartingBatch(true);
     setBatchAlert(null);
     try {
-      const res = await fetch("/api/start-batch-conversion/", {
+      const res = await fetch("/edi835/api/start-batch-conversion/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          client_id: isAdmin ? selectedClientId || undefined : undefined,
+        }),
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await readJsonResponse(res);
+      if (res.ok && data.success) {
         setBatchAlert({
           type: "success",
           message: data.message || `✓ Batch processing completed! Processed ${data.processed_count} files.`,
@@ -304,7 +320,7 @@ export default function ConversionsView({
       } else {
         setBatchAlert({
           type: "error",
-          message: data.error || "Batch conversion failed.",
+          message: data.error || data.message || "Batch conversion failed.",
         });
       }
     } catch (err) {
