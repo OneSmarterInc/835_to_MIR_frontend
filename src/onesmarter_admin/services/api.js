@@ -699,3 +699,85 @@ export const redoOffboardingStep = async (clientId, stepNum) => {
   if (!data.success) throw new Error(data.error || 'Failed to redo offboarding step');
   return data.state;
 };
+export async function viewEdiFile(clientId, fileId, fileType = 'input') {
+  const res = await fetch(
+    `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  if (!res.ok) {
+    let message = 'Failed to load file';
+
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch (_) {}
+
+    throw new Error(message);
+  }
+
+  const filename =
+    res.headers.get('X-OneSmarter-Filename') || 'file';
+
+  const contentType =
+    res.headers.get('Content-Type') || 'text/plain';
+
+  const blob = await res.blob();
+
+  const fileUrl = URL.createObjectURL(
+    new Blob([blob], { type: contentType })
+  );
+
+  return {
+    fileUrl,
+    filename,
+    contentType,
+    blob
+  };
+}
+
+export async function downloadEdiFile(
+  clientId,
+  fileId,
+  fileType = 'mir'
+) {
+  const res = await fetch(
+    `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/?download=1`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  if (!res.ok) {
+    let message = 'Failed to download file';
+
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch (_) {}
+
+    throw new Error(message);
+  }
+
+  const filename =
+    res.headers.get('X-OneSmarter-Filename') ||
+    (fileType === 'mir' ? 'output.mir' : 'input.x12');
+
+  const blob = await res.blob();
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 1500);
+}
