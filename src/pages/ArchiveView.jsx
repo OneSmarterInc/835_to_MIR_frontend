@@ -492,7 +492,7 @@ export default function ArchiveView({
                   const isSftpSuccess = Boolean(f.present_in_sftp);
                   const canPushToSftp = isProcessed && !isSftpSuccess;
                   const sftpStatusText = isSftpSuccess
-                    ? "Success"
+                    ? "Pushed"
                     : f.status === "ERROR"
                     ? "Failed"
                     : "Push to SFTP";
