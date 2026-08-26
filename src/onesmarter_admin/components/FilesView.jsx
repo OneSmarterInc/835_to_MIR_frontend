@@ -3,7 +3,8 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import {
   fetchClientEdiFiles,
   viewEdiFile,
-  downloadEdiFile
+  downloadEdiFile,
+  pushEdiFileToSftp
 } from '../services/api';
 
 export default function FilesView({ clients = [], activeClientId, onSelectClient }) {
@@ -11,6 +12,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [ediFiles, setEdiFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pushingId, setPushingId] = useState(null);
 
   const [searchText, setSearchText] = useState('');
   const [pageSize, setPageSize] = useState(20);
@@ -171,6 +173,19 @@ const handleDownloadMir = async (file) => {
   } catch (err) {
     console.error('Download MIR error:', err);
     alert(`Unable to download MIR: ${err.message}`);
+  }
+};
+
+const handlePushMir = async (file) => {
+  setPushingId(file.id);
+  try {
+    const result = await pushEdiFileToSftp(file.id);
+    alert(`✓ ${result.message}`);
+    await loadEdiFiles(selectedClientId);
+  } catch (err) {
+    alert(`Unable to push MIR to SFTP: ${err.message}`);
+  } finally {
+    setPushingId(null);
   }
 };
 
@@ -442,26 +457,39 @@ const handleDownloadMir = async (file) => {
                           </td>
                           <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button
-  type="button"
-  className="btn-eye"
-  title="View 835 File"
-  onClick={() => handleViewFile(f)}
->
+                              type="button"
+                              className="btn-eye"
+                              title="View File"
+                              onClick={() => handleViewFile(f)}
+                            >
                               <svg viewBox="0 0 24 24">
                                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                               </svg>
                             </button>
                             {isProcessed ? (
-                              <button
-                                type="button"
-                                className="btn-download"
-                                title="Download .mir File"
-                                onClick={() => handleDownloadMir(f)}
-                              >
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                                </svg>
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn-download"
+                                  title="Download .mir File"
+                                  onClick={() => handleDownloadMir(f)}
+                                >
+                                  <svg viewBox="0 0 24 24">
+                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                  </svg>
+                                </button>
+                                {!isSftpSuccess && (
+                                  <button
+                                    type="button"
+                                    className="btn tiny primary"
+                                    title="Push generated MIR to SFTP"
+                                    onClick={() => handlePushMir(f)}
+                                    disabled={pushingId === f.id}
+                                  >
+                                    {pushingId === f.id ? 'Pushing…' : 'Push MIR'}
+                                  </button>
+                                )}
+                              </>
                             ) : '—'}
                           </td>
                         </tr>
