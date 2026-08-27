@@ -49,3 +49,4 @@ jobs:
           git rm .github/workflows/fix-archive-mir-name.yml
           git commit -m "Fix archive MIR output and download filename"
           git push origin HEAD:master
+
