@@ -63,7 +63,7 @@ function renderAuditDetails(details) {
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     return user || { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
@@ -426,11 +426,26 @@ export default function App({ user, onLogout }) {
         onSignOut={handleSignOut}
         currentUser={currentUser}
         onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        isSidebarOpen={isSidebarOpen}
       />
 
       <div className="shell">
+        {isSidebarOpen && (
+          <button
+            type="button"
+            className="admin-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
         {/* Left Navigation Sidebar matching POC exactly */}
-        <nav className="rail" style={{ display: isSidebarOpen ? 'block' : 'none' }}>
+        <nav
+          className="rail"
+          aria-hidden={!isSidebarOpen}
+          onClick={(event) => {
+            if (event.target.closest('.navitem')) setIsSidebarOpen(false);
+          }}
+        >
           <div className="grp eyebrow">Clients</div>
           <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
             <span>All Clients</span>
