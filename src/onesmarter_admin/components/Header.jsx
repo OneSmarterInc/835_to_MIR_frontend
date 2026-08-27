@@ -1,11 +1,6 @@
 import React, { useEffect } from 'react';
 
-export default function Header({
-  onSignOut,
-  currentUser,
-  onToggleSidebar,
-  isSidebarOpen = false,
-}) {
+export default function Header({ onSignOut, currentUser, onToggleSidebar, isSidebarOpen = false }) {
   const displayName = currentUser?.name || currentUser?.email || 'Sahil Asarkar';
   const initials = displayName.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'SA';
   const role = currentUser?.role || 'CLIENT USER';
@@ -16,10 +11,9 @@ export default function Header({
   useEffect(() => {
     const rail = document.querySelector('.shell > .rail');
     if (!rail) return;
-
-    rail.style.setProperty('display', isSidebarOpen ? 'block' : 'none', 'important');
-    rail.style.setProperty('transform', 'none', 'important');
-    rail.style.setProperty('opacity', '1', 'important');
+    rail.style.setProperty('display', 'block', 'important');
+    rail.style.setProperty('transform', isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)', 'important');
+    rail.style.setProperty('opacity', isSidebarOpen ? '1' : '0', 'important');
     rail.style.setProperty('pointer-events', isSidebarOpen ? 'auto' : 'none', 'important');
   }, [isSidebarOpen]);
 
@@ -40,60 +34,22 @@ export default function Header({
           border-right: none !important;
           padding: 18px 0 !important;
           box-shadow: 4px 0 20px rgba(0, 0, 0, 0.24) !important;
-          transform: none !important;
-          opacity: 1 !important;
-          pointer-events: auto !important;
-          transition: none !important;
-          animation: none !important;
-          will-change: auto !important;
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
+          will-change: transform, opacity;
           font-family: var(--body) !important;
           color: #B9C6D4 !important;
         }
-        .shell > .rail .grp {
-          padding-left: 16px !important;
-          padding-right: 16px !important;
-          color: #6C7F94 !important;
-        }
+        .shell > .rail .grp { padding-left: 16px !important; padding-right: 16px !important; color: #6C7F94 !important; }
         .shell > .rail .navitem {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: space-between !important;
-          gap: 8px !important;
-          width: 100% !important;
-          text-align: left !important;
-          padding: 9px 16px !important;
-          border-left: 2px solid transparent !important;
-          color: #B9C6D4 !important;
-          background: transparent !important;
-          transition: none !important;
-          animation: none !important;
+          display: flex !important; align-items: center !important; justify-content: space-between !important;
+          gap: 8px !important; width: 100% !important; text-align: left !important; padding: 9px 16px !important;
+          border-left: 2px solid transparent !important; color: #B9C6D4 !important; background: transparent !important;
         }
-        .shell > .rail .navitem:hover {
-          background: #243244 !important;
-          color: #ffffff !important;
-        }
-        .shell > .rail .navitem.on {
-          border-left-color: var(--ochre) !important;
-          background: #243244 !important;
-          color: #ffffff !important;
-          font-weight: 600 !important;
-        }
-        .shell > .rail .navitem .count {
-          font-family: var(--display) !important;
-          font-size: 10px !important;
-          background: var(--ochre) !important;
-          color: #fff !important;
-          border-radius: 9999px !important;
-          padding: 1px 6px !important;
-        }
-        .shell > .main {
-          width: 100% !important;
-          min-width: 0 !important;
-          max-width: 100% !important;
-          flex: 1 1 100% !important;
-        }
+        .shell > .rail .navitem:hover { background: #243244 !important; color: #ffffff !important; }
+        .shell > .rail .navitem.on { border-left-color: var(--ochre) !important; background: #243244 !important; color: #ffffff !important; font-weight: 600 !important; }
+        .shell > .rail .navitem .count { font-family: var(--display) !important; font-size: 10px !important; background: var(--ochre) !important; color: #fff !important; border-radius: 9999px !important; padding: 1px 6px !important; }
+        .shell > .main { width: 100% !important; min-width: 0 !important; max-width: 100% !important; flex: 1 1 100% !important; }
       `}</style>
-
       <div className="topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <button type="button" className="admin-hamburger-btn" onClick={onToggleSidebar} title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" style={{ background: 'none', border: 'none', color: '#B9C6D4', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
