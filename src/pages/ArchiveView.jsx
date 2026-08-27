@@ -140,7 +140,6 @@ export default function ArchiveView({
     }
   };
 
-
   const handleSortHeader = (key) => {
     if (sortKey === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -264,7 +263,7 @@ export default function ArchiveView({
                 minWidth: "210px",
                 overflow: "hidden",
               }}
-             >
+            >
               <button
                 type="button"
                 style={{
@@ -608,39 +607,40 @@ export default function ArchiveView({
                           {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
-                      <td
-                        className="num"
-                        style={{
-                          fontSize: "11px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="btn-eye"
-                          title="View / Edit Code"
-                          onClick={() => onOpenFileModal(f.id)}
+                      <td className="num" style={{ fontSize: "11px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            minHeight: "28px",
+                          }}
                         >
-                          <svg viewBox="0 0 24 24">
-                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                          </svg>
-                        </button>
-                        {isProcessed ? (
                           <button
                             type="button"
-                            className="btn-download"
-                            title="Download .mir File"
-                            onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
+                            className="btn-eye"
+                            title="View / Edit Code"
+                            onClick={() => onOpenFileModal(f.id)}
                           >
                             <svg viewBox="0 0 24 24">
-                              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                             </svg>
                           </button>
-                        ) : (
-                          "—"
-                        )}
+                          {isProcessed ? (
+                            <button
+                              type="button"
+                              className="btn-download"
+                              title="Download .mir File"
+                              onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
+                            >
+                              <svg viewBox="0 0 24 24">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                              </svg>
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
