@@ -132,54 +132,76 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
 
   return (
     <section className="view on result-view">
-      <div className="hdr-row result-header">
-        <div>
-          <div className="eyebrow">RECON Processing</div>
-          <h1>Result</h1>
-          <p className="sub">Upload, process, and review client RECON files and their structured claim records.</p>
-        </div>
-        <button className="btn" onClick={loadFiles} disabled={busy}>Refresh</button>
-      </div>
+      <div className="eyebrow">Operations Studio</div>
+      <h1>Result</h1>
+      <p className="sub">Upload and process RECON files, then review structured claim results.</p>
 
-      <div className="result-process-card">
-        <div className="result-steps" aria-label="RECON processing steps">
-          <span className="done">1 Upload</span><span>2 Validate</span><span>3 Process</span><span>4 Store</span>
+      <div className="start-conversion-card result-process-card">
+        {isAdmin && (
+          <div className="result-client-bar">
+            <label>Associate with Client:</label>
+            <select value={clientId} onChange={(event) => setClientId(event.target.value)}>
+              <option value="">-- Select Client --</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>{client.name} ({client.client_code || client.code || "—"})</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="start-conversion-header">
+          <h2>Process a RECON file</h2>
+          <div className="step-pills" aria-label="RECON processing steps">
+            <span className={`step-pill ${selectedFile ? "done" : "active"}`}>1 &bull; UPLOAD RECON</span>
+            <span className="step-arrow">&rarr;</span>
+            <span className={`step-pill ${busy ? "active" : ""}`}>2 &bull; PROCESS</span>
+            <span className="step-arrow">&rarr;</span>
+            <span className="step-pill">3 &bull; STORE RESULT</span>
+          </div>
         </div>
-        <div className="result-form-grid">
-          {isAdmin && (
-            <label>
-              <span>Client</span>
-              <select value={clientId} onChange={(event) => setClientId(event.target.value)}>
-                <option value="">All Clients / Select for upload</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>{client.name} ({client.client_code || client.code || "—"})</option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="result-file-picker">
-            <span>RECON file</span>
+
+        <div className="conversion-boxes result-conversion-boxes">
+          <div className="c-box">
+            <div className="c-box-label">REQUIRED &bull; RECON INPUT</div>
             <input
               id="recon-file-input"
               type="file"
               accept=".recon,.txt,.dat,.csv,.tsv"
               onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
             />
-            <small>{selectedFile ? `${selectedFile.name} · ${(selectedFile.size / 1024).toFixed(1)} KB` : "CSV, TSV, pipe-delimited, or fixed-width · maximum 50 MB"}</small>
-          </label>
-          <button className="btn primary result-process-button" onClick={uploadAndProcess} disabled={busy || processingId !== ""}>
-            {busy ? "Processing…" : "Process RECON"}
-          </button>
+            <div className="subtext">
+              {selectedFile
+                ? `${selectedFile.name} · ${(selectedFile.size / 1024).toFixed(1)} KB`
+                : "CSV, TSV, pipe-delimited, or fixed-width · maximum 50 MB"}
+            </div>
+          </div>
+
+          <div className="c-actions result-c-actions">
+            <button type="button" className="btn-gray" onClick={uploadAndProcess} disabled={busy || processingId !== ""}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              <span>{busy ? "Processing RECON..." : "Process RECON"}</span>
+            </button>
+            <button type="button" className="btn-gray" onClick={loadFiles} disabled={busy}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
         {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
       </div>
 
-      <div className="filters result-filters">
+      <div className="filters-bar result-filters">
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search filename, ID, client, or status" />
-        <span className="n">{filteredFiles.length} RECON files</span>
+        <span className="runs-counter">{filteredFiles.length} results</span>
       </div>
 
-      <div className="result-table-wrap">
+      <div className="card result-table-card"><div className="result-table-wrap">
         <table>
           <thead><tr>
             <th>Result ID</th>{isAdmin && <th>Client</th>}<th>RECON File</th><th>Uploaded</th>
@@ -205,7 +227,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
             ))}
           </tbody>
         </table>
-      </div>
+      </div></div>
 
       {detail && (
         <div className="result-detail-backdrop" onClick={() => setDetail(null)}>
