@@ -14,6 +14,7 @@
 .result-filters select { min-width: 340px; max-width: 60vw; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
 .result-filters .runs-counter { color: var(--ink-3); font-size: 12px; font-weight: 600; }
 .result-table-card { padding: 0 !important; overflow: hidden; margin-bottom: 16px; }
+.result-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line, #e2e8f0); color: var(--ink-2); font-size: 12px; }
 .result-table-wrap { width: 100%; overflow: auto; background: #fff; }
 .result-table-wrap table { min-width: 980px; margin: 0; }
 .result-empty { padding: 32px !important; text-align: center; color: var(--ink-3); }
