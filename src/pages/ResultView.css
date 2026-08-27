@@ -13,7 +13,7 @@
 .result-filters label { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 12px; font-weight: 700; }
 .result-filters select { min-width: 340px; max-width: 60vw; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
 .result-filters .runs-counter { color: var(--ink-3); font-size: 12px; font-weight: 600; }
-.result-global-search { display: flex; align-items: center; gap: 8px; flex: 1; }
+.result-global-search { display: flex; align-items: center; flex: 1; }
 .result-global-search input { width: min(560px, 100%); padding: 9px 11px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; }
 .result-table-card { padding: 0 !important; overflow: hidden; margin-bottom: 16px; }
 .result-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line, #e2e8f0); color: var(--ink-2); font-size: 12px; }
@@ -28,7 +28,15 @@
 .result-detail { width: min(1100px, 96vw); max-height: 88vh; overflow: auto; border-radius: 14px; padding: 20px; background: var(--paper, #fff); box-shadow: 0 24px 70px rgba(0,0,0,.24); }
 .result-detail-title { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .result-detail-title h2 { margin: 3px 0 0; }
-.reconciliation-table { min-width: 1500px !important; }
+.reconciliation-table { width: 100%; min-width: 1180px !important; table-layout: fixed; }
+.reconciliation-table .result-col-claim { width: 18%; }
+.reconciliation-table .result-col-patient { width: 20%; }
+.reconciliation-table .result-col-file { width: 15%; }
+.reconciliation-table .result-col-money { width: 9%; }
+.reconciliation-table .result-col-difference { width: 8%; }
+.reconciliation-table .result-col-status { width: 6%; }
+.reconciliation-table th, .reconciliation-table td { overflow-wrap: anywhere; }
+.reconciliation-table .tag { display: inline-block; max-width: 100%; white-space: normal; }
 .reconciliation-table th input, .reconciliation-table th select { display: block; width: 100%; min-width: 95px; box-sizing: border-box; margin-top: 6px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 3px; background: #fff; font-size: 11px; font-weight: 400; }
 .reconciliation-table td small { display: block; margin-top: 3px; color: var(--ink-3); white-space: nowrap; }
 .result-name-link { border: 0; padding: 0; background: transparent; color: var(--teal, #087f8c); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
