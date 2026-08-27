@@ -1,0 +1,50 @@
+name: Standardize MIR filenames across admin and client
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-mir-names:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update MIR filename handling
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [Path('src/pages/ArchiveView.jsx'), Path('src/pages/ConversionsView.jsx')]
+          old_variants = [
+              '''const mirName = f.output_path\n                    ? f.output_path.split("/").pop()\n                    : "MIR_" +\n                      (f.original_filename || "").split(",")[0].trim().replace(/\\.[^/.]+$/, "") + ".mir";''',
+              '''const mirName = f.output_path\n                    ? f.output_path.split("/").pop()\n                    : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\\.[^/.]+$/, "") + ".mir";''',
+          ]
+          new = '''const mirName =\n                    f.output_filename ||\n                    f.mir_filename ||\n                    f.combined_filename ||\n                    (f.output_path ? f.output_path.split("/").pop() : "") ||\n                    "MIR_" +\n                      (f.original_filename || "").split(",")[0].trim().replace(/\\.[^/.]+$/, "") +\n                      ".mir";'''
+
+          for path in paths:
+              if not path.exists():
+                  raise SystemExit(f'Missing expected file: {path}')
+              text = path.read_text(encoding='utf-8')
+              matches = sum(text.count(old) for old in old_variants)
+              if matches != 1:
+                  raise SystemExit(f'Expected exactly one MIR filename block in {path}, found {matches}')
+              for old in old_variants:
+                  text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/ArchiveView.jsx src/pages/ConversionsView.jsx
+          git rm .github/workflows/fix-mir-names-both.yml
+          git commit -m "Standardize MIR filenames across admin and client"
+          git push origin HEAD:master
