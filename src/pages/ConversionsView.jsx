@@ -39,7 +39,6 @@ export default function ConversionsView({
   const [processing, setProcessing] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
   const [startingBatch, setStartingBatch] = useState(false);
-  const [batchAlert, setBatchAlert] = useState(null);
 
   const [validationReport, setValidationReport] = useState(null);
   const [validationError, setValidationError] = useState(null);
@@ -307,7 +306,6 @@ export default function ConversionsView({
   // Start Automated SFTP Inbound Batch Pipeline
   const handleStartBatchConversion = async () => {
     setStartingBatch(true);
-    setBatchAlert(null);
     try {
       const res = await fetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
         method: "POST",
@@ -321,11 +319,6 @@ export default function ConversionsView({
       if (!res.ok || !data.success || !data.job_id) {
         throw new Error(data.error || data.message || "Batch conversion could not be started.");
       }
-
-      setBatchAlert({
-        type: "success",
-        message: "Batch started. Reading inbound 835 files and creating one combined MIR...",
-      });
 
       let completedData = null;
       for (let attempt = 0; attempt < 240; attempt += 1) {
@@ -353,22 +346,12 @@ export default function ConversionsView({
       }
 
       if (completedData.success) {
-        setBatchAlert({
-          type: "success",
-          message: completedData.message || `✓ Batch processing completed! Processed ${completedData.processed_count} files.`,
-        });
         if (onRefreshData) onRefreshData();
       } else {
-        setBatchAlert({
-          type: "error",
-          message: completedData.error || completedData.message || "Batch conversion failed.",
-        });
+        setValidationError(completedData.error || completedData.message || "Batch conversion failed.");
       }
     } catch (err) {
-      setBatchAlert({
-        type: "error",
-        message: err.message,
-      });
+      setValidationError(err.message);
     } finally {
       setStartingBatch(false);
     }
@@ -581,23 +564,6 @@ export default function ConversionsView({
             </button>
           </div>
         </div>
-
-        {/* BATCH CONVERSION ALERT BANNER */}
-        {batchAlert && (
-          <div
-            className={`status-banner ${batchAlert.type === "success" ? "valid" : "invalid"}`}
-            style={{ marginTop: "14px" }}
-          >
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "14px" }}>
-                {batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error"}
-              </div>
-              <div style={{ fontSize: "12px", marginTop: "2px" }}>
-                {batchAlert.message}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ERROR ALERT BOX */}
         {validationError && (
