@@ -41,15 +41,27 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   }, [clientId, isAdmin]);
   useEffect(() => { setSelectedReconId(""); loadResults(""); }, [loadResults]);
 
+  const waitForProcessing = async (fileId) => {
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      const result = await apiJson(`/edi835/api/recon/files/${fileId}/`);
+      if (result.file.status === "PROCESSED") return result.file;
+      if (result.file.status === "FAILED") throw new Error(result.file.processing_error || "RECON processing failed.");
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+    }
+    throw new Error("RECON processing is still running. Refresh Results in a few moments.");
+  };
+
   const uploadAndProcess = async () => {
     if (!selectedFile) return setMessage({ kind: "error", text: "Select a RECON file first." });
     setBusy(true); setMessage(null);
     try {
       const form = new FormData(); form.append("recon_file", selectedFile); if (isAdmin) form.append("client_id", clientId);
       const uploaded = await apiJson("/edi835/api/recon/upload/", { method: "POST", body: form });
-      const processed = await apiJson(`/edi835/api/recon/files/${uploaded.file.id}/process/`, { method: "POST" });
+      await apiJson(`/edi835/api/recon/files/${uploaded.file.id}/process/`, { method: "POST" });
+      setMessage({ kind: "success", text: "RECON uploaded. Processing safely in the background…" });
+      const processed = await waitForProcessing(uploaded.file.id);
       setSelectedFile(null); const input = document.getElementById("recon-file-input"); if (input) input.value = "";
-      setMessage({ kind: "success", text: `Processed ${processed.file.claim_count} claims and ${processed.file.service_count} services.` });
+      setMessage({ kind: "success", text: `Processed ${processed.claim_count} claims. MIR results have been updated.` });
       await loadResults(uploaded.file.id);
     } catch (error) { setMessage({ kind: "error", text: error.message }); } finally { setBusy(false); }
   };
@@ -78,7 +90,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
     <div className="filters-bar result-filters"><label>RECON file <select value={selectedReconId} onChange={(e) => { setSelectedReconId(e.target.value); loadResults(e.target.value); }}><option value="">{data.recon_files.length ? "Latest processed RECON" : "No RECON uploaded — MIR claims only"}</option>{data.recon_files.map((f) => <option key={f.id} value={f.id}>{f.original_filename} · {showDate(f.processed_at)}</option>)}</select></label><span className="runs-counter">{rows.length} MIR claims</span></div>
-    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><thead><tr><th>Claim ID<input value={filters.claim} onChange={(e) => setFilter("claim", e.target.value)} /></th><th>Patient name<input value={filters.name} onChange={(e) => setFilter("name", e.target.value)} /></th><th>MIR file / date<input value={filters.mir} onChange={(e) => setFilter("mir", e.target.value)} /></th><th>RECON file / date<input value={filters.recon} onChange={(e) => setFilter("recon", e.target.value)} /></th><th>Services</th><th>MIR charge</th><th>Amount to pay</th><th>RECON paid</th><th>Remaining</th><th>Status<select value={filters.status} onChange={(e) => setFilter("status", e.target.value)}><option value="">All</option>{["CLEAR","NOT_IN_RECON","SIGNATURE_MISMATCH","PARTIALLY_PAID","OVERPAID","UNPAID","AMOUNT_MISMATCH"].map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></th></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id}><td><b>{row.claim_id || "—"}</b></td><td><button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button><small>{row.member_id || "—"}</small></td><td>{row.mir_filename}<small>{showDate(row.mir_date)}</small></td><td>{row.recon_filename || "—"}<small>{showDate(row.recon_date)}</small></td><td className="num">{row.mir_service_count}</td><td className="num">{money(row.mir_charge_amount)}</td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.remaining_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="10" className="result-empty">No MIR claims are stored for the selected scope.</td></tr>}</tbody></table></div></div>
+    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><thead><tr><th>Claim ID<input value={filters.claim} onChange={(e) => setFilter("claim", e.target.value)} /></th><th>Patient name<input value={filters.name} onChange={(e) => setFilter("name", e.target.value)} /></th><th>MIR file / date<input value={filters.mir} onChange={(e) => setFilter("mir", e.target.value)} /></th><th>RECON file / date<input value={filters.recon} onChange={(e) => setFilter("recon", e.target.value)} /></th><th>Amount in MIR</th><th>Amount in RECON</th><th>Difference</th><th>Status<select value={filters.status} onChange={(e) => setFilter("status", e.target.value)}><option value="">All</option>{["CLEAR","NOT_IN_RECON","SIGNATURE_MISMATCH","PARTIALLY_PAID","OVERPAID","UNPAID","AMOUNT_MISMATCH"].map((s) => <option key={s} value={s}>{label(s)}</option>)}</select></th></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id}><td><b>{row.claim_id || "—"}</b></td><td><button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button><small>{row.member_id || "—"}</small></td><td>{row.mir_filename}<small>{showDate(row.mir_date)}</small></td><td>{row.recon_filename || "—"}<small>{showDate(row.recon_date)}</small></td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.difference_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR claims are stored for the selected scope.</td></tr>}</tbody></table></div></div>
     {detail && <div className="result-detail-backdrop" onClick={() => setDetail(null)}><div className="result-detail" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim reconciliation</div><h2>{detail.summary?.claim_id}</h2></div><button className="btn" onClick={() => setDetail(null)}>Close</button></div><div className="claim-summary-grid"><div><b>Patient</b><span>{detail.summary?.patient_name || "—"}</span></div><div><b>MIR / RECON services</b><span>{detail.summary?.mir_service_count} / {detail.summary?.recon_service_count}</span></div><div><b>Amount to pay</b><span>{money(detail.summary?.amount_to_pay)}</span></div><div><b>Paid / remaining</b><span>{money(detail.summary?.recon_paid_amount)} / {money(detail.summary?.remaining_amount)}</span></div></div><h3>MIR services · {detail.mir.file}</h3><ServiceTable services={detail.mir.services} /><h3>RECON services · {detail.recon.file || "Not in RECON"}</h3><ServiceTable services={detail.recon.services} /></div></div>}
   </section>;
 }
