@@ -765,9 +765,14 @@ export default function ConversionsView({
                   const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
                   const upTime = f.uploaded_at ? f.uploaded_at.substring(11, 19) : "—";
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
-                  const mirName = f.output_path
-                    ? f.output_path.split("/").pop()
-                    : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
+                  const mirName =
+                    f.output_filename ||
+                    f.mir_filename ||
+                    f.combined_filename ||
+                    (f.output_path ? f.output_path.split("/").pop() : "") ||
+                    "MIR_" +
+                      (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") +
+                      ".mir";
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
