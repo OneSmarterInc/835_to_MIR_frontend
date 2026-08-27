@@ -19,6 +19,7 @@ import ArchiveView from "./pages/ArchiveView";
 import ConnectionsView from "./pages/ConnectionsView";
 import ContactsView from "./pages/ContactsView";
 import AdminView from "./pages/AdminView";
+import ResultView from "./pages/ResultView";
 
 
 export default function App() {
@@ -745,6 +746,11 @@ export default function App() {
 
             />
 
+          }
+
+          {
+            activeTab==="result" &&
+            <ResultView />
           }
 
 

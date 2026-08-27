@@ -44,6 +44,13 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
         >
           Archive
         </button>
+        <button
+          className={`navitem ${activeTab === "result" ? "on" : ""}`}
+          data-v="result"
+          onClick={() => onSelectTab("result")}
+        >
+          Result
+        </button>
         <div className="grp eyebrow" style={{ paddingTop: "18px" }}>
           Setup
         </div>

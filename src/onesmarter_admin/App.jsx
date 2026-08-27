@@ -18,6 +18,7 @@ import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
+import ResultView from '../pages/ResultView';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -447,6 +448,9 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
           </button>
+          <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
+            <span>Result</span>
+          </button>
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>
           <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
@@ -526,6 +530,14 @@ export default function App({ user, onLogout }) {
               onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
               clients={clients}
               isAdmin={true}
+            />
+          )}
+
+          {activeNav === 'result' && (
+            <ResultView
+              clients={clients}
+              isAdmin={true}
+              initialClientId={activeClientId}
             />
           )}
 
