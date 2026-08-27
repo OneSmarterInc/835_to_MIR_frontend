@@ -1,3 +1,4 @@
+/* Keep Result visually aligned with the shared Conversions workspace. */
 .result-view { width: 100%; }
 .result-process-card { margin-top: 22px; }
 .result-client-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line, #e2e8f0); background: #f8fafc; box-sizing: border-box; width: 100%; }
