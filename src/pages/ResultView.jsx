@@ -32,6 +32,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     try {
       const params = new URLSearchParams();
       if (isAdmin && clientId) params.set("client_id", clientId);
+      if (isAdmin && !clientId) params.set("scope", "global");
       if (requestedReconId) params.set("recon_file_id", requestedReconId);
       const result = await apiJson(`/edi835/api/reconciliation/?${params}`);
       setData(result);
@@ -42,7 +43,6 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
 
   const uploadAndProcess = async () => {
     if (!selectedFile) return setMessage({ kind: "error", text: "Select a RECON file first." });
-    if (isAdmin && !clientId) return setMessage({ kind: "error", text: "Select a client first." });
     setBusy(true); setMessage(null);
     try {
       const form = new FormData(); form.append("recon_file", selectedFile); if (isAdmin) form.append("client_id", clientId);
@@ -72,7 +72,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     <div className="eyebrow">Operations Studio</div><h1>Result</h1>
     <p className="sub">Compare every MIR claim with the selected RECON payment file.</p>
     <div className="start-conversion-card result-process-card">
-      {isAdmin && <div className="result-client-bar"><label>Client</label><select value={clientId} onChange={(e) => setClientId(e.target.value)}><option value="">Select client</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.client_code || c.code || "—"})</option>)}</select></div>}
+      {isAdmin && <div className="result-client-bar"><label>Associate with Client:</label><select value={clientId} onChange={(e) => setClientId(e.target.value)}><option value="">-- None (Global System Default) --</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.client_code || c.code || "—"})</option>)}</select></div>}
       <div className="start-conversion-header"><h2>Upload RECON</h2><div className="step-pills"><span className="step-pill active">1 · UPLOAD</span><span className="step-arrow">→</span><span className="step-pill">2 · PROCESS</span><span className="step-arrow">→</span><span className="step-pill">3 · RECONCILE</span></div></div>
       <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" accept=".recon,.rcon,.txt,.dat,.csv,.tsv" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} /><div className="subtext">{selectedFile ? selectedFile.name : "CSV, TSV, pipe-delimited, or configured fixed-width file"}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(selectedReconId)} disabled={busy}>Refresh</button></div></div>
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
