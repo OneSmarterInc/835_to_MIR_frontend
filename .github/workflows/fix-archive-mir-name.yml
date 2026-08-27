@@ -19,26 +19,28 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path("src/pages/ArchiveView.jsx")
-          text = path.read_text(encoding="utf-8")
+          lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
 
-          pattern = r'(?m)^\s*const baseName = \(f\.original_filename \|\| ""\)\.replace\(/\\\\\.[^/\.]+\$/, ""\);\s*\n\s*const mirName = "MIR_" \+ baseName \+ "\\.mir";'
-          replacement = '''                  const mirName = f.output_path
-                    ? f.output_path.split("/").pop()
-                    : "MIR_" +
-                      (f.original_filename || "")
-                        .split(",")[0]
-                        .trim()
-                        .replace(/\\.[^/.]+$/, "") +
-                      ".mir";'''
+          for i, line in enumerate(lines):
+              if "const baseName = (f.original_filename || \"\")" in line:
+                  if i + 1 >= len(lines) or 'const mirName = "MIR_" + baseName + ".mir"' not in lines[i + 1]:
+                      raise SystemExit("Archive filename block changed unexpectedly; refusing to modify the file.")
 
-          updated, count = re.subn(pattern, replacement, text, count=1)
-          if count != 1:
-              raise SystemExit("Expected archive MIR filename block was not found; refusing to modify the file.")
+                  indent = line[:len(line) - len(line.lstrip())]
+                  replacement = [
+                      f'{indent}const mirName = f.output_path\n',
+                      f'{indent}  ? f.output_path.split("/").pop()\n',
+                      f'{indent}  : "MIR_" +\n',
+                      f'{indent}    (f.original_filename || "").split(",")[0].trim().replace(/\\.[^/.]+$/, "") + ".mir";\n',
+                  ]
+                  lines[i:i + 2] = replacement
+                  break
+          else:
+              raise SystemExit("Archive filename block was not found; refusing to modify the file.")
 
-          path.write_text(updated, encoding="utf-8")
+          path.write_text("".join(lines), encoding="utf-8")
           PY
 
       - name: Commit fix and remove temporary workflow
