@@ -5,6 +5,17 @@
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MIR835</title>
+    <style>
+      /* Admin conversion page: hide the validation success notice. */
+      .start-conversion-card .status-banner.valid {
+        display: none !important;
+      }
+
+      /* Admin conversion page: remove the Total Segments metric. */
+      .start-conversion-card .metrics .metric:first-child {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
