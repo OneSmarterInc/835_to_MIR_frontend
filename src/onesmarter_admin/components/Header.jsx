@@ -31,8 +31,7 @@ export default function Header({
 
   const displayTitle = isSystemAdmin ? displayName : clientName;
 
-  // Automatically open sidebar when cursor reaches
-  // the left edge of the screen.
+  // Keep the existing edge-open behavior, but do not change page layout.
   useEffect(() => {
     const handleMouseMove = (event) => {
       if (event.clientX <= 18 && !isSidebarOpen) {
@@ -49,14 +48,30 @@ export default function Header({
 
   return (
     <>
-      {/* Invisible left-edge trigger */}
-      <div
-        className="sidebar-edge-trigger"
-        aria-hidden="true"
-      />
+      {/* Admin drawer is fixed/overlayed so it never pushes .main sideways. */}
+      <style>{`
+        .shell > .rail {
+          position: fixed !important;
+          top: 56px !important;
+          left: 0 !important;
+          bottom: 0 !important;
+          width: 206px !important;
+          height: calc(100vh - 56px) !important;
+          z-index: 100 !important;
+          flex: none !important;
+          overflow-y: auto !important;
+          box-shadow: 4px 0 20px rgba(0, 0, 0, 0.24) !important;
+        }
+
+        .shell > .main {
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+          flex: 1 1 100% !important;
+        }
+      `}</style>
 
       <div className="topbar">
-
         {/* LEFT SIDE */}
         <div
           style={{
@@ -104,7 +119,6 @@ export default function Header({
           </div>
         </div>
 
-        {/* SPACER */}
         <div className="spacer" />
 
         {/* USER */}
@@ -141,7 +155,6 @@ export default function Header({
             <line x1="12" y1="2" x2="12" y2="12" />
           </svg>
         </button>
-
       </div>
     </>
   );
