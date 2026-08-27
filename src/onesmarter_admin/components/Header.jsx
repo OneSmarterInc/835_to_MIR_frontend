@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function Header({
   onSignOut,
@@ -13,49 +13,96 @@ export default function Header({
   const isSystemAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Super Admin' || currentUser?.is_staff || currentUser?.is_superuser;
   const displayTitle = isSystemAdmin ? displayName : clientName;
   const openRef = useRef(isSidebarOpen);
-  const [hoverDrawer, setHoverDrawer] = useState(false);
+  const initializedRef = useRef(false);
+  const manualRef = useRef(false);
+
+  const applyDrawer = (open) => {
+    const rail = document.querySelector('.shell > .rail');
+    if (rail) {
+      rail.style.setProperty('display', 'block', 'important');
+      rail.style.setProperty('transform', open ? 'translateX(0)' : 'translateX(-100%)', 'important');
+      rail.style.setProperty('opacity', open ? '1' : '0', 'important');
+      rail.style.setProperty('pointer-events', open ? 'auto' : 'none', 'important');
+    }
+  };
+
+  const setDrawer = (open, syncState = true) => {
+    if (openRef.current === open) {
+      applyDrawer(open);
+      return;
+    }
+    openRef.current = open;
+    applyDrawer(open);
+    if (syncState) onToggleSidebar?.();
+  };
 
   useEffect(() => {
     openRef.current = isSidebarOpen;
+    applyDrawer(isSidebarOpen);
   }, [isSidebarOpen]);
 
   useEffect(() => {
-    const handleMouseMove = (event) => {
-      const rail = document.querySelector('.shell > .rail');
-      const overRail = !!rail && rail.contains(event.target);
-      const overEdge = event.clientX <= 18;
-
-      if ((overEdge || overRail) && !openRef.current) {
-        openRef.current = true;
-        setHoverDrawer(true);
-        onToggleSidebar?.();
-      } else if (!overRail && !overEdge && openRef.current && hoverDrawer) {
+    const rail = document.querySelector('.shell > .rail');
+    if (rail && !initializedRef.current) {
+      initializedRef.current = true;
+      // Start hidden; the left-edge hover opens the drawer.
+      if (isSidebarOpen) {
         openRef.current = false;
-        setHoverDrawer(false);
         onToggleSidebar?.();
       }
+      applyDrawer(false);
+    }
+
+    const handleMouseMove = (event) => {
+      const currentRail = document.querySelector('.shell > .rail');
+      if (!currentRail) return;
+
+      const overDrawer = currentRail.contains(event.target);
+      const overEdge = event.clientX <= 24;
+
+      if (!openRef.current && overEdge) {
+        manualRef.current = false;
+        setDrawer(true);
+        return;
+      }
+
+      // Keep the drawer open while the pointer is anywhere inside it.
+      if (openRef.current && overDrawer) return;
+
+      // Once the pointer leaves the drawer, close it. A tiny 24px edge zone
+      // prevents accidental closing while moving from the edge into the menu.
+      if (openRef.current && !overDrawer && !overEdge && !manualRef.current) {
+        setDrawer(false);
+      }
+    };
+
+    const handleClick = (event) => {
+      const currentRail = document.querySelector('.shell > .rail');
+      if (!currentRail || !currentRail.contains(event.target)) return;
+
+      const option = event.target.closest('button, a, [role="button"]');
+      if (!option) return;
+
+      // Navigation selection closes the drawer after React updates the view.
+      window.setTimeout(() => {
+        manualRef.current = false;
+        setDrawer(false);
+      }, 150);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [hoverDrawer, onToggleSidebar]);
-
-  useEffect(() => {
-    const handleClick = (event) => {
-      const rail = document.querySelector('.shell > .rail');
-      if (!rail || !rail.contains(event.target)) return;
-      const option = event.target.closest('a, button, [role="button"]');
-      if (option) {
-        window.setTimeout(() => {
-          openRef.current = false;
-          setHoverDrawer(false);
-          onToggleSidebar?.();
-        }, 150);
-      }
-    };
     document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('click', handleClick, true);
+    };
   }, [onToggleSidebar]);
+
+  const handleHamburger = () => {
+    const next = !openRef.current;
+    manualRef.current = next;
+    setDrawer(next);
+  };
 
   return (
     <>
@@ -70,9 +117,53 @@ export default function Header({
           z-index: 100 !important;
           flex: none !important;
           overflow-y: auto !important;
+          background: #1D2938 !important;
+          border-right: none !important;
+          padding: 18px 0 !important;
           box-shadow: 4px 0 20px rgba(0, 0, 0, 0.24) !important;
-          transition: transform 220ms ease, opacity 180ms ease, box-shadow 220ms ease !important;
+          transform: translateX(-100%) !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
           will-change: transform, opacity;
+          font-family: var(--body) !important;
+          color: #B9C6D4 !important;
+        }
+        .shell > .rail .grp {
+          padding-left: 16px !important;
+          padding-right: 16px !important;
+          color: #6C7F94 !important;
+        }
+        .shell > .rail .navitem {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 8px !important;
+          width: 100% !important;
+          text-align: left !important;
+          padding: 9px 16px !important;
+          border-left: 2px solid transparent !important;
+          color: #B9C6D4 !important;
+          background: transparent !important;
+          transition: all 0.15s ease !important;
+        }
+        .shell > .rail .navitem:hover {
+          background: #243244 !important;
+          color: #ffffff !important;
+        }
+        .shell > .rail .navitem.on {
+          border-left-color: var(--ochre) !important;
+          background: #243244 !important;
+          color: #ffffff !important;
+          font-weight: 600 !important;
+        }
+        .shell > .rail .navitem .count {
+          font-family: var(--display) !important;
+          font-size: 10px !important;
+          background: var(--ochre) !important;
+          color: #fff !important;
+          border-radius: 9999px !important;
+          padding: 1px 6px !important;
         }
         .shell > .main {
           width: 100% !important;
@@ -84,7 +175,7 @@ export default function Header({
 
       <div className="topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button type="button" className="admin-hamburger-btn" onClick={onToggleSidebar} title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" style={{ background: 'none', border: 'none', color: '#B9C6D4', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button type="button" className="admin-hamburger-btn" onClick={handleHamburger} title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" style={{ background: 'none', border: 'none', color: '#B9C6D4', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <div className="wordmark">ONESMARTER <span>/ MIR RELAY ADMIN</span></div>
