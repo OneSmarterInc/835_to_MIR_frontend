@@ -13,7 +13,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [pushingId, setPushingId] = useState(null);
-
   const [searchText, setSearchText] = useState('');
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,7 +104,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const startIndex = (pageIndex - 1) * pageSize;
   const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
-  // Metrics derived from ediFiles
   const conversionSets = ediFiles.length;
   const archivedCount = ediFiles.filter(f => f.status === 'ARCHIVED').length;
   const files835 = ediFiles.length;
@@ -117,7 +115,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const handleDownloadZip = async (type) => {
     setShowZipMenu(false);
     try {
-      const url = selectedClientId 
+      const url = selectedClientId
         ? `/api/download-zip/?type=${type}&client=${encodeURIComponent(selectedClientId)}`
         : `/api/download-zip/?type=${type}`;
       const res = await fetch(url, { credentials: "include" });
@@ -139,58 +137,40 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   };
 
   const handleViewFile = async (file) => {
-  try {
-    const result = await viewEdiFile(
-      selectedClientId,
-      file.id,
-      'input'
-    );
+    try {
+      const result = await viewEdiFile(selectedClientId, file.id, 'input');
+      window.open(result.fileUrl, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(result.fileUrl), 60000);
+    } catch (err) {
+      console.error('View file error:', err);
+      alert(`Unable to view file: ${err.message}`);
+    }
+  };
 
-    window.open(
-      result.fileUrl,
-      '_blank',
-      'noopener,noreferrer'
-    );
+  const handleDownloadMir = async (file) => {
+    try {
+      await downloadEdiFile(selectedClientId, file.id, 'mir');
+    } catch (err) {
+      console.error('Download MIR error:', err);
+      alert(`Unable to download MIR: ${err.message}`);
+    }
+  };
 
-    setTimeout(() => {
-      URL.revokeObjectURL(result.fileUrl);
-    }, 60000);
-
-  } catch (err) {
-    console.error('View file error:', err);
-    alert(`Unable to view file: ${err.message}`);
-  }
-};
-
-const handleDownloadMir = async (file) => {
-  try {
-    await downloadEdiFile(
-      selectedClientId,
-      file.id,
-      'mir'
-    );
-  } catch (err) {
-    console.error('Download MIR error:', err);
-    alert(`Unable to download MIR: ${err.message}`);
-  }
-};
-
-const handlePushMir = async (file) => {
-  setPushingId(file.id);
-  try {
-    const result = await pushEdiFileToSftp(file.id);
-    alert(`✓ ${result.message}`);
-    await loadEdiFiles(selectedClientId);
-  } catch (err) {
-    alert(`Unable to push MIR to SFTP: ${err.message}`);
-  } finally {
-    setPushingId(null);
-  }
-};
+  const handlePushMir = async (file) => {
+    setPushingId(file.id);
+    try {
+      const result = await pushEdiFileToSftp(file.id);
+      alert(`✓ ${result.message}`);
+      await loadEdiFiles(selectedClientId);
+    } catch (err) {
+      alert(`Unable to push MIR to SFTP: ${err.message}`);
+    } finally {
+      setPushingId(null);
+    }
+  };
 
   return (
     <section className="view on" id="v-files">
-      {/* HEADER ROW */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div>
@@ -216,21 +196,11 @@ const handlePushMir = async (file) => {
           </div>
         </div>
 
-        {/* ZIP ARCHIVE DOWNLOAD BUTTON */}
         <div style={{ position: 'relative', display: 'inline-block' }}>
           <button
             type="button"
             className="btn-gray"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: 600,
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer' }}
             onClick={() => setShowZipMenu(!showZipMenu)}
             title="Export Archive to ZIP"
           >
@@ -244,31 +214,14 @@ const handlePushMir = async (file) => {
           </button>
 
           {showZipMenu && (
-            <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '6px',
-              background: '#ffffff', border: '1px solid var(--line, #e2e8f0)',
-              borderRadius: '6px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-              zIndex: 200, minWidth: '210px', overflow: 'hidden',
-            }}>
-              <button
-                type="button"
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
-                onClick={() => handleDownloadZip('mir')}
-              >
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '6px', background: '#ffffff', border: '1px solid var(--line, #e2e8f0)', borderRadius: '6px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', zIndex: 200, minWidth: '210px', overflow: 'hidden' }}>
+              <button type="button" style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }} onClick={() => handleDownloadZip('mir')}>
                 Download all MIR (.mir)
               </button>
-              <button
-                type="button"
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }}
-                onClick={() => handleDownloadZip('835')}
-              >
+              <button type="button" style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontWeight: 500 }} onClick={() => handleDownloadZip('835')}>
                 Download all 835 (.x12 / .835)
               </button>
-              <button
-                type="button"
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: 'var(--teal, #0d9488)', fontWeight: 700, cursor: 'pointer' }}
-                onClick={() => handleDownloadZip('both')}
-              >
+              <button type="button" style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 14px', fontSize: '12px', color: 'var(--teal, #0d9488)', fontWeight: 700, cursor: 'pointer' }} onClick={() => handleDownloadZip('both')}>
                 Download Both (MIR &amp; 835)
               </button>
             </div>
@@ -286,36 +239,14 @@ const handlePushMir = async (file) => {
         </div>
       )}
 
-      {/* 5 METRIC CARDS */}
       <div className="metrics" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-        <div className="metric">
-          <div className="v">{conversionSets}</div>
-          <div className="l">Conversion sets</div>
-          <div className="d"><span>{archivedCount}</span> physical file seals stored</div>
-        </div>
-        <div className="metric">
-          <div className="v">{files835}</div>
-          <div className="l">835 files received</div>
-          <div className="d">Across all conversion sets</div>
-        </div>
-        <div className="metric">
-          <div className="v">0</div>
-          <div className="l">837 references</div>
-          <div className="d">Optional - reference only</div>
-        </div>
-        <div className="metric">
-          <div className="v">{validatedSets}</div>
-          <div className="l">Validated sets</div>
-          <div className="d">835 validation passed</div>
-        </div>
-        <div className="metric">
-          <div className="v">{processedSets}</div>
-          <div className="l">Processed sets</div>
-          <div className="d"><span>{waitingFailed}</span> waiting/failed – <span>{valFailed}</span> validation failed</div>
-        </div>
+        <div className="metric"><div className="v">{conversionSets}</div><div className="l">Conversion sets</div><div className="d"><span>{archivedCount}</span> physical file seals stored</div></div>
+        <div className="metric"><div className="v">{files835}</div><div className="l">835 files received</div><div className="d">Across all conversion sets</div></div>
+        <div className="metric"><div className="v">0</div><div className="l">837 references</div><div className="d">Optional - reference only</div></div>
+        <div className="metric"><div className="v">{validatedSets}</div><div className="l">Validated sets</div><div className="d">835 validation passed</div></div>
+        <div className="metric"><div className="v">{processedSets}</div><div className="l">Processed sets</div><div className="d"><span>{waitingFailed}</span> waiting/failed – <span>{valFailed}</span> validation failed</div></div>
       </div>
 
-      {/* SEARCH BAR ROW */}
       <div className="filters-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <input
           type="text"
@@ -324,9 +255,7 @@ const handlePushMir = async (file) => {
           onChange={(e) => { setSearchText(e.target.value); setCurrentPage(1); }}
           style={{ padding: '7px 12px', fontSize: '12px', border: '1px solid var(--line)', borderRadius: '4px', width: '280px' }}
         />
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-3)' }}>
-          {filtered.length} sets
-        </span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-3)' }}>{filtered.length} sets</span>
       </div>
 
       {loading ? (
@@ -335,55 +264,30 @@ const handlePushMir = async (file) => {
         </div>
       ) : (
         <>
-          {/* ARCHIVE DATA TABLE */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '16px' }}>
             <div style={{ overflowX: 'auto' }}>
               <table className="datatable" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th
-                      className={`sortable ${sortKey === 'date' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('date')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'date' ? sortOrder : ''}`} onClick={() => handleSortHeader('date')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       835 DATE <span className="sort-arrow">{sortKey === 'date' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
-                    <th
-                      className={`sortable ${sortKey === 'id' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('id')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'id' ? sortOrder : ''}`} onClick={() => handleSortHeader('id')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       RUN <span className="sort-arrow">{sortKey === 'id' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
-                    <th
-                      className={`sortable ${sortKey === 'filename' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('filename')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'filename' ? sortOrder : ''}`} onClick={() => handleSortHeader('filename')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       835 INPUT <span className="sort-arrow">{sortKey === 'filename' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
                     <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>837 REF</th>
                     <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>MIR OUTPUT</th>
-                    <th
-                      className={`sortable ${sortKey === 'claims' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('claims')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'claims' ? sortOrder : ''}`} onClick={() => handleSortHeader('claims')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       CLAIMS <span className="sort-arrow">{sortKey === 'claims' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
-                    <th
-                      className={`sortable ${sortKey === 'sftp' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('sftp')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'sftp' ? sortOrder : ''}`} onClick={() => handleSortHeader('sftp')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       IMPORT MODE <span className="sort-arrow">{sortKey === 'sftp' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
                     <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>SFTP PUSH</th>
-                    <th
-                      className={`sortable ${sortKey === 'status' ? sortOrder : ''}`}
-                      onClick={() => handleSortHeader('status')}
-                      style={{ fontSize: '11px', letterSpacing: '0.05em' }}
-                    >
+                    <th className={`sortable ${sortKey === 'status' ? sortOrder : ''}`} onClick={() => handleSortHeader('status')} style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
                       STATUS <span className="sort-arrow">{sortKey === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
                     <th style={{ fontSize: '11px', letterSpacing: '0.05em' }}>ACTION</th>
@@ -393,9 +297,7 @@ const handlePushMir = async (file) => {
                   {pageItems.length === 0 ? (
                     <tr>
                       <td colSpan="10" style={{ padding: '32px', textAlign: 'center', color: 'var(--ink-3)' }}>
-                        {ediFiles.length === 0
-                          ? 'No EDI 835 files found in the archive for this client.'
-                          : 'No conversion sets match these filters.'}
+                        {ediFiles.length === 0 ? 'No EDI 835 files found in the archive for this client.' : 'No conversion sets match these filters.'}
                       </td>
                     </tr>
                   ) : (
@@ -422,16 +324,13 @@ const handlePushMir = async (file) => {
                       }
 
                       const statusTagClass = f.status === 'ARCHIVED' ? 'ok' : f.status === 'ERROR' ? 'bad' : 'work';
-
                       const isSftpSource =
                         f.ingestion_source === 'SFTP' ||
                         (f.original_filename && f.original_filename.includes(',')) ||
                         (f.input_path && f.input_path.toLowerCase().includes('sftp'));
                       const sourceLabel = isSftpSource ? 'SFTP' : 'MANUAL';
                       const sourceTagClass = isSftpSource ? 'ok' : 'work';
-                      const sourceTitle = isSftpSource
-                        ? 'Ingested automatically from SFTP inbound folder'
-                        : 'Uploaded manually via conversion form';
+                      const sourceTitle = isSftpSource ? 'Ingested automatically from SFTP inbound folder' : 'Uploaded manually via conversion form';
 
                       return (
                         <tr key={f.id}>
@@ -442,56 +341,35 @@ const handlePushMir = async (file) => {
                           <td className="num" style={{ color: 'var(--ink-2)' }}>{isProcessed ? mirName : '—'}</td>
                           <td className="num">{f.claims_count || 0}</td>
                           <td>
-                            <span className={`tag ${sourceTagClass}`} style={{ fontSize: '10.5px' }} title={sourceTitle}>
-                              {sourceLabel}
-                            </span>
+                            <span className={`tag ${sourceTagClass}`} style={{ fontSize: '10.5px' }} title={sourceTitle}>{sourceLabel}</span>
                           </td>
                           <td>
                             {canPushToSftp ? (
-                              <button
-                                type="button"
-                                className="tag work"
-                                style={{ fontSize: '10.5px', cursor: 'pointer' }}
-                                title="Upload the generated MIR file to the configured SFTP server"
-                                onClick={() => handlePushMir(f)}
-                                disabled={pushingId === f.id}
-                              >
+                              <button type="button" className="tag work" style={{ fontSize: '10.5px', cursor: 'pointer' }} title="Upload the generated MIR file to the configured SFTP server" onClick={() => handlePushMir(f)} disabled={pushingId === f.id}>
                                 {pushingId === f.id ? 'Pushing…' : 'Push to SFTP'}
                               </button>
                             ) : (
-                              <span className={`tag ${sftpTagClass}`} style={{ fontSize: '10.5px' }}>
-                                {sftpStatusText}
-                              </span>
+                              <span className={`tag ${sftpTagClass}`} style={{ fontSize: '10.5px' }}>{sftpStatusText}</span>
                             )}
                           </td>
                           <td>
-                            <span className={`tag ${statusTagClass}`} style={{ fontSize: '10.5px' }}>
-                              {displayStatus}
-                            </span>
+                            <span className={`tag ${statusTagClass}`} style={{ fontSize: '10.5px' }}>{displayStatus}</span>
                           </td>
-                          <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              type="button"
-                              className="btn-eye"
-                              title="View File"
-                              onClick={() => handleViewFile(f)}
-                            >
-                              <svg viewBox="0 0 24 24">
-                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                              </svg>
-                            </button>
-                            {isProcessed ? (
-                              <button
-                                type="button"
-                                className="btn-download"
-                                title="Download .mir File"
-                                onClick={() => handleDownloadMir(f)}
-                              >
+                          <td className="num" style={{ fontSize: '11px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '28px' }}>
+                              <button type="button" className="btn-eye" title="View File" onClick={() => handleViewFile(f)}>
                                 <svg viewBox="0 0 24 24">
-                                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                                 </svg>
                               </button>
-                            ) : '—'}
+                              {isProcessed ? (
+                                <button type="button" className="btn-download" title="Download .mir File" onClick={() => handleDownloadMir(f)}>
+                                  <svg viewBox="0 0 24 24">
+                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                                  </svg>
+                                </button>
+                              ) : '—'}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -501,18 +379,10 @@ const handlePushMir = async (file) => {
               </table>
             </div>
 
-            {/* PAGINATION CONTROL FOOTER */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 20px', borderTop: '1px solid var(--line)', background: 'var(--surface)',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: '1px solid var(--line)', background: 'var(--surface)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>Rows per page:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setCurrentPage(1); }}
-                  style={{ padding: '4px 8px', fontSize: '11px', border: '1px solid var(--line)', borderRadius: '4px' }}
-                >
+                <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setCurrentPage(1); }} style={{ padding: '4px 8px', fontSize: '11px', border: '1px solid var(--line)', borderRadius: '4px' }}>
                   <option value="10">10</option>
                   <option value="20">20</option>
                   <option value="50">50</option>
@@ -520,30 +390,13 @@ const handlePushMir = async (file) => {
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button
-                  className="btn secondary"
-                  style={{ padding: '4px 10px', fontSize: '11px' }}
-                  disabled={pageIndex <= 1}
-                  onClick={() => setCurrentPage(pageIndex - 1)}
-                >
-                  &ndash; Previous
-                </button>
-                <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
-                  Page {pageIndex} of {totalPages}
-                </span>
-                <button
-                  className="btn secondary"
-                  style={{ padding: '4px 10px', fontSize: '11px' }}
-                  disabled={pageIndex >= totalPages}
-                  onClick={() => setCurrentPage(pageIndex + 1)}
-                >
-                  Next &rarr;
-                </button>
+                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex <= 1} onClick={() => setCurrentPage(pageIndex - 1)}>&ndash; Previous</button>
+                <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>Page {pageIndex} of {totalPages}</span>
+                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex >= totalPages} onClick={() => setCurrentPage(pageIndex + 1)}>Next &rarr;</button>
               </div>
             </div>
           </div>
 
-          {/* FOOTER LEGEND */}
           <div style={{ fontSize: '11.5px', color: 'var(--teal)', fontWeight: 500, display: 'flex', gap: '24px' }}>
             <span>&#9632; Archive table = one row per conversion set</span>
             <span>&#9632; Physical 835 / 837 / MIR file hashes remain stored individually</span>
