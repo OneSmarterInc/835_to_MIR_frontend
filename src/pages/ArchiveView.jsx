@@ -485,8 +485,10 @@ export default function ArchiveView({
                 pageItems.map((f) => {
                   const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
-                  const baseName = (f.original_filename || "").replace(/\.[^/.]+$/, "");
-                  const mirName = "MIR_" + baseName + ".mir";
+                  const mirName = f.output_path
+                    ? f.output_path.split("/").pop()
+                    : "MIR_" +
+                      (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
                   const isProcessed = f.status === "ARCHIVED";
                   const isSftpSuccess = Boolean(f.present_in_sftp);
                   const canPushToSftp = isProcessed && !isSftpSuccess;
