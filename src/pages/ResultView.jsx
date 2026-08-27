@@ -141,7 +141,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
           <div className="result-client-bar">
             <label>Associate with Client:</label>
             <select value={clientId} onChange={(event) => setClientId(event.target.value)}>
-              <option value="">-- Select Client --</option>
+              <option value="">-- None (Global System Default) --</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>{client.name} ({client.client_code || client.code || "—"})</option>
               ))}

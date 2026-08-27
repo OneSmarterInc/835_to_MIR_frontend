@@ -1,9 +1,9 @@
 /* Keep Result visually aligned with the shared Conversions workspace. */
 .result-view { width: 100%; }
 .result-process-card { margin-top: 22px; }
-.result-client-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line, #e2e8f0); background: #f8fafc; box-sizing: border-box; width: 100%; }
+.result-client-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line, #e2e8f0); background: #f8fafc; box-sizing: border-box; width: 100%; }
 .result-client-bar label { color: var(--ink-2); font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.result-client-bar select { width: min(290px, 100%); min-width: 220px; max-width: 100%; box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 4px; background: #fff; color: var(--ink); font-size: 12.5px; }
+.result-client-bar select { width: min(365px, 100%); min-width: 280px; max-width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; color: var(--ink); font-size: 14px; }
 .result-conversion-boxes { grid-template-columns: minmax(300px, 1fr) auto; }
 .result-c-actions { align-self: stretch; justify-content: center; }
 .result-message { margin-top: 14px; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
