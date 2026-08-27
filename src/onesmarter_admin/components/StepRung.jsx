@@ -786,7 +786,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                                   body: JSON.stringify({ use_default: true, client_id: clientId, connection_type: 'UNIFIED' })
                                 });
                                 setS6SftpVerified(true);
-                                
+                                await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});
+                                await onRefresh();
+
                                 let detailsStr = 'Using default SFTP server connection details.';
                                 try {
                                   const resSftp = await fetch('/edi835/api/sftp/get/');
