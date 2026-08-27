@@ -1,0 +1,51 @@
+name: Fix archive MIR filename consistency
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-archive-name:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update archive MIR filename logic
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/pages/ArchiveView.jsx")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''                  const baseName = (f.original_filename || "").replace(/\\.[^/.]+$/, "");
+                  const mirName = "MIR_" + baseName + ".mir";'''
+          new = '''                  const mirName = f.output_path
+                    ? f.output_path.split("/").pop()
+                    : "MIR_" +
+                      (f.original_filename || "")
+                        .split(",")[0]
+                        .trim()
+                        .replace(/\\.[^/.]+$/, "") +
+                      ".mir";'''
+
+          if old not in text:
+              raise SystemExit("Expected archive MIR filename block was not found; refusing to modify the file.")
+
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/ArchiveView.jsx
+          git rm .github/workflows/fix-archive-mir-name.yml
+          git commit -m "Fix archive MIR output and download filename"
+          git push origin HEAD:master
