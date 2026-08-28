@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./ResultView.css";
 
 function authHeaders(extra = {}) {
@@ -33,6 +33,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const [message, setMessage] = useState(null);
   const [detail, setDetail] = useState(null);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ key: "", direction: "asc" });
   const requestSequence = useRef(0);
 
   useEffect(() => { if (initialClientId) setClientId(initialClientId); }, [initialClientId]);
@@ -92,7 +93,27 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       setDetail(await apiJson(`/edi835/api/reconciliation/claims/${row.mir_claim_id}/`));
     } catch (error) { setMessage({ kind: "error", text: error.message }); }
   };
-  const rows = data.claims;
+  const rows = useMemo(() => {
+    if (!sort.key) return data.claims;
+    const numeric = new Set(["amount_to_pay", "recon_paid_amount", "difference_amount"]);
+    return [...data.claims].sort((left, right) => {
+      const leftValue = numeric.has(sort.key)
+        ? Number(left[sort.key] || 0)
+        : String(left[sort.key] || "").toLocaleLowerCase();
+      const rightValue = numeric.has(sort.key)
+        ? Number(right[sort.key] || 0)
+        : String(right[sort.key] || "").toLocaleLowerCase();
+      const comparison = numeric.has(sort.key)
+        ? leftValue - rightValue
+        : leftValue.localeCompare(rightValue, undefined, { numeric: true, sensitivity: "base" });
+      return sort.direction === "asc" ? comparison : -comparison;
+    });
+  }, [data.claims, sort]);
+  const changeSort = (key) => setSort((current) => ({
+    key,
+    direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+  }));
+  const sortArrow = (key) => sort.key === key ? (sort.direction === "asc" ? "▲" : "▼") : "⇅";
 
   return <section className="view on result-view">
     <div className="eyebrow">Operations Studio</div><h1>Result</h1>
@@ -104,9 +125,14 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
     <div className="filters-bar result-filters"><div className="result-global-search"><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search all MIR and RECON data" aria-label="Search all MIR and RECON results" /></div><span className="runs-counter">{data.total_claims ?? rows.length} MIR claims · all processed RECON files</span></div>
-    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><colgroup><col className="result-col-claim" /><col className="result-col-patient" /><col className="result-col-file" /><col className="result-col-file" /><col className="result-col-money" /><col className="result-col-money" /><col className="result-col-difference" /><col className="result-col-status" /></colgroup><thead><tr><th>Claim ID</th><th>Patient name</th><th>MIR file / date</th><th>RECON file / date</th><th>Amount in MIR</th><th>Amount in RECON</th><th>Difference</th><th>Status</th></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id}><td><b>{row.claim_id || "—"}</b></td><td><button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button><small>{row.member_id || "—"}</small></td><td>{row.mir_filename}<small>{showDate(row.mir_date)}</small></td><td>{row.recon_filename || "—"}{row.recon_filename && <small>{showDate(row.recon_date)}</small>}</td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.difference_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR claims match this search.</td></tr>}</tbody></table></div><div className="result-pagination"><button className="btn-gray" disabled={page <= 1 || busy} onClick={() => loadResults(page - 1, activeSearch)}>Previous</button><span>Page {page} of {data.total_pages || 1}</span><button className="btn-gray" disabled={page >= (data.total_pages || 1) || busy} onClick={() => loadResults(page + 1, activeSearch)}>Next</button></div></div>
+    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><colgroup><col className="result-col-claim" /><col className="result-col-patient" /><col className="result-col-file" /><col className="result-col-file" /><col className="result-col-money" /><col className="result-col-money" /><col className="result-col-difference" /><col className="result-col-status" /></colgroup><thead><tr><SortableHeader label="Claim ID" sortKey="claim_id" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Patient name" sortKey="patient_name" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="MIR file / date" sortKey="mir_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="RECON file / date" sortKey="recon_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in MIR" sortKey="amount_to_pay" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in RECON" sortKey="recon_paid_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Difference" sortKey="difference_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Status" sortKey="status" sort={sort} onSort={changeSort} arrow={sortArrow} /></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id}><td><b>{row.claim_id || "—"}</b></td><td><button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button><small>{row.member_id || "—"}</small></td><td>{row.mir_filename}<small>{showDate(row.mir_date)}</small></td><td>{row.recon_filename || "—"}{row.recon_filename && <small>{showDate(row.recon_date)}</small>}</td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.difference_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR claims match this search.</td></tr>}</tbody></table></div><div className="result-pagination"><button className="btn-gray" disabled={page <= 1 || busy} onClick={() => loadResults(page - 1, activeSearch)}>Previous</button><span>Page {page} of {data.total_pages || 1}</span><button className="btn-gray" disabled={page >= (data.total_pages || 1) || busy} onClick={() => loadResults(page + 1, activeSearch)}>Next</button></div></div>
     {detail && <div className="result-detail-backdrop" onClick={() => setDetail(null)}><div className="result-detail" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim reconciliation</div><h2>{detail.summary?.claim_id}</h2></div><button className="btn" onClick={() => setDetail(null)}>Close</button></div><div className="claim-summary-grid"><div><b>Patient</b><span>{detail.summary?.patient_name || "—"}</span></div><div><b>MIR / RECON services</b><span>{detail.summary?.mir_service_count} / {detail.summary?.recon_service_count}</span></div><div><b>Amount to pay</b><span>{money(detail.summary?.amount_to_pay)}</span></div><div><b>Paid / remaining</b><span>{money(detail.summary?.recon_paid_amount)} / {money(detail.summary?.remaining_amount)}</span></div></div><h3>MIR services · {detail.mir.file}</h3><ServiceTable services={detail.mir.services} /><h3>RECON services · {detail.recon.file || "Not in RECON"}</h3><ServiceTable services={detail.recon.services} /></div></div>}
   </section>;
+}
+
+function SortableHeader({ label: headerLabel, sortKey, sort, onSort, arrow }) {
+  const active = sort.key === sortKey;
+  return <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}><button type="button" className={`result-sort-button${active ? " active" : ""}`} onClick={() => onSort(sortKey)}><span>{headerLabel}</span><span className="result-sort-arrow" aria-hidden="true">{arrow(sortKey)}</span></button></th>;
 }
 
 function ServiceTable({ services = [] }) {
