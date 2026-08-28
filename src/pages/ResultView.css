@@ -56,4 +56,13 @@
 .result-file-row > div { min-width: 0; }
 .result-file-row b { display: block; overflow-wrap: anywhere; }
 .result-file-row small { display: block; margin-top: 4px; color: var(--ink-3); }
+.result-recon-matches { display: flex; flex-direction: column; gap: 7px; }
+.result-recon-match { padding-bottom: 7px; border-bottom: 1px solid var(--line, #e2e8f0); }
+.result-recon-match:last-of-type { padding-bottom: 0; border-bottom: 0; }
+.result-recon-match span { display: block; overflow-wrap: anywhere; }
+.result-recon-match small { white-space: normal !important; }
+.result-show-more { align-self: flex-start; border: 0; padding: 0; background: transparent; color: var(--teal, #087f8c); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.result-match-amount { flex: 0 0 auto; text-align: right; }
+.result-match-amount small { margin-top: 0; }
+.result-match-total { display: flex; justify-content: flex-end; gap: 18px; padding: 14px 2px 0; }
 @media (max-width: 850px) { .result-conversion-boxes { grid-template-columns: 1fr; } .result-c-actions { width: 100%; } .result-filters { align-items: stretch; flex-direction: column; } }
