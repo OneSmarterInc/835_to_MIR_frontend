@@ -936,7 +936,11 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     ✓ Save Naming Format &amp; Complete Step {displayStepNumber}
                   </button>
                 </div>
+              </div>
+            )}
 
+            {step.actionType === 'user_creation' && (
+              <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
                 <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '15px' }}>
                   {step.extra?.users && step.extra.users.length > 0 && (
                     <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
