@@ -1,6 +1,7 @@
 name: Fix admin MIR download filename
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/fix-admin-mir-download.yml'
@@ -14,35 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fix admin MIR download
+      - name: Patch admin MIR download
         run: |
           python - <<'PY'
           from pathlib import Path
-
           p = Path('src/onesmarter_admin/components/FilesView.jsx')
           s = p.read_text()
 
-          old = '''                          <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              type="button"
-                              className="btn-eye"
-                              title="View File"
-                            >'''
-          new = '''                          <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              type="button"
-                              className="btn-eye"
-                              title="View File"
-                            >'''
-
-          # Add a download helper immediately before the component return.
           marker = "  return (\n    <section className=\"view on\" id=\"v-files\">"
           helper = '''  const handleDownloadMir = async (file) => {
     try {
       const params = new URLSearchParams({ file_id: String(file.id), file_type: 'mir' });
       const res = await fetch(`/api/download/?${params.toString()}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Download failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Download failed');
+      }
       const blob = await res.blob();
+      // The table and download must use the exact same canonical onboarding name.
       const filename = file.mir_filename || res.headers.get('X-OneSmarter-Filename') || 'output.mir';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -50,7 +40,8 @@ jobs:
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       alert('MIR Download error: ' + err.message);
     }
@@ -72,7 +63,7 @@ jobs:
                               <button
                                 type="button"
                                 className="btn-download"
-                                title="Download .mir File"
+                                title={`Download ${f.mir_filename || mirName}`}
                                 onClick={() => handleDownloadMir(f)}
                               >'''
           if old_button in s:
@@ -80,10 +71,11 @@ jobs:
           elif 'onClick={() => handleDownloadMir(f)}' not in s:
               raise SystemExit('Could not find admin MIR download button')
 
+          s = s.replace("const mirName = 'MIR_' + baseName + '.mir';", "const mirName = f.mir_filename || ('MIR_' + baseName + '.mir');", 1)
           p.write_text(s)
           PY
 
-      - name: Commit fix and remove one-time workflow
+      - name: Commit and remove temporary workflow
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
