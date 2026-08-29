@@ -223,6 +223,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
     try {
       const newState = await saveGoLiveComment(selectedClientId, specialComment.trim());
       setGoliveState(newState);
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId: selectedClientId, stepKey: 'golive_step_5' } }));
       setSuccessMessage('Step 5: Special Comment saved and step marked complete.');
       if (onClientUpdated) {
         onClientUpdated();

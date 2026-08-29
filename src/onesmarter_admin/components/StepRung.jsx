@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, fetchClientSmtpConfig, saveClientSmtpConfig } from '../services/api';
+import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, deleteClientContact, deleteClientUser, fetchClientSmtpConfig, saveClientSmtpConfig } from '../services/api';
 import FeedbackModal from './modals/FeedbackModal';
 import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
@@ -75,9 +75,19 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [s4Touched, setS4Touched] = useState({ name: false, email: false, phone: false });
   const [s4SubmitError, setS4SubmitError] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  const [savingClaim, setSavingClaim] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [localContacts, setLocalContacts] = useState(step.extra?.contacts || []);
+  const [localUsers, setLocalUsers] = useState(step.extra?.users || []);
 
   // Step 4 Real-time inline field validations
-  const s4Existing = step.extra?.contacts || [];
+  const s4Existing = localContacts;
+
+  useEffect(() => setLocalContacts(step.extra?.contacts || []), [step.extra?.contacts]);
+  useEffect(() => setLocalUsers(step.extra?.users || []), [step.extra?.users]);
 
   const s4NameError = (() => {
     if (!s4Touched.name && !s4Name) return '';
@@ -308,6 +318,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const handleStep4Save = async () => {
+    if (savingContact) return;
     setS4Touched({ name: true, email: true, phone: true });
     setS4SubmitError('');
 
@@ -319,7 +330,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
     const fullPhone = s4Phone.trim() ? `${s4CountryCode}${s4Phone.trim()}` : '';
 
     try {
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_4_contacts/save/`, {
+      setSavingContact(true);
+      const result = await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_4_contacts/save/`, {
         role_name: s4Role,
         employee_name: trimmedName,
         email: s4Email.trim(),
@@ -330,23 +342,44 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setS4Phone('');
       setS4Touched({ name: false, email: false, phone: false });
       setS4SubmitError('');
-      await onRefresh();
+      if (result.contact) setLocalContacts((current) => [...current, result.contact]);
+      onRefresh();
     } catch (err) {
       setS4SubmitError(err.message || 'Failed to save contact.');
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const handleDeleteContact = async (contact) => {
+    if (!contact?.id || deletingId) return;
+    if (!window.confirm(`Delete contact ${contact.name || contact.employee_name}?`)) return;
+    try {
+      setDeletingId(`contact-${contact.id}`);
+      await deleteClientContact(clientId, contact.id);
+      setLocalContacts((current) => current.filter((item) => item.id !== contact.id));
+      onRefresh();
+    } catch (err) {
+      setS4SubmitError(err.message || 'Failed to delete contact.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const handleStep5Save = async () => {
+    if (savingClaim) return;
     if (!s5Text.trim()) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] });
       return;
     }
     try {
+      setSavingClaim(true);
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_5_claim_sys/save/`, { verification_text: s5Text });
-      await onRefresh();
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey: step.key } }));
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] });
-    }
+    } finally { setSavingClaim(false); }
   };
 
   const handleStep10Save = async () => {
@@ -413,12 +446,14 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const handleStep9CreateUser = async () => {
+    if (creatingUser) return;
     if (!s9Name.trim() || !s9Email.trim() || !s9Password) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Name, Email, and Password are required.', checks: [] });
       return;
     }
     try {
-      await createUser({
+      setCreatingUser(true);
+      const result = await createUser({
         name: s9Name,
         email: s9Email,
         password: s9Password,
@@ -432,28 +467,44 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setS9Email('');
       setS9Password('');
       setS9Mobile('');
-      await onRefresh();
+      if (result.user) setLocalUsers((current) => [...current, result.user]);
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Creation Error', content: err.message, checks: [] });
-    }
+    } finally { setCreatingUser(false); }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!user?.id || deletingId) return;
+    if (!window.confirm(`Delete user ${user.email}?`)) return;
+    try {
+      setDeletingId(`user-${user.id}`);
+      await deleteClientUser(clientId, user.id);
+      setLocalUsers((current) => current.filter((item) => item.id !== user.id));
+      onRefresh();
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Delete Error', content: err.message, checks: [] });
+    } finally { setDeletingId(null); }
   };
 
   const handleStep13Save = async () => {
+    if (savingSchedule) return;
     if (!s13Date.trim() || !s13Time.trim()) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please select scheduled date and time.', checks: [] });
       return;
     }
     try {
+      setSavingSchedule(true);
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
         scheduled_date: s13Date.trim(),
         scheduled_time: s13Time.trim(),
         timezone: 'Eastern (ET)',
         notes: s13Notes.trim()
       });
-      await onRefresh();
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Schedule Error', content: err.message, checks: [] });
-    }
+    } finally { setSavingSchedule(false); }
   };
 
   const handleTextSubmission = async () => {
@@ -528,23 +579,23 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
           <>
             {step.actionType === 'contact_manager' && (
               <div className="step-custom-box" style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)', marginTop: '10px' }}>
-                {step.extra?.contacts && step.extra.contacts.length > 0 && (
+                {localContacts.length > 0 && (
                   <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
                     <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Recorded Contacts ({step.extra.contacts.length})</span>
-                      {step.extra.contacts.length > 2 && (
+                      <span>Recorded Contacts ({localContacts.length})</span>
+                      {localContacts.length > 2 && (
                         <button
                           type="button"
                           style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => setShowAllContacts(!showAllContacts)}
                         >
-                          {showAllContacts ? '▲ Show Less' : `▼ Show More (${step.extra.contacts.length - 2} more)`}
+                          {showAllContacts ? '▲ Show Less' : `▼ Show More (${localContacts.length - 2} more)`}
                         </button>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {(showAllContacts ? step.extra.contacts : step.extra.contacts.slice(0, 2)).map((c, idx) => (
-                        <div key={c.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllContacts ? step.extra.contacts.length : Math.min(2, step.extra.contacts.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
+                      {(showAllContacts ? localContacts : localContacts.slice(0, 2)).map((c, idx) => (
+                        <div key={c.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllContacts ? localContacts.length : Math.min(2, localContacts.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
                           <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
                             <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                           </svg>
@@ -567,6 +618,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                               </span>
                             )}
                           </div>
+                          <button type="button" className="btn tiny" title="Delete contact" aria-label={`Delete contact ${c.name || ''}`} disabled={deletingId === `contact-${c.id}`} onClick={() => handleDeleteContact(c)} style={{ marginLeft: 'auto', color: 'var(--brick)' }}>🗑</button>
                         </div>
                       ))}
                     </div>
@@ -693,9 +745,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       type="button"
                       className="btn tiny primary"
                       onClick={handleStep4Save}
+                      disabled={savingContact}
                       style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                     >
-                      {step.extra?.contacts && step.extra.contacts.length > 0 ? '+ Add Contact' : 'Save & Complete'}
+                      {savingContact ? 'Saving…' : (localContacts.length > 0 ? '+ Add Contact' : 'Save & Complete')}
                     </button>
                   </div>
                 </div>
@@ -713,7 +766,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Claim System Verification Information</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s5Text} onChange={(e) => setS5Text(e.target.value)} placeholder="e.g. Vendor hosted ClaimsCore Enterprise, SFTP outbound nightly 835 drops verified." />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
-                  <button className="btn tiny primary" onClick={handleStep5Save}>Submit &amp; Complete Step 5</button>
+                  <button className="btn tiny primary" onClick={handleStep5Save} disabled={savingClaim}>{savingClaim ? 'Saving…' : 'Submit & Complete Step 5'}</button>
                 </div>
               </div>
             )}
@@ -934,23 +987,23 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
             {step.actionType === 'user_creation' && (
               <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
                 <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '15px' }}>
-                  {step.extra?.users && step.extra.users.length > 0 && (
+                  {localUsers.length > 0 && (
                     <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
                       <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Recorded Users ({step.extra.users.length})</span>
-                        {step.extra.users.length > 2 && (
+                        <span>Recorded Users ({localUsers.length})</span>
+                        {localUsers.length > 2 && (
                           <button
                             type="button"
                             style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
                             onClick={() => setShowAllUsers(!showAllUsers)}
                           >
-                            {showAllUsers ? '▲ Show Less' : `▼ Show More (${step.extra.users.length - 2} more)`}
+                            {showAllUsers ? '▲ Show Less' : `▼ Show More (${localUsers.length - 2} more)`}
                           </button>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {(showAllUsers ? step.extra.users : step.extra.users.slice(0, 2)).map((u, idx) => (
-                          <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? step.extra.users.length : Math.min(2, step.extra.users.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
+                        {(showAllUsers ? localUsers : localUsers.slice(0, 2)).map((u, idx) => (
+                          <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? localUsers.length : Math.min(2, localUsers.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
                             <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
                               <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                             </svg>
@@ -973,6 +1026,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                                 </span>
                               )}
                             </div>
+                            <button type="button" className="btn tiny" title="Delete user" aria-label={`Delete user ${u.email || ''}`} disabled={deletingId === `user-${u.id}`} onClick={() => handleDeleteUser(u)} style={{ marginLeft: 'auto', color: 'var(--brick)' }}>🗑</button>
                           </div>
                         ))}
                       </div>
@@ -1022,9 +1076,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       <button
                         className="btn tiny primary"
                         onClick={handleStep9CreateUser}
+                        disabled={creatingUser}
                         style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
                       >
-                        ✓ Create User &amp; Complete Step {displayStepNumber}
+                        {creatingUser ? 'Creating…' : `✓ Create User & Complete Step ${displayStepNumber}`}
                       </button>
                     </div>
                   </div>
@@ -1395,16 +1450,20 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       type="button"
                       className="btn tiny primary"
                       onClick={handleStep13Save}
+                      disabled={savingSchedule}
                       style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px' }}
                     >
-                      Save Schedule &amp; Complete
+                      {savingSchedule ? 'Saving…' : 'Save Schedule & Complete'}
                     </button>
                     <button
                       type="button"
                       className="btn tiny"
                       title="Skip this step — Go Live scheduling is optional"
+                      disabled={savingSchedule}
                       onClick={async () => {
+                        if (savingSchedule) return;
                         try {
+                          setSavingSchedule(true);
                           await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_13_schedule/save/`, {
                             scheduled_date: '',
                             scheduled_time: '',
@@ -1414,7 +1473,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                           await onRefresh();
                         } catch (err) {
                           setFeedback({ isOpen: true, kind: 'bad', title: 'Skip Error', content: err.message, checks: [] });
-                        }
+                        } finally { setSavingSchedule(false); }
                       }}
                       style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
                     >

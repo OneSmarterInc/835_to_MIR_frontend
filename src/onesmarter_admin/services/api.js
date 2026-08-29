@@ -271,6 +271,18 @@ export async function addNote(clientId, stepKey, noteText) {
   return data;
 }
 
+export async function deleteNote(clientId, stepKey, noteId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/notes/${encodeURIComponent(noteId)}/delete/`, {});
+}
+
+export async function deleteClientContact(clientId, contactId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/delete/`, {});
+}
+
+export async function deleteClientUser(clientId, userId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/users/${encodeURIComponent(userId)}/delete/`, {});
+}
+
 export async function fetchEmployeeRoles() {
   const res = await fetch(`${BASE_URL}/employee-roles/`, {
     headers: getAuthHeaders()

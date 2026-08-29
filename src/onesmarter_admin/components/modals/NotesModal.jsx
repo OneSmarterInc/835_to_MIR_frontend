@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
-import { fetchNotes, addNote } from '../../services/api';
+import { fetchNotes, addNote, deleteNote } from '../../services/api';
 import '../StepNotesHistory.css';
 
 function formatDateTime(dateVal) {
@@ -19,6 +19,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [noteError, setNoteError] = useState('');
 
@@ -35,6 +36,21 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
       setNotes(data.notes || []);
     } catch (e) {
       console.error('Failed to load notes', e);
+    }
+  };
+
+  const handleDeleteNote = async (note) => {
+    if (!note.id || deletingId || !window.confirm('Delete this note?')) return;
+    try {
+      setDeletingId(note.id);
+      setNoteError('');
+      await deleteNote(clientId, stepKey, note.id);
+      setNotes((current) => current.filter((item) => item.id !== note.id));
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey } }));
+    } catch (e) {
+      setNoteError(e.message || 'Failed to delete note.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -74,7 +90,10 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
             <article key={n.id} className="step-note-history-item">
               <div className="step-note-history-meta">
                 <b>{n.author}</b>
-                <span>{formatDateTime(n.created_at)}</span>
+                <span className="step-note-history-actions">
+                  <span>{formatDateTime(n.created_at)}</span>
+                  <button type="button" onClick={() => handleDeleteNote(n)} disabled={deletingId === n.id} title="Delete note" aria-label="Delete note">🗑</button>
+                </span>
               </div>
               <div className="step-note-history-text">{n.note_text}</div>
             </article>

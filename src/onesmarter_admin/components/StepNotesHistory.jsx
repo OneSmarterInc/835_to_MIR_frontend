@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchNotes } from '../services/api';
+import { deleteNote, fetchNotes } from '../services/api';
 import './StepNotesHistory.css';
 
 function formatDateTime(value) {
@@ -19,6 +19,22 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   const [notes, setNotes] = useState([]);
   const [expanded, setExpanded] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState('');
+
+  const handleDelete = async (note) => {
+    if (!note.id || deletingId || !window.confirm('Delete this note?')) return;
+    try {
+      setDeletingId(note.id);
+      setError('');
+      await deleteNote(clientId, stepKey, note.id);
+      setNotes((current) => current.filter((item) => item.id !== note.id));
+    } catch (err) {
+      setError(err.message || 'Failed to delete note.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     const handleNoteAdded = (event) => {
@@ -86,12 +102,16 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
           <article className="step-note-history-item" key={note.id || `${note.created_at || 'note'}-${index}`}>
             <div className="step-note-history-meta">
               <b>{note.author || 'Administrator'}</b>
-              {note.created_at && <span>{formatDateTime(note.created_at)}</span>}
+              <span className="step-note-history-actions">
+                {note.created_at && <span>{formatDateTime(note.created_at)}</span>}
+                {note.id && <button type="button" onClick={() => handleDelete(note)} disabled={deletingId === note.id} title="Delete note" aria-label="Delete note">🗑</button>}
+              </span>
             </div>
             <div className="step-note-history-text">{note.note_text}</div>
           </article>
         ))}
       </div>
+      {error && <div className="step-note-history-error">{error}</div>}
       {orderedNotes.length > 3 && (
         <button
           type="button"
