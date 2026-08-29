@@ -37,6 +37,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmInput, setConfirmInput] = useState('');
   const [archiveDownloading, setArchiveDownloading] = useState(false);
+  const [offboarding, setOffboarding] = useState(false);
 
   const currentClient = clients.find(c => c.id === activeClientId);
 
@@ -111,13 +112,17 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   };
 
   const handleDestroyKeys = async () => {
-    if (confirmInput !== currentClient?.name) return;
+    if (confirmInput.trim() !== currentClient?.name?.trim() || offboarding) return;
     try {
+      setOffboarding(true);
       await completeOffboardingStep(activeClientId, 3);
       setIsConfirmOpen(false);
-      onRefresh();
+      setConfirmInput('');
+      await onRefresh();
     } catch (e) {
-      alert(e.message || 'Error destroying keys');
+      alert(e.message || 'Error offboarding client');
+    } finally {
+      setOffboarding(false);
     }
   };
 
@@ -289,6 +294,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                       setIsConfirmOpen(true);
                     }}
                     disabled={!step2Done}
+                    title={!step2Done ? 'Complete Step 2 before offboarding the client' : 'Offboard client and revoke user access'}
                     style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)', fontWeight: '600', padding: '8px 16px', opacity: !step2Done ? 0.5 : 1 }}
                   >
                     ⚠️ Offboard Client
@@ -338,15 +344,16 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                 type="button" 
                 className="btn primary" 
                 onClick={handleDestroyKeys}
-                disabled={confirmInput !== currentClient?.name}
-                style={{ background: 'var(--brick)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', opacity: confirmInput !== currentClient?.name ? 0.5 : 1 }}
+                disabled={confirmInput.trim() !== currentClient?.name?.trim() || offboarding}
+                style={{ background: 'var(--brick)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', opacity: confirmInput.trim() !== currentClient?.name?.trim() || offboarding ? 0.5 : 1 }}
               >
-                Confirm Offboard
+                {offboarding ? 'Offboarding…' : 'Confirm Offboard'}
               </button>
               <button 
                 type="button" 
                 className="btn" 
                 onClick={() => setIsConfirmOpen(false)}
+                disabled={offboarding}
                 style={{ padding: '8px 16px', borderRadius: '4px' }}
               >
                 Cancel
