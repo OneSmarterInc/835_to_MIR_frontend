@@ -54,7 +54,10 @@ function formatToMMDDYYYY(val) {
 }
 
 export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
-  const displayStepNumber = step.displayNumber ?? step.id;
+  // User creation is the dedicated ninth onboarding action. Keep its rung,
+  // completion button, notes, and redo labels consistent even if a cached API
+  // response still carries the former combined-step display number.
+  const displayStepNumber = step.actionType === 'user_creation' ? 9 : (step.displayNumber ?? step.id);
   const [feedback, setFeedback] = useState({ isOpen: false, kind: 'ok', title: '', content: '', checks: [] });
   const [viewerFile, setViewerFile] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
