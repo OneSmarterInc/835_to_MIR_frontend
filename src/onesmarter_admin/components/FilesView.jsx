@@ -293,7 +293,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                       const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : '—';
                       const shortId = 'R-' + (f.id || '').substring(0, 6).toUpperCase();
                       const baseName = (f.original_filename || '').replace(/\.[^/.]+$/, '');
-                      const mirName = 'MIR_' + baseName + '.mir';
+                      const mirName = f.mir_filename || ('MIR_' + baseName + '.mir');
                       const isProcessed = f.status === 'ARCHIVED';
                       const isSftpSuccess = Boolean(f.present_in_sftp);
                       const canPushToSftp = isProcessed && !isSftpSuccess;
