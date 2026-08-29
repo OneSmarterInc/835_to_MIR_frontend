@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import {
   fetchClientEdiFiles,
-  viewEdiFile,
   downloadEdiFile,
   pushEdiFileToSftp
 } from '../services/api';
 
-export default function FilesView({ clients = [], activeClientId, onSelectClient }) {
+export default function FilesView({ clients = [], activeClientId, onSelectClient, onOpenFileModal }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [ediFiles, setEdiFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -133,17 +132,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
       }, 1000);
     } catch (err) {
       alert("ZIP Download error: " + err.message);
-    }
-  };
-
-  const handleViewFile = async (file) => {
-    try {
-      const result = await viewEdiFile(selectedClientId, file.id, 'input');
-      window.open(result.fileUrl, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(result.fileUrl), 60000);
-    } catch (err) {
-      console.error('View file error:', err);
-      alert(`Unable to view file: ${err.message}`);
     }
   };
 
@@ -357,7 +345,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                           </td>
                           <td className="num" style={{ fontSize: '11px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '32px' }}>
-                              <button type="button" className="btn-eye" title="View File" onClick={() => handleViewFile(f)}>
+                              <button type="button" className="btn-eye" title="View File" onClick={() => onOpenFileModal?.(f.id)}>
                                 <svg viewBox="0 0 24 24">
                                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                                 </svg>
