@@ -1,0 +1,93 @@
+name: Fix admin MIR download filename
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-admin-mir-download.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fix admin MIR download
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/onesmarter_admin/components/FilesView.jsx')
+          s = p.read_text()
+
+          old = '''                          <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn-eye"
+                              title="View File"
+                            >'''
+          new = '''                          <td className="num" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn-eye"
+                              title="View File"
+                            >'''
+
+          # Add a download helper immediately before the component return.
+          marker = "  return (\n    <section className=\"view on\" id=\"v-files\">"
+          helper = '''  const handleDownloadMir = async (file) => {
+    try {
+      const params = new URLSearchParams({ file_id: String(file.id), file_type: 'mir' });
+      const res = await fetch(`/api/download/?${params.toString()}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const filename = file.mir_filename || res.headers.get('X-OneSmarter-Filename') || 'output.mir';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch (err) {
+      alert('MIR Download error: ' + err.message);
+    }
+  };
+
+'''
+          if 'const handleDownloadMir = async (file)' not in s:
+              if marker not in s:
+                  raise SystemExit('Could not find FilesView return marker')
+              s = s.replace(marker, helper + marker, 1)
+
+          old_button = '''                            {isProcessed ? (
+                              <button
+                                type="button"
+                                className="btn-download"
+                                title="Download .mir File"
+                              >'''
+          new_button = '''                            {isProcessed ? (
+                              <button
+                                type="button"
+                                className="btn-download"
+                                title="Download .mir File"
+                                onClick={() => handleDownloadMir(f)}
+                              >'''
+          if old_button in s:
+              s = s.replace(old_button, new_button, 1)
+          elif 'onClick={() => handleDownloadMir(f)}' not in s:
+              raise SystemExit('Could not find admin MIR download button')
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fix and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/onesmarter_admin/components/FilesView.jsx
+          git rm .github/workflows/fix-admin-mir-download.yml
+          git commit -m "Use configured MIR filename for admin file downloads"
+          git push
