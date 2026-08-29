@@ -6,6 +6,13 @@ import {
   pushEdiFileToSftp
 } from '../services/api';
 
+// MIR filenames shown and downloaded in Admin Files must always come from
+// the canonical server-side MIRFile.mir_filename value. Never derive the
+// display/download name from the physical output_path.
+function canonicalMirFilename(file) {
+  return file?.mir_filename || file?.output_filename || file?.combined_filename || '';
+}
+
 export default function FilesView({ clients = [], activeClientId, onSelectClient, onOpenFileModal }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [ediFiles, setEdiFiles] = useState([]);
@@ -62,6 +69,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
       const fullStr = (
         (item.id || '') + ' ' +
         (item.original_filename || '') + ' ' +
+        (canonicalMirFilename(item) || '') + ' ' +
         (item.output_path || '')
       ).toLowerCase();
       if (!fullStr.includes(query)) return false;
@@ -136,6 +144,11 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   };
 
   const handleDownloadMir = async (file) => {
+    const mirName = canonicalMirFilename(file);
+    if (!mirName) {
+      alert('The configured MIR filename is not available for this conversion yet.');
+      return;
+    }
     try {
       await downloadEdiFile(selectedClientId, file.id, 'mir');
     } catch (err) {
@@ -292,8 +305,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                     pageItems.map((f) => {
                       const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : '—';
                       const shortId = 'R-' + (f.id || '').substring(0, 6).toUpperCase();
-                      const baseName = (f.original_filename || '').replace(/\.[^/.]+$/, '');
-                      const mirName = f.mir_filename || ('MIR_' + baseName + '.mir');
+                      const mirName = canonicalMirFilename(f);
                       const isProcessed = f.status === 'ARCHIVED';
                       const isSftpSuccess = Boolean(f.present_in_sftp);
                       const canPushToSftp = isProcessed && !isSftpSuccess;
@@ -326,7 +338,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                           <td className="num" style={{ fontWeight: 600, fontSize: '11.5px' }}>{shortId}</td>
                           <td className="num" style={{ color: 'var(--ink-2)' }}>{f.original_filename}</td>
                           <td className="num" style={{ color: 'var(--ink-3)' }}>—</td>
-                          <td className="num" style={{ color: 'var(--ink-2)' }}>{isProcessed ? mirName : '—'}</td>
+                          <td className="num" style={{ color: 'var(--ink-2)' }}>{isProcessed ? (mirName || '—') : '—'}</td>
                           <td className="num">{f.claims_count || 0}</td>
                           <td>
                             <span className={`tag ${sourceTagClass}`} style={{ fontSize: '10.5px' }} title={sourceTitle}>{sourceLabel}</span>
@@ -346,15 +358,11 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                           <td className="num" style={{ fontSize: '11px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '32px' }}>
                               <button type="button" className="btn-eye" title="View File" onClick={() => onOpenFileModal?.(f.id)}>
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                                </svg>
+                                <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>
                               </button>
-                              {isProcessed ? (
-                                <button type="button" className="btn-download" title="Download .mir File" onClick={() => handleDownloadMir(f)}>
-                                  <svg viewBox="0 0 24 24">
-                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                                  </svg>
+                              {isProcessed && mirName ? (
+                                <button type="button" className="btn-download" title={`Download ${mirName}`} onClick={() => handleDownloadMir(f)}>
+                                  <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
                                 </button>
                               ) : null}
                             </div>
@@ -378,16 +386,11 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex <= 1} onClick={() => setCurrentPage(pageIndex - 1)}>&ndash; Previous</button>
+                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex <= 1} onClick={() => setCurrentPage(pageIndex - 1)}>– Previous</button>
                 <span style={{ fontSize: '11px', color: 'var(--ink-2)' }}>Page {pageIndex} of {totalPages}</span>
-                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex >= totalPages} onClick={() => setCurrentPage(pageIndex + 1)}>Next &rarr;</button>
+                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '11px' }} disabled={pageIndex >= totalPages} onClick={() => setCurrentPage(pageIndex + 1)}>Next →</button>
               </div>
             </div>
-          </div>
-
-          <div style={{ fontSize: '11.5px', color: 'var(--teal)', fontWeight: 500, display: 'flex', gap: '24px' }}>
-            <span>&#9632; Archive table = one row per conversion set</span>
-            <span>&#9632; Physical 835 / 837 / MIR file hashes remain stored individually</span>
           </div>
         </>
       )}
