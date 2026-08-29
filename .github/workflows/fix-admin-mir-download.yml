@@ -25,15 +25,18 @@ jobs:
           marker = "  return (\n    <section className=\"view on\" id=\"v-files\">"
           helper = '''  const handleDownloadMir = async (file) => {
     try {
-      const params = new URLSearchParams({ file_id: String(file.id), file_type: 'mir' });
-      const res = await fetch(`/api/download/?${params.toString()}`, { credentials: 'include' });
+      const clientId = file.client_id || selectedClientId;
+      if (!clientId || !file.id) throw new Error('Client or file id is missing.');
+      const token = localStorage.getItem('onesmarter_admin_token');
+      const headers = token ? { Authorization: `Token ${token}` } : {};
+      const endpoint = `/admin-panel/api/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(file.id)}/mir/?download=1`;
+      const res = await fetch(endpoint, { headers, credentials: 'include' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Download failed');
+        throw new Error(data.error || `MIR download failed (HTTP ${res.status})`);
       }
       const blob = await res.blob();
-      // The table and download must use the exact same canonical onboarding name.
-      const filename = file.mir_filename || res.headers.get('X-OneSmarter-Filename') || 'output.mir';
+      const filename = res.headers.get('X-OneSmarter-Filename') || file.mir_filename || 'output.mir';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -43,43 +46,42 @@ jobs:
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
-      alert('MIR Download error: ' + err.message);
+      alert('MIR Download error: ' + (err.message || 'Download failed'));
     }
   };
 
 '''
           if 'const handleDownloadMir = async (file)' not in s:
-              if marker not in s:
-                  raise SystemExit('Could not find FilesView return marker')
+              if marker not in s: raise SystemExit('return marker not found')
               s = s.replace(marker, helper + marker, 1)
 
-          old_button = '''                            {isProcessed ? (
+          old = '''                            {isProcessed ? (
                               <button
                                 type="button"
                                 className="btn-download"
                                 title="Download .mir File"
                               >'''
-          new_button = '''                            {isProcessed ? (
+          new = '''                            {isProcessed ? (
                               <button
                                 type="button"
                                 className="btn-download"
                                 title={`Download ${f.mir_filename || mirName}`}
                                 onClick={() => handleDownloadMir(f)}
                               >'''
-          if old_button in s:
-              s = s.replace(old_button, new_button, 1)
+          if old in s:
+              s = s.replace(old, new, 1)
           elif 'onClick={() => handleDownloadMir(f)}' not in s:
-              raise SystemExit('Could not find admin MIR download button')
+              raise SystemExit('download button not found')
 
           s = s.replace("const mirName = 'MIR_' + baseName + '.mir';", "const mirName = f.mir_filename || ('MIR_' + baseName + '.mir');", 1)
           p.write_text(s)
           PY
 
-      - name: Commit and remove temporary workflow
+      - name: Commit fix and remove temporary workflow
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/onesmarter_admin/components/FilesView.jsx
           git rm .github/workflows/fix-admin-mir-download.yml
-          git commit -m "Use configured MIR filename for admin file downloads"
+          git diff --cached --quiet || git commit -m "Fix admin MIR download filename"
           git push
