@@ -16,7 +16,7 @@ function formatDateTime(value) {
 }
 
 export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
-  const [notes, setNotes] = useState(latestNote ? [latestNote] : []);
+  const [notes, setNotes] = useState([]);
   const [expanded, setExpanded] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -31,23 +31,39 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   }, [clientId, stepKey]);
 
   useEffect(() => {
+    setNotes([]);
+    setExpanded(false);
+  }, [clientId, stepKey]);
+
+  useEffect(() => {
     let active = true;
     if (!clientId || !stepKey) {
       setNotes([]);
       return () => { active = false; };
     }
 
-    setNotes(latestNote ? [latestNote] : []);
+    if (latestNote) {
+      setNotes((current) => {
+        const duplicate = current.some((note) =>
+          (latestNote.id && note.id === latestNote.id) ||
+          (!latestNote.id && note.note_text === latestNote.note_text && note.author === latestNote.author)
+        );
+        return duplicate ? current : [latestNote, ...current];
+      });
+    }
     fetchNotes(clientId, stepKey)
       .then((data) => {
-        if (active) setNotes(data.notes || []);
+        if (active) {
+          const fetchedNotes = data.notes || [];
+          setNotes(fetchedNotes.length ? fetchedNotes : (latestNote ? [latestNote] : []));
+        }
       })
       .catch(() => {
         // Keep the latest note supplied with the step if history cannot be loaded.
       });
 
     return () => { active = false; };
-  }, [clientId, stepKey, latestNote, reloadToken]);
+  }, [clientId, stepKey, latestNote?.id, latestNote?.note_text, latestNote?.author, reloadToken]);
 
   const orderedNotes = useMemo(
     () => [...notes].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),

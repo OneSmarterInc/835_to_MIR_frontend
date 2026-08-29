@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
 import { fetchNotes, addNote } from '../../services/api';
+import '../StepNotesHistory.css';
 
 function formatDateTime(dateVal) {
   if (!dateVal) return 'N/A';
@@ -60,20 +61,27 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
       <div className="modal-t" id="notes-modal-title">Step Notes — {stepTitle || ''}</div>
       <div className="modal-b" id="notes-modal-subtitle">Internal notes recorded by administrators.</div>
 
-      <div className="notes-list" id="notes-list-container">
+      <section className="step-notes-history" id="notes-list-container" aria-label="Past notes">
+        <div className="step-notes-history-title">
+          <span>Past Notes</span>
+          <span>{notes.length}</span>
+        </div>
+        <div className="step-notes-history-list">
         {notes.length === 0 ? (
-          <div style={{ color: 'var(--ink-3)', fontSize: '12px' }}>No notes recorded for this step yet.</div>
+          <div className="step-note-history-item" style={{ color: 'var(--ink-3)', fontSize: '12px' }}>No notes recorded for this step yet.</div>
         ) : (
           [...notes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((n) => (
-            <div key={n.id} className="note-item">
-              <div className="meta">
-                <b>{n.author}</b> · {formatDateTime(n.created_at)}
+            <article key={n.id} className="step-note-history-item">
+              <div className="step-note-history-meta">
+                <b>{n.author}</b>
+                <span>{formatDateTime(n.created_at)}</span>
               </div>
-              <div>{n.note_text}</div>
-            </div>
+              <div className="step-note-history-text">{n.note_text}</div>
+            </article>
           ))
         )}
-      </div>
+        </div>
+      </section>
 
       <form onSubmit={handleAddNote}>
         <div className="field">

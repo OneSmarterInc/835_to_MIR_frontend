@@ -116,7 +116,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
     return '';
   })();
 
-  const [s5Text, setS5Text] = useState(step.latestNote?.note_text || step.extra?.verification?.verification_text || '');
+  const [s5Text, setS5Text] = useState(step.extra?.verification?.verification_text || '');
   const [s6Method, setS6Method] = useState(step.extra?.transferConfig?.method || 'SFTP');
   const [s6SftpMode, setS6SftpMode] = useState(step.extra?.transferConfig?.notes?.includes('Pull') ? 'Pull' : 'Push');
   const [s6ApiUrl, setS6ApiUrl] = useState(step.extra?.transferConfig?.notes?.startsWith('https') ? step.extra.transferConfig.notes : '');
@@ -1297,7 +1297,6 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                       <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || 'N/A'}</div>
                       <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.scheduled_time || 'N/A'}</div>
-                      <div><b>Notes:</b> {step.latestNote?.note_text || 'None'}</div>
                     </div>
                   </div>
                 )}

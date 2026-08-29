@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import FeedbackModal from './modals/FeedbackModal';
 import ConfirmModal from './modals/ConfirmModal';
+import StepNotesHistory from './StepNotesHistory';
 
 function toISODate(val) {
   if (!val) return '';
@@ -371,12 +372,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                     </div>
                   )}
 
-                  {/* Latest Note Evidence */}
-                  {step.latestNote && step.step_number !== 4 && step.step_number !== 5 && (
-                    <div className="ev" style={{ color: 'var(--ochre)', marginTop: '4px', fontSize: '11.5px' }}>
-                      💬 Latest Note: "{step.latestNote.note_text}" — <i>{step.latestNote.author}</i>
-                    </div>
-                  )}
+                  <StepNotesHistory clientId={activeClientId} stepKey={step.key} latestNote={step.latestNote} />
 
                   {/* Step 3 Content (SFTP Setup) */}
                   {step.step_number === 3 && (
@@ -422,7 +418,6 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                             <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.production_date) || 'N/A'}</div>
                             <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.production_time || 'N/A'}</div>
-                            <div><b>Notes:</b> {step.extra?.schedule?.notes || step.latestNote?.note_text || 'None'}</div>
                           </div>
                         </div>
                       )}
@@ -529,16 +524,6 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                   {/* Step 5 Content (Any Special Comment) */}
                   {step.step_number === 5 && (
                     <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                      {isDone && step.latestNote && (
-                        <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                          <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                            Current Special Processing Instructions
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                            <div><b>Note:</b> {step.latestNote.note_text}</div>
-                          </div>
-                        </div>
-                      )}
                       <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Special Processing Instructions / Comments Logged</label>
                       <textarea
                         rows={1}
