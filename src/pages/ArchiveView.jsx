@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import EyeIcon from "../components/EyeIcon";
+import FileActionButtons from "../components/FileActionButtons";
 
 export default function ArchiveView({
   metrics,
@@ -615,37 +615,7 @@ export default function ArchiveView({
                         </span>
                       </td>
                       <td className="num" style={{ fontSize: "11px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            minHeight: "28px",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className="btn-eye"
-                            title="View / Edit Code"
-                            onClick={() => onOpenFileModal(f.id)}
-                          >
-                            <EyeIcon />
-                          </button>
-                          {isProcessed ? (
-                            <button
-                              type="button"
-                              className="btn-download"
-                              title="Download .mir File"
-                              onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
-                            >
-                              <svg viewBox="0 0 24 24">
-                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                              </svg>
-                            </button>
-                          ) : (
-                            null
-                          )}
-                        </div>
+                        <FileActionButtons onView={() => onOpenFileModal(f.id)} onDownload={isProcessed ? () => handleDownloadMir(mirName, f.mir_text, f.id) : null} viewTitle="View / Edit Code" downloadTitle="Download .mir File" />
                       </td>
                     </tr>
                   );

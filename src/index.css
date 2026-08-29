@@ -888,7 +888,9 @@ td.num {
   background: none;
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 3px 6px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   cursor: pointer;
   color: var(--ink-2);
   display: inline-flex;
@@ -1040,7 +1042,9 @@ td.num {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 4px 8px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   cursor: pointer;
   color: var(--teal);
   display: inline-flex;
@@ -1064,6 +1068,16 @@ td.num {
   height: 15px;
   fill: currentColor;
 }
+
+.file-action-buttons { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; white-space: nowrap; }
+.file-action-button { width: 40px; height: 40px; padding: 0; border: 1px solid #d5e1ed; border-radius: 7px; background: #fff; color: #172638; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 3px rgba(15,23,42,.06); transition: background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease; }
+.file-action-button.download { border-color: #d2e4e0; }
+.file-action-button:hover { background: #f8fafc; border-color: #9fb1c3; transform: translateY(-1px); box-shadow: 0 3px 7px rgba(15,23,42,.1); }
+.file-action-button.download:hover { background: #f4faf8; border-color: var(--teal); }
+.file-action-button svg { width: 18px; height: 18px; }
+.file-action-button.view svg { fill: none; stroke: currentColor; }
+.file-action-button.download svg { fill: currentColor; }
+.file-action-button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 .pass-wrapper {
   position: relative;
