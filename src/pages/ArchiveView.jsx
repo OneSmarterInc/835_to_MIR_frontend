@@ -644,7 +644,7 @@ export default function ArchiveView({
                               </svg>
                             </button>
                           ) : (
-                            "—"
+                            null
                           )}
                         </div>
                       </td>

@@ -829,7 +829,16 @@ export default function ConversionsView({
                         </span>
                       </td>
                       <td className="num" style={{ fontSize: "11px" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "32px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            minHeight: "32px",
+                          }}
+                        >
                           <button
                             type="button"
                             className="btn-eye"
