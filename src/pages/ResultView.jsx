@@ -175,7 +175,7 @@ function SortableHeader({ label: headerLabel, sortKey, sort, onSort, arrow }) {
 
 function StatusHeader({ sort, onSort, arrow, value, onChange }) {
   const active = sort.key === "status";
-  return <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}><button type="button" className={`result-sort-button${active ? " active" : ""}`} onClick={() => onSort("status")}><span>Status</span><span className="result-sort-arrow" aria-hidden="true">{arrow("status")}</span></button><select className="result-status-filter" value={value} onChange={(event) => onChange(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All statuses</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></th>;
+  return <th className="result-status-header" aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}><button type="button" className={`result-sort-button${active ? " active" : ""}`} onClick={() => onSort("status")}><span>Status</span><span className="result-sort-arrow" aria-hidden="true">{arrow("status")}</span></button><select className="result-status-filter" value={value} onChange={(event) => onChange(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All statuses</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></th>;
 }
 
 function ReconMatches({ row, onShowMore }) {
