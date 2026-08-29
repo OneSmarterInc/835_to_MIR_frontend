@@ -1,0 +1,37 @@
+name: Fix canonical MIR filename display
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[mir-filename-bot]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use persisted MIR filename in admin archive
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/onesmarter_admin/components/FilesView.jsx')
+          text = path.read_text()
+          old = "const mirName = 'MIR_' + baseName + '.mir';"
+          new = "const mirName = f.mir_filename || ('MIR_' + baseName + '.mir');"
+          if old not in text:
+              raise SystemExit('Expected MIR filename expression was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/onesmarter_admin/components/FilesView.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m '[mir-filename-bot] Use configured MIR filename in admin archive'
+          git push
