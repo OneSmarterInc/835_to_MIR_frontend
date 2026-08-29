@@ -46,6 +46,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
       await addNote(clientId, stepKey, newNote.trim());
       setNewNote('');
       await loadNotes();
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey } }));
       onClose(); // Close the modal immediately after saving
     } catch (e) {
       setNoteError(e.message || 'Failed to save note.');

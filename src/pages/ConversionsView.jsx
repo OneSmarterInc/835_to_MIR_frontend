@@ -832,10 +832,10 @@ export default function ConversionsView({
                         <div
                           style={{
                             display: "flex",
-                            flexDirection: "column",
+                            flexDirection: "row",
                             alignItems: "center",
                             justifyContent: "center",
-                            gap: "6px",
+                            gap: "8px",
                             minHeight: "32px",
                           }}
                         >
