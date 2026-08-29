@@ -4,6 +4,7 @@ import Topbar from "./components/Topbar";
 import Drawer from "./components/Drawer";
 import FileViewerModal from "./components/FileViewerModal";
 import SftpBrowserModal from "./components/SftpBrowserModal";
+import AccessDeniedScreen from "./components/AccessDeniedScreen";
 
 import { safeFetchJson } from "./utils/api";
 
@@ -406,6 +407,17 @@ export default function App() {
 
   };
 
+  const handleAccessDenied = (loginData)=>{
+    setAuthNext(null);
+    setUserState({
+      authenticated:false,
+      offboarded:true,
+      offboarded_message:loginData?.message || loginData?.error,
+      client:loginData?.client || null,
+      user:null
+    });
+  };
+
 
 
 
@@ -434,6 +446,18 @@ export default function App() {
 
   }
 
+  // This gate is deliberately above every portal/admin route and MFA flow.
+  // Server-side middleware independently enforces the same restriction.
+  if(userState?.offboarded){
+    return (
+      <AccessDeniedScreen
+        client={userState.client || userState.user?.client}
+        message={userState.offboarded_message}
+        onExit={handleLogout}
+      />
+    );
+  }
+
 
 
 
@@ -452,6 +476,8 @@ export default function App() {
         isAdminRoute={isAdminRoute}
 
         onLoginSuccess={handleLoginSuccess}
+
+        onAccessDenied={handleAccessDenied}
 
       />
 

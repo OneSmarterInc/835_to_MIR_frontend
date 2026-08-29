@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { safeFetchJson } from "../utils/api";
 
-export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
+export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -19,6 +19,11 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
         credentials: "include",
         body: JSON.stringify({ email, password, isAdminRoute }),
       });
+
+      if (data?.offboarded || data?.code === "CLIENT_OFFBOARDED") {
+        onAccessDenied?.(data);
+        return;
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Sign in failed.");
@@ -105,4 +110,3 @@ export default function LoginPage({ onLoginSuccess, isAdminRoute }) {
     </div>
   );
 }
-

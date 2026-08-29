@@ -1414,3 +1414,69 @@ td.num {
 @media (max-width: 420px) {
   .metrics { grid-template-columns: 1fr; }
 }
+/* Offboarded-client lock screen. No application navigation is mounted here. */
+.access-denied-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #eef2f6;
+}
+
+.access-denied-card {
+  width: min(540px, 100%);
+  padding: 48px 36px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+}
+
+.access-denied-icon {
+  width: 92px;
+  height: 82px;
+  margin: 0 auto 24px;
+  display: grid;
+  place-items: center;
+  color: #422006;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  background: #facc15;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  padding-top: 18px;
+}
+
+.access-denied-card h1 {
+  margin: 0 0 14px;
+  color: #0f172a;
+  font-size: 32px;
+}
+
+.access-denied-card p {
+  margin: 0 auto 10px;
+  color: #475569;
+  font-size: 17px;
+}
+
+.access-denied-client {
+  font-weight: 700;
+}
+
+.access-denied-exit {
+  margin-top: 24px;
+  min-width: 170px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 4px;
+  background: #111827;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.access-denied-exit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
