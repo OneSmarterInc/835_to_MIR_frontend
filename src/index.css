@@ -884,6 +884,7 @@ td.num {
 }
 
 .btn-eye {
+  position: relative;
   background: none;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -903,9 +904,25 @@ td.num {
 }
 
 .btn-eye svg {
-  width: 15px;
-  height: 15px;
-  fill: currentColor;
+  display: none;
+}
+
+.btn-eye::before {
+  content: "";
+  width: 14px;
+  height: 9px;
+  border: 1.6px solid currentColor;
+  border-radius: 50% / 55%;
+  display: block;
+}
+
+.btn-eye::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .btn, button.btn, .btn-primary, .btn-secondary, .btn-sftp, .btn-gray {

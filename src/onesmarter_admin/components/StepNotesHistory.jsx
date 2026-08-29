@@ -32,12 +32,12 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
 
   useEffect(() => {
     let active = true;
-    if (!clientId || !stepKey || !latestNote) {
+    if (!clientId || !stepKey) {
       setNotes([]);
       return () => { active = false; };
     }
 
-    setNotes([latestNote]);
+    setNotes(latestNote ? [latestNote] : []);
     fetchNotes(clientId, stepKey)
       .then((data) => {
         if (active) setNotes(data.notes || []);

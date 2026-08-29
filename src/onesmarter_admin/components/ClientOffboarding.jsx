@@ -1,9 +1,42 @@
 import React, { useState } from 'react';
 import { completeOffboardingStep, redoOffboardingStep } from '../services/api';
+import StepNotesHistory from './StepNotesHistory';
+
+const iconOnlyButtonStyle = {
+  background: 'var(--surface)',
+  border: '1px solid var(--line)',
+  width: '34px',
+  height: '34px',
+  padding: '0',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const RedoIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 3-6.7" />
+    <path d="M3 3v6h6" />
+  </svg>
+);
+
+const NotesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
+  </svg>
+);
+
+const ZipIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 4h6l2 2h8v14H4Z" />
+    <path d="M14 6v3h-2v3h2v3h-2v3" />
+  </svg>
+);
 
 function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardingState, onRefresh, onOpenNotes }) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmInput, setConfirmInput] = useState('');
+  const [archiveDownloading, setArchiveDownloading] = useState(false);
 
   const currentClient = clients.find(c => c.id === activeClientId);
 
@@ -46,6 +79,34 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       onRefresh();
     } catch (e) {
       alert(e.message || 'Error undoing step');
+    }
+  };
+
+  const handleArchiveDownload = async () => {
+    if (!activeClientId || !step1Done || archiveDownloading) return;
+    setArchiveDownloading(true);
+    try {
+      const response = await fetch(`/api/download-zip/?type=all&client=${encodeURIComponent(activeClientId)}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create the client archive.');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentClient?.client_code || currentClient?.name || 'client'}_835_MIR_RECON_archive.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      await handleComplete(2);
+    } catch (error) {
+      alert(error.message || 'Error downloading client archive');
+    } finally {
+      setArchiveDownloading(false);
     }
   };
 
@@ -123,9 +184,11 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                     type="button" 
                     className="btn" 
                     onClick={() => handleRedo(1)}
-                    style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '6px 12px', fontSize: '12px', color: 'var(--brick)' }}
+                    title="Redo termination notice"
+                    aria-label="Redo termination notice"
+                    style={{ ...iconOnlyButtonStyle, color: 'var(--brick)' }}
                   >
-                    🔄 Redo
+                    <RedoIcon />
                   </button>
                 )}
 
@@ -133,9 +196,11 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   type="button" 
                   className="btn" 
                   onClick={() => onOpenNotes('offboard_step_1', 'Termination Notice Recorded')}
-                  style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '6px 12px', fontSize: '12px' }}
+                  title="View termination notice notes"
+                  aria-label="View termination notice notes"
+                  style={iconOnlyButtonStyle}
                 >
-                  💬 Notes
+                  <NotesIcon />
                 </button>
               </div>
 
@@ -144,6 +209,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   ✓ Uploaded document: {step1Doc}
                 </div>
               )}
+              <StepNotesHistory clientId={activeClientId} stepKey="offboard_step_1" />
             </div>
           </div>
 
@@ -156,40 +222,38 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
               
               <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 {!step2Done ? (
-                  <a
-                    href={`/api/download-zip/?type=both&client=${activeClientId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => {
-                      if(step1Done) {
-                        setTimeout(() => handleComplete(2), 500);
-                      }
-                    }}
+                  <button
+                    type="button"
+                    onClick={handleArchiveDownload}
+                    disabled={!step1Done || archiveDownloading}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
                       textDecoration: 'none',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--line)',
+                      background: 'var(--ink)',
+                      border: '1px solid var(--ink)',
                       padding: '6px 12px',
                       fontSize: '12px',
-                      color: 'inherit',
+                      color: '#fff',
                       borderRadius: '4px',
                       opacity: !step1Done ? 0.5 : 1,
-                      pointerEvents: !step1Done ? 'none' : 'auto'
+                      cursor: !step1Done || archiveDownloading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <span>📦 Download Archive (MIR & 835)</span>
-                  </a>
+                    <ZipIcon />
+                    <span>{archiveDownloading ? 'Preparing Archive…' : 'Download Archive (835, MIR & RECON)'}</span>
+                  </button>
                 ) : (
                   <button 
                     type="button" 
                     className="btn" 
                     onClick={() => handleRedo(2)}
-                    style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '6px 12px', fontSize: '12px', color: 'var(--brick)' }}
+                    title="Redo archive return"
+                    aria-label="Redo archive return"
+                    style={{ ...iconOnlyButtonStyle, color: 'var(--brick)' }}
                   >
-                    🔄 Redo
+                    <RedoIcon />
                   </button>
                 )}
                 
@@ -197,11 +261,14 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   type="button" 
                   className="btn" 
                   onClick={() => onOpenNotes('offboard_step_2', 'Archive Returned to Client')}
-                  style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '6px 12px', fontSize: '12px' }}
+                  title="View archive return notes"
+                  aria-label="View archive return notes"
+                  style={iconOnlyButtonStyle}
                 >
-                  💬 Notes
+                  <NotesIcon />
                 </button>
               </div>
+              <StepNotesHistory clientId={activeClientId} stepKey="offboard_step_2" />
             </div>
           </div>
 
