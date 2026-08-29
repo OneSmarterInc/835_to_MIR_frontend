@@ -18,6 +18,9 @@ function formatDate(dateVal) {
  */
 function getStageBadge(stage) {
   const s = (stage || '').toLowerCase().replace(/[\s-]/g, '_');
+  if (s === 'offboarded') {
+    return <span className="tag bad">Offboarded</span>;
+  }
   if (s === 'production') {
     return <span className="tag ok">Production</span>;
   }
@@ -65,6 +68,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
     else if (filterStage === 'golive_pending') matchesStage = s === 'golive_pending' || s === 'go_live_pending';
     else if (filterStage === 'production_pending') matchesStage = s === 'production_pending';
     else if (filterStage === 'production') matchesStage = s === 'production';
+    else if (filterStage === 'offboarded') matchesStage = s === 'offboarded';
 
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
@@ -127,6 +131,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
           <option value="golive_pending">Go Live Pending</option>
           <option value="production_pending">Production Pending</option>
           <option value="production">Production</option>
+          <option value="offboarded">Offboarded</option>
         </select>
         <input
           placeholder="Filter clients by name, owner, or identifier…"
