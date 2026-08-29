@@ -39,9 +39,13 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState({ key: "", direction: "asc" });
   const requestSequence = useRef(0);
+  const requestAbort = useRef(null);
 
   useEffect(() => { if (initialClientId) setClientId(initialClientId); }, [initialClientId]);
   const loadResults = useCallback(async (requestedPage = 1, requestedSearch = "", requestedSort = { key: "", direction: "asc" }) => {
+    requestAbort.current?.abort();
+    const controller = new AbortController();
+    requestAbort.current = controller;
     const sequence = ++requestSequence.current;
     try {
       const params = new URLSearchParams();
@@ -54,12 +58,17 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       }
       params.set("page", String(requestedPage));
       params.set("page_size", "100");
-      const result = await apiJson(`/edi835/api/reconciliation/?${params}`);
+      const result = await apiJson(`/edi835/api/reconciliation/?${params}`, { signal: controller.signal });
       if (sequence !== requestSequence.current) return;
       setData(result);
       setPage(result.page || requestedPage);
-    } catch (error) { if (sequence === requestSequence.current) setMessage({ kind: "error", text: error.message }); }
+    } catch (error) {
+      if (error.name !== "AbortError" && sequence === requestSequence.current) {
+        setMessage({ kind: "error", text: error.message });
+      }
+    }
   }, [clientId, isAdmin]);
+  useEffect(() => () => requestAbort.current?.abort(), []);
   useEffect(() => { setPage(1); setSearch(""); setActiveSearch(""); }, [loadResults]);
   useEffect(() => {
     const value = search.trim();
