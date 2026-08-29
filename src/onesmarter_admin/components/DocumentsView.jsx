@@ -154,6 +154,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
           </p>
         </div>
       ) : (
+        <div className="admin-table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -226,6 +227,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       <FileViewerModal

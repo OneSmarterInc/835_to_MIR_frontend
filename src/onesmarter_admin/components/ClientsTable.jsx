@@ -137,6 +137,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
       </div>
 
       {/* Relational Client Grid */}
+      <div className="admin-table-scroll">
       <table className="clickable">
         <thead>
           <tr>
@@ -224,6 +225,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
           )}
         </tbody>
       </table>
+      </div>
 
       <div className="note">
         <b>Client-Aware Architecture:</b> Every client maintains an isolated sequential compliance workflow, notes, contacts, transfer setup, and audit records in the database.

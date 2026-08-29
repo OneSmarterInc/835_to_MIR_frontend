@@ -221,6 +221,7 @@ export default function AccessView({ currentUser }) {
       ) : (
         <>
           <h2 className="sec">Administrative Staff Access</h2>
+          <div className="admin-table-scroll">
           <table style={{ width: '100%' }}>
             <thead>
               <tr>
@@ -300,6 +301,7 @@ export default function AccessView({ currentUser }) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 

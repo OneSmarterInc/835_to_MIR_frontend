@@ -239,7 +239,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
         </div>
       )}
 
-      <div className="metrics" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+      <div className="metrics files-metrics-grid" style={{ gap: '12px', marginBottom: '20px' }}>
         <div className="metric"><div className="v">{conversionSets}</div><div className="l">Conversion sets</div><div className="d"><span>{archivedCount}</span> physical file seals stored</div></div>
         <div className="metric"><div className="v">{files835}</div><div className="l">835 files received</div><div className="d">Across all conversion sets</div></div>
         <div className="metric"><div className="v">0</div><div className="l">837 references</div><div className="d">Optional - reference only</div></div>

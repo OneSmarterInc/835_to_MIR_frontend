@@ -258,7 +258,7 @@ export default function DefaultConfigsView() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px', marginTop: '20px' }}>
+      <div className="admin-responsive-grid" style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
 
         {/* SFTP Default Card */}
         <div className="card" style={{ padding: '20px' }}>
@@ -390,4 +390,3 @@ export default function DefaultConfigsView() {
     </section>
   );
 }
-
