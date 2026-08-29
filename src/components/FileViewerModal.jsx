@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 export default function FileViewerModal({ fileId, onClose }) {
+  const noDataMessage = "No data available in DataTable for this record.";
   const [loading, setLoading] = useState(true);
   const [filename, setFilename] = useState("Loading file...");
   const [ediText, setEdiText] = useState("");
@@ -22,8 +23,8 @@ export default function FileViewerModal({ fileId, onClose }) {
       })
       .then((data) => {
         setFilename(data.filename || "File View & Edit");
-        setEdiText(data.edi_text || "(No 835 content recorded)");
-        setMirText(data.mir_text || "(No MIR content generated yet)");
+        setEdiText(data.edi_text || noDataMessage);
+        setMirText(data.mir_text || noDataMessage);
         setLoading(false);
       })
       .catch((err) => {
