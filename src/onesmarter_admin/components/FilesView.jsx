@@ -356,7 +356,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                             <span className={`tag ${statusTagClass}`} style={{ fontSize: '10.5px' }}>{displayStatus}</span>
                           </td>
                           <td className="num" style={{ fontSize: '11px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '28px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '32px' }}>
                               <button type="button" className="btn-eye" title="View File" onClick={() => handleViewFile(f)}>
                                 <svg viewBox="0 0 24 24">
                                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
@@ -368,7 +368,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
                                     <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                                   </svg>
                                 </button>
-                              ) : '—'}
+                              ) : null}
                             </div>
                           </td>
                         </tr>
