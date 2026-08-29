@@ -9,14 +9,21 @@ export default function FileViewerModal({ fileId, onClose }) {
   const [activeTab, setActiveTab] = useState("835"); // "835" or "MIR"
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [error, setError] = useState(null);
+  const [loadedFileId, setLoadedFileId] = useState(null);
 
   useEffect(() => {
-    if (!fileId) return;
+    if (!fileId) {
+      setLoadedFileId(null);
+      setLoading(true);
+      return undefined;
+    }
+    const controller = new AbortController();
     setLoading(true);
+    setLoadedFileId(null);
     setError(null);
     setActiveTab("835");
 
-    fetch(`/api/file-content/${fileId}/`)
+    fetch(`/api/file-content/${fileId}/`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("Could not retrieve file content");
         return res.json();
@@ -25,18 +32,23 @@ export default function FileViewerModal({ fileId, onClose }) {
         setFilename(data.filename || "File View & Edit");
         setEdiText(data.edi_text || noDataMessage);
         setMirText(data.mir_text || noDataMessage);
+        setLoadedFileId(fileId);
         setLoading(false);
       })
       .catch((err) => {
+        if (err.name === "AbortError") return;
         setError(err.message);
         setFilename("Error Loading File");
+        setLoadedFileId(fileId);
         setLoading(false);
       });
+    return () => controller.abort();
   }, [fileId]);
 
   if (!fileId) return null;
 
   const currentText = activeTab === "835" ? ediText : mirText;
+  const isCurrentFileLoading = loading || loadedFileId !== fileId;
 
   const handleTextChange = (e) => {
     const val = e.target.value;
@@ -96,7 +108,7 @@ export default function FileViewerModal({ fileId, onClose }) {
         <div className="inline-viewer-body">
           <textarea
             spellCheck="false"
-            value={loading ? "Loading file content..." : error ? `Error: ${error}` : currentText}
+            value={isCurrentFileLoading ? "Loading file content..." : error ? `Error: ${error}` : currentText}
             onChange={handleTextChange}
             style={{
               whiteSpace: activeTab === "835" ? "pre-wrap" : "pre",
