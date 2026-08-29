@@ -545,6 +545,8 @@ export default function App({ user, onLogout }) {
               onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
               clients={clients}
               isAdmin={true}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
             />
           )}
 

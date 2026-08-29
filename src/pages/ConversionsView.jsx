@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -25,8 +25,19 @@ export default function ConversionsView({
   onOpenFileModal,
   clients = [],
   isAdmin = false,
+  activeClientId = "",
+  onSelectClient,
 }) {
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(
+    isAdmin ? activeClientId || "" : ""
+  );
+
+  useEffect(() => {
+    if (isAdmin) {
+      setSelectedClientId(activeClientId || "");
+      setCurrentPage(1);
+    }
+  }, [activeClientId, isAdmin]);
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
   const [ediText, setEdiText] = useState("");
@@ -436,7 +447,9 @@ export default function ConversionsView({
             <select
               value={selectedClientId}
               onChange={(e) => {
-                setSelectedClientId(e.target.value);
+                const clientId = e.target.value;
+                setSelectedClientId(clientId);
+                if (onSelectClient) onSelectClient(clientId);
                 setCurrentPage(1);
               }}
               style={{
