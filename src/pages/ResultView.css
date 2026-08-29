@@ -12,6 +12,7 @@
 .result-filters { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin: 0 0 12px; }
 .result-filters label { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 12px; font-weight: 700; }
 .result-filters select { min-width: 340px; max-width: 60vw; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+.result-filters .result-status-select { flex: 0 0 180px; width: 180px; min-width: 150px; max-width: 220px; height: 38px; padding: 7px 30px 7px 10px; color: var(--ink-2); font-size: 12px; font-weight: 600; }
 .result-filters .runs-counter { color: var(--ink-3); font-size: 12px; font-weight: 600; }
 .result-global-search { display: flex; align-items: center; flex: 1; }
 .result-global-search input { width: min(560px, 100%); padding: 9px 11px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; }
@@ -37,14 +38,12 @@
 .reconciliation-table .result-col-difference { width: 9%; }
 .reconciliation-table .result-col-status { width: 10%; }
 .reconciliation-table th, .reconciliation-table td { overflow-wrap: anywhere; }
-.reconciliation-table th.result-status-header { min-width: 138px; padding: 9px 10px 10px; vertical-align: top; }
 .reconciliation-table .tag { display: inline-block; max-width: 100%; white-space: normal; }
 .result-sort-button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 7px; width: auto; max-width: 100%; border: 0; padding: 2px 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; letter-spacing: inherit; line-height: 1.35; text-align: left; text-transform: inherit; cursor: pointer; }
 .result-sort-button > span:first-child { min-width: 0; }
 .result-sort-arrow { flex: 0 0 auto; color: #94a3b8; font-family: Arial, sans-serif; font-size: 11px; line-height: 1; }
 .result-sort-button.active .result-sort-arrow { color: var(--teal, #087f8c); }
 .reconciliation-table th input, .reconciliation-table th select { display: block; width: 100%; min-width: 95px; box-sizing: border-box; margin-top: 6px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 3px; background: #fff; font-size: 11px; font-weight: 400; }
-.reconciliation-table th .result-status-filter { display: block; width: 100%; min-width: 118px; height: 30px; margin-top: 7px; padding: 5px 24px 5px 8px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background-color: #fff; color: var(--ink-2, #334155); font-family: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0; line-height: 18px; text-transform: none; cursor: pointer; }
 .reconciliation-table td small { display: block; margin-top: 3px; color: var(--ink-3); white-space: nowrap; }
 .result-name-link { border: 0; padding: 0; background: transparent; color: var(--teal, #087f8c); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .claim-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px; }
