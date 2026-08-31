@@ -51,7 +51,14 @@ export default function App({ user, onLogout }) {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
-    return user || { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
+    if (user) return user;
+    try {
+      const storedUser = localStorage.getItem('onesmarter_admin_user');
+      if (storedUser) return JSON.parse(storedUser);
+    } catch (error) {
+      console.warn('Could not restore the signed-in administrator identity.', error);
+    }
+    return { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
 
   const [clients, setClients] = useState([]);
