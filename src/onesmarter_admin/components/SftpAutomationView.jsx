@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import TimeDisplay from '../../components/TimeDisplay';
+import ClientSelectDropdown from './ClientSelectDropdown';
 import { EASTERN_TIME_ZONE, scheduleTimeLabel, scheduleTimeZoneOptions, timeZoneDisplayName } from '../../utils/timezone';
 import './SftpAutomationView.css';
 
@@ -134,10 +135,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
 
     <div className="sftp-auto-client-bar">
       <label htmlFor="sftp-auto-client">Associate with Client:</label>
-      <select id="sftp-auto-client" value={selectedClientId} onChange={(event) => selectClient(event.target.value)}>
-        <option value="">Select client</option>
-        {clients.map((client) => <option key={client.id} value={client.id}>{client.name} ({client.client_code || client.code || '—'})</option>)}
-      </select>
+      <div className="sftp-auto-client-select"><ClientSelectDropdown id="sftp-auto-client" clients={clients} value={selectedClientId} onChange={selectClient} fullWidth /></div>
     </div>
 
     <div className="sftp-auto-config-list">

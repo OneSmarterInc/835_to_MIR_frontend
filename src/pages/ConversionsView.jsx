@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import FileActionButtons from "../components/FileActionButtons";
 import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
+import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -460,32 +461,18 @@ export default function ConversionsView({
         {isAdmin && clients && clients.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC', boxSizing: 'border-box', width: '100%' }}>
             <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
-            <select
+            <div style={{ flex: '1 1 620px', maxWidth: '820px', minWidth: 0 }}>
+              <ClientSelectDropdown
+              clients={clients}
               value={selectedClientId}
-              onChange={(e) => {
-                const clientId = e.target.value;
+              includeGlobal
+              fullWidth
+              onChange={(clientId) => {
                 setSelectedClientId(clientId);
                 if (onSelectClient) onSelectClient(clientId);
                 setCurrentPage(1);
               }}
-              style={{
-                padding: "6px 10px",
-                border: "1px solid var(--line, #e2e8f0)",
-                borderRadius: "4px",
-                fontSize: "12.5px",
-                background: "#fff",
-                color: "var(--ink, #000)",
-                width: "min(290px, 100%)",
-                minWidth: "220px",
-                maxWidth: "100%",
-                boxSizing: "border-box"
-              }}
-            >
-              <option value="">-- None (Global System Default) --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            /></div>
           </div>
         )}
         <div className="start-conversion-header">

@@ -1,7 +1,7 @@
 .sftp-auto-view { min-width: 0; }
-.sftp-auto-client-bar { display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin: 18px 0; border: 1px solid var(--line); background: var(--paper); }
+.sftp-auto-client-bar { display: flex; align-items: center; gap: 18px; padding: 16px 20px; margin: 18px 0; border: 1px solid var(--line); background: var(--paper); }
 .sftp-auto-client-bar label { flex: 0 0 auto; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.sftp-auto-client-bar select { flex: 1 1 360px; max-width: 620px; min-width: 0; }
+.sftp-auto-client-select { flex: 1 1 760px; width: 100%; min-width: 0; max-width: 980px; }
 .sftp-auto-config { padding: 18px; }
 .sftp-auto-config-list { display: grid; gap: 14px; }
 .sftp-auto-config h2 { margin: 4px 0 14px; }
@@ -29,7 +29,7 @@
 .sftp-auto-error { color: var(--brick) !important; max-width: 300px; }
 @media (max-width: 900px) {
   .sftp-auto-client-bar { align-items: stretch; flex-direction: column; }
-  .sftp-auto-client-bar select { flex-basis: auto; max-width: none; }
+  .sftp-auto-client-select { flex-basis: auto; max-width: none; }
   .sftp-auto-fields { grid-template-columns: 1fr; }
   .sftp-auto-toggle { min-height: auto; }
   .sftp-auto-set-time > span { flex-basis: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./ResultView.css";
 import TimeDisplay from "../components/TimeDisplay";
+import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
 function authHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -171,7 +172,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     <div className="eyebrow">Operations Studio</div><h1>Result</h1>
     <p className="sub">Compare every MIR claim with all processed RECON payment files.</p>
     <div className="start-conversion-card result-process-card">
-      {isAdmin && <div className="result-client-bar"><label>Associate with Client:</label><select value={clientId} onChange={(e) => setClientId(e.target.value)}><option value="">-- None (Global System Default) --</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.client_code || c.code || "—"})</option>)}</select></div>}
+      {isAdmin && <div className="result-client-bar"><label>Associate with Client:</label><div className="result-client-select"><ClientSelectDropdown clients={clients} value={clientId} onChange={setClientId} includeGlobal fullWidth /></div></div>}
       <div className="start-conversion-header"><h2>Upload RECON</h2><div className="step-pills"><span className="step-pill active">1 · UPLOAD</span><span className="step-arrow">→</span><span className="step-pill">2 · PROCESS</span><span className="step-arrow">→</span><span className="step-pill">3 · RECONCILE</span></div></div>
       <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} /><div className="subtext">{selectedFile ? selectedFile.name : "Any RECON filename or extension, including .p7a"}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
