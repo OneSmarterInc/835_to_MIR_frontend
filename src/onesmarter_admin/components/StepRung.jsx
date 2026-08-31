@@ -408,7 +408,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
     try {
       const notesPayload = s6Method === 'SFTP'
-        ? `SFTP Direction: ${s6SftpMode}${finalConfig ? ` | Host: ${finalConfig.host} | 835: ${finalConfig.inbound_835_folder} | 837: ${finalConfig.inbound_837_folder} | MIR: ${finalConfig.outbound_mir_folder}` : ''}`
+        ? `SFTP Direction: ${s6SftpMode}${finalConfig ? ` | Host: ${finalConfig.host} | 835: ${finalConfig.inbound_835_folder} | 837: ${finalConfig.inbound_837_folder} | RECON: ${finalConfig.inbound_recon_folder || 'Not set'} | MIR: ${finalConfig.outbound_mir_folder}` : ''}`
         : (s6Method === 'HTTPS API' ? s6ApiUrl.trim() : 'Manual Upload Direct');
 
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {

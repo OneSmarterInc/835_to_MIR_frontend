@@ -15,6 +15,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
 
   const [inbound835, setInbound835] = useState('');
   const [inbound837, setInbound837] = useState('');
+  const [inboundRecon, setInboundRecon] = useState('');
   const [outboundMir, setOutboundMir] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -41,6 +42,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
             setAuthMethod(config.auth_method || 'Password');
             setInbound835(config.inbound_835_folder || '');
             setInbound837(config.inbound_837_folder || '');
+            setInboundRecon(config.inbound_recon_folder || '');
             setOutboundMir(config.outbound_mir_folder || '');
             // Never pre-populate password from server — mark as already configured
             if (config.host && config.username) setConnected(true);
@@ -85,6 +87,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
         auth_method: authMethod,
         inbound_835_folder: inbound835,
         inbound_837_folder: inbound837,
+        inbound_recon_folder: inboundRecon,
         outbound_mir_folder: outboundMir,
       };
       const res = await fetch("/edi835/api/sftp/save/", {
@@ -133,6 +136,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
         auth_method: authMethod,
         inbound_835_folder: inbound835,
         inbound_837_folder: inbound837,
+        inbound_recon_folder: inboundRecon,
         outbound_mir_folder: outboundMir,
       };
       const res = await fetch("/edi835/api/sftp/save/", {
@@ -153,6 +157,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
             auth_method: authMethod,
             inbound_835_folder: inbound835,
             inbound_837_folder: inbound837,
+            inbound_recon_folder: inboundRecon,
             outbound_mir_folder: outboundMir,
             status: 'CONNECTED',
           });
@@ -295,6 +300,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <FolderBrowse label="835 Inbound Folder" value={inbound835} onChange={setInbound835} setter={setInbound835} />
                 <FolderBrowse label="837 Reference Folder" value={inbound837} onChange={setInbound837} setter={setInbound837} />
+                <FolderBrowse label="RECON Inbound Folder" value={inboundRecon} onChange={setInboundRecon} setter={setInboundRecon} />
                 <FolderBrowse label="MIR Outbound Folder" value={outboundMir} onChange={setOutboundMir} setter={setOutboundMir} />
               </div>
 
@@ -329,4 +335,3 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
     </>
   );
 }
-

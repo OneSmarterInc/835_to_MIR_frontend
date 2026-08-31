@@ -26,12 +26,15 @@ function FileList({ files, empty = '—' }) {
 }
 
 export default function SftpAutomationView({ clients = [], activeClientId = '', onSelectClient }) {
+  const automationTypes = useMemo(() => [
+    { value: '835', label: '835 to MIR', description: 'Fetch 835 files, build MIR, and deliver MIR outbound.' },
+    { value: '837', label: '837 Reference', description: 'Fetch and ingest 837 reference files only.' },
+    { value: 'RECON', label: 'RECON', description: 'Fetch and process RECON files from the dedicated RECON folder.' },
+  ], []);
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || '');
   const [schedules, setSchedules] = useState([]);
   const [runs, setRuns] = useState([]);
-  const [runTime, setRunTime] = useState('09:00');
-  const [timeZone, setTimeZone] = useState(EASTERN_TIME_ZONE);
-  const [enabled, setEnabled] = useState(true);
+  const [forms, setForms] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
@@ -58,23 +61,25 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       const data = await apiJson(`/edi835/api/admin/sftp-automation/?${params}`);
       setSchedules(data.schedules || []);
       setRuns(data.runs || []);
-      const selected = (data.schedules || []).find((item) => String(item.client_id) === String(selectedClientId));
-      if (!quiet && selected) {
-        setRunTime(selected.run_time || '09:00');
-        setTimeZone(selected.timezone || EASTERN_TIME_ZONE);
-        setEnabled(selected.enabled !== false);
-      } else if (!quiet) {
+      if (!quiet) {
         const client = clients.find((item) => String(item.id) === String(selectedClientId));
-        setRunTime('09:00');
-        setTimeZone(client?.timezone || EASTERN_TIME_ZONE);
-        setEnabled(true);
+        const defaults = {};
+        automationTypes.forEach((type) => {
+          const schedule = (data.schedules || []).find((item) => String(item.client_id) === String(selectedClientId) && item.automation_type === type.value);
+          defaults[type.value] = {
+            run_time: schedule?.run_time || '09:00',
+            timezone: schedule?.timezone || client?.timezone || EASTERN_TIME_ZONE,
+            enabled: schedule?.enabled !== false,
+          };
+        });
+        setForms(defaults);
       }
     } catch (error) {
       if (!quiet) setMessage({ kind: 'bad', text: error.message });
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [clients, selectedClientId]);
+  }, [automationTypes, clients, selectedClientId]);
 
   useEffect(() => {
     loadData();
@@ -88,7 +93,11 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     setMessage(null);
   };
 
-  const saveSchedule = async () => {
+  const updateForm = (type, field, value) => setForms((current) => ({
+    ...current, [type]: { ...(current[type] || {}), [field]: value },
+  }));
+
+  const saveSchedule = async (automationType) => {
     if (!selectedClientId) {
       setMessage({ kind: 'bad', text: 'Select a client first.' });
       return;
@@ -96,13 +105,14 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     setSaving(true);
     setMessage(null);
     try {
+      const form = forms[automationType] || {};
       const data = await apiJson('/edi835/api/admin/sftp-automation/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: selectedClientId, run_time: runTime, timezone: timeZone, enabled }),
+        body: JSON.stringify({ client_id: selectedClientId, automation_type: automationType, ...form }),
       });
-      setMessage({ kind: 'ok', text: enabled ? 'Daily SFTP automation schedule saved.' : 'SFTP automation disabled for this client.' });
-      setSchedules((current) => [...current.filter((item) => item.client_id !== data.schedule.client_id), data.schedule]);
+      setMessage({ kind: 'ok', text: `${automationType} automation schedule saved.` });
+      setSchedules((current) => [...current.filter((item) => !(item.client_id === data.schedule.client_id && item.automation_type === automationType)), data.schedule]);
       await loadData(true);
     } catch (error) {
       setMessage({ kind: 'bad', text: error.message });
@@ -111,16 +121,15 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     }
   };
 
-  const selectedSchedule = schedules.find((item) => String(item.client_id) === String(selectedClientId));
-  const clientSchedules = clients.map((client) => ({
-    client,
-    schedule: schedules.find((item) => String(item.client_id) === String(client.id)) || null,
-  }));
+  const clientSchedules = clients.flatMap((client) => automationTypes.map((type) => ({
+    client, type,
+    schedule: schedules.find((item) => String(item.client_id) === String(client.id) && item.automation_type === type.value) || null,
+  })));
 
   return <section className="view on sftp-auto-view">
     <div className="eyebrow">Scheduled Operations</div>
     <h1>SFTP Automation</h1>
-    <p className="sub">Run the same client-side Test pipeline automatically: inbound 835 and 837/RECON ingestion, MIR generation, and outbound SFTP delivery.</p>
+    <p className="sub">Schedule 835, 837, and RECON ingestion independently while preserving the combined client-side Test pipeline.</p>
 
     <div className="sftp-auto-client-bar">
       <label htmlFor="sftp-auto-client">Associate with Client:</label>
@@ -130,32 +139,32 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       </select>
     </div>
 
-    <div className="card sftp-auto-config">
-      <div>
-        <div className="eyebrow">Daily Schedule</div>
-        <h2>Automate Client Test Pipeline</h2>
-      </div>
-      <div className="sftp-auto-fields">
-        <label>Run time<input type="time" value={runTime} onChange={(event) => setRunTime(event.target.value)} /></label>
-        <label>Timezone<select value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{zones.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
-        <label className="sftp-auto-toggle"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />Automation enabled</label>
-        <button type="button" className="btn-gray" disabled={saving || !selectedClientId} onClick={saveSchedule}>{saving ? 'Saving…' : 'Save Schedule'}</button>
-      </div>
-      <div className="sftp-auto-set-time">
-        <b>Set time:</b> {selectedSchedule ? scheduleTimeLabel(selectedSchedule.run_time, selectedSchedule.timezone) : 'Not scheduled'}
-        {selectedSchedule?.next_run_at && selectedSchedule.enabled && <span><b>Next run:</b><TimeDisplay value={selectedSchedule.next_run_at} /></span>}
-      </div>
+    <div className="sftp-auto-config-list">
+      {automationTypes.map((type) => {
+        const form = forms[type.value] || { run_time: '09:00', timezone: EASTERN_TIME_ZONE, enabled: true };
+        const schedule = schedules.find((item) => String(item.client_id) === String(selectedClientId) && item.automation_type === type.value);
+        return <div className="card sftp-auto-config" key={type.value}>
+          <div><div className="eyebrow">Daily {type.value} Schedule</div><h2>{type.label}</h2><p className="sub">{type.description}</p></div>
+          <div className="sftp-auto-fields">
+            <label>Run time<input type="time" value={form.run_time} onChange={(event) => updateForm(type.value, 'run_time', event.target.value)} /></label>
+            <label>Timezone<select value={form.timezone} onChange={(event) => updateForm(type.value, 'timezone', event.target.value)}>{zones.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
+            <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => updateForm(type.value, 'enabled', event.target.checked)} />Automation enabled</label>
+            <button type="button" className="btn-gray" disabled={saving || !selectedClientId} onClick={() => saveSchedule(type.value)}>{saving ? 'Saving…' : `Save ${type.value} Schedule`}</button>
+          </div>
+          <div className="sftp-auto-set-time"><b>Set time:</b> {schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}{schedule?.next_run_at && schedule.enabled && <span><b>Next run:</b><TimeDisplay value={schedule.next_run_at} /></span>}</div>
+        </div>;
+      })}
       {message && <div className={`sftp-auto-message ${message.kind}`}>{message.text}</div>}
     </div>
 
     <h2 className="sec">All Client Schedules</h2>
-    <div className="card sftp-auto-table-wrap"><table className="datatable"><thead><tr><th>Client</th><th>Set Time</th><th>Next Run</th><th>Last Run</th><th>Status</th></tr></thead><tbody>
-      {clientSchedules.length ? clientSchedules.map(({ client, schedule }) => <tr key={client.id}><td><b>{client.name}</b><small>{client.client_code || client.code || '—'}</small></td><td>{schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}</td><td>{schedule?.next_run_at ? <TimeDisplay value={schedule.next_run_at} /> : '—'}</td><td>{schedule?.last_run_at ? <TimeDisplay value={schedule.last_run_at} /> : '—'}</td><td><span className={`tag ${schedule?.enabled ? 'ok' : 'idle'}`}>{schedule ? (schedule.enabled ? 'Enabled' : 'Disabled') : 'Not scheduled'}</span></td></tr>) : <tr><td colSpan="5" className="sftp-auto-none">No clients available.</td></tr>}
+    <div className="card sftp-auto-table-wrap"><table className="datatable"><thead><tr><th>Client</th><th>Automation</th><th>Set Time</th><th>Next Run</th><th>Last Run</th><th>Status</th></tr></thead><tbody>
+      {clientSchedules.length ? clientSchedules.map(({ client, type, schedule }) => <tr key={`${client.id}-${type.value}`}><td><b>{client.name}</b><small>{client.client_code || client.code || '—'}</small></td><td><b>{type.label}</b></td><td>{schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}</td><td>{schedule?.next_run_at ? <TimeDisplay value={schedule.next_run_at} /> : '—'}</td><td>{schedule?.last_run_at ? <TimeDisplay value={schedule.last_run_at} /> : '—'}</td><td><span className={`tag ${schedule?.enabled ? 'ok' : 'idle'}`}>{schedule ? (schedule.enabled ? 'Enabled' : 'Disabled') : 'Not scheduled'}</span></td></tr>) : <tr><td colSpan="6" className="sftp-auto-none">No clients available.</td></tr>}
     </tbody></table></div>
 
     <div className="sftp-auto-runs-heading"><div><h2 className="sec">Automation Run Summary</h2><p className="sub">Every scheduled invocation and its complete file-flow summary.</p></div><button type="button" className="btn-gray" onClick={() => loadData()} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button></div>
-    <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Scheduled / Duration</th><th>Client</th><th>835 Inputs</th><th>837 / RECON Inputs</th><th>MIR Outputs</th><th>Counts</th><th>Status / Error</th></tr></thead><tbody>
-      {runs.length ? runs.map((run) => <tr key={run.id}><td><TimeDisplay value={run.scheduled_for} includeSeconds />{run.started_at && <small>Started: <TimeDisplay value={run.started_at} includeSeconds /></small>}{run.finished_at && <small>Finished: <TimeDisplay value={run.finished_at} includeSeconds /></small>}</td><td><b>{run.client_name}</b><small>{run.client_code || '—'}</small></td><td><FileList files={run.input_835_files} empty="No new 835 files" /></td><td><FileList files={run.input_recon_files} empty="No new 837/RECON files" /></td><td><FileList files={run.mir_output_files} empty="No MIR generated" /></td><td><b>{run.processed_835_count}</b> 835 processed<small>{run.recon_file_count} RECON imported</small></td><td><span className={`tag ${run.status === 'SUCCESS' ? 'ok' : run.status === 'FAILED' ? 'bad' : 'work'}`}>{run.status}</span>{run.error_message && <small className="sftp-auto-error">{run.error_message}</small>}</td></tr>) : <tr><td colSpan="7" className="sftp-auto-none">No scheduled runs recorded for this client.</td></tr>}
+    <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Scheduled / Duration</th><th>Client / Type</th><th>835 Inputs</th><th>837 / RECON Inputs</th><th>MIR Outputs</th><th>Counts</th><th>Status / Error</th></tr></thead><tbody>
+      {runs.length ? runs.map((run) => <tr key={run.id}><td><TimeDisplay value={run.scheduled_for} includeSeconds />{run.started_at && <small>Started: <TimeDisplay value={run.started_at} includeSeconds /></small>}{run.finished_at && <small>Finished: <TimeDisplay value={run.finished_at} includeSeconds /></small>}</td><td><b>{run.client_name}</b><small>{run.client_code || '—'} · {run.automation_type}</small></td><td><FileList files={run.input_835_files} empty="No new 835 files" /></td><td><FileList files={run.input_recon_files} empty="No new 837/RECON files" /></td><td><FileList files={run.mir_output_files} empty="No MIR generated" /></td><td><b>{run.processed_835_count}</b> 835 processed<small>{run.recon_file_count} reference/recon imported</small></td><td><span className={`tag ${run.status === 'SUCCESS' ? 'ok' : run.status === 'FAILED' ? 'bad' : 'work'}`}>{run.status}</span>{run.error_message && <small className="sftp-auto-error">{run.error_message}</small>}</td></tr>) : <tr><td colSpan="7" className="sftp-auto-none">No scheduled runs recorded for this client.</td></tr>}
     </tbody></table></div>
   </section>;
 }

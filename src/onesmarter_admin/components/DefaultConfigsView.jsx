@@ -24,6 +24,7 @@ export default function DefaultConfigsView() {
   const [sftpPass, setSftpPass] = useState('');
   const [sftpInbound835, setSftpInbound835] = useState('');
   const [sftpInbound837, setSftpInbound837] = useState('');
+  const [sftpInboundRecon, setSftpInboundRecon] = useState('');
   const [sftpOutboundMir, setSftpOutboundMir] = useState('');
   const [sftpStatus, setSftpStatus] = useState('');
   const [sftpLoading, setSftpLoading] = useState(false);
@@ -66,6 +67,7 @@ export default function DefaultConfigsView() {
             setSftpHasPassword(Boolean(cfg.has_password));
             setSftpInbound835(cfg.inbound_835_folder || '');
             setSftpInbound837(cfg.inbound_837_folder || '');
+            setSftpInboundRecon(cfg.inbound_recon_folder || '');
             setSftpOutboundMir(cfg.outbound_mir_folder || '');
             setSftpConnected(cfg.status === 'CONNECTED');
             setSftpStatus(`Loaded — Status: ${cfg.status || 'PENDING'}`);
@@ -166,6 +168,7 @@ export default function DefaultConfigsView() {
         username: sftpUser.trim(),
         inbound_835_folder: sftpInbound835.trim(),
         inbound_837_folder: sftpInbound837.trim(),
+        inbound_recon_folder: sftpInboundRecon.trim(),
         outbound_mir_folder: sftpOutboundMir.trim(),
         connection_type: 'UNIFIED',
         use_same_server: true
@@ -303,6 +306,7 @@ export default function DefaultConfigsView() {
           <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <FolderBrowse label="Inbound 835 Folder" value={sftpInbound835} onChange={setSftpInbound835} setter={setSftpInbound835} />
             <FolderBrowse label="Inbound 837 Folder" value={sftpInbound837} onChange={setSftpInbound837} setter={setSftpInbound837} />
+            <FolderBrowse label="Inbound RECON Folder" value={sftpInboundRecon} onChange={setSftpInboundRecon} setter={setSftpInboundRecon} />
             <FolderBrowse label="Outbound MIR Folder" value={sftpOutboundMir} onChange={setSftpOutboundMir} setter={setSftpOutboundMir} />
           </div>
 

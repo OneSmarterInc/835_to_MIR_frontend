@@ -32,6 +32,7 @@ export default function ConnectionsView({
   const [uniSshKey, setUniSshKey] = useState("");
   const [uniTrust, setUniTrust] = useState(true);
   const [uniDir837, setUniDir837] = useState("");
+  const [uniDirRecon, setUniDirRecon] = useState("");
   const [uniDir835, setUniDir835] = useState("");
   const [uniDirMir, setUniDirMir] = useState("");
   const [showUniPass, setShowUniPass] = useState(false);
@@ -49,6 +50,7 @@ export default function ConnectionsView({
   const [inPass, setInPass] = useState("");
   const [inAuth, setInAuth] = useState("Password");
   const [inDir837, setInDir837] = useState("");
+  const [inDirRecon, setInDirRecon] = useState("");
   const [inDir835, setInDir835] = useState("");
   const [showInPass, setShowInPass] = useState(false);
 
@@ -117,6 +119,7 @@ export default function ConnectionsView({
           if (activeConfig.username !== undefined) setUniUser(activeConfig.username || "");
           if (activeConfig.auth_method !== undefined) setUniAuth(activeConfig.auth_method || "Password");
           if (activeConfig.inbound_837_folder !== undefined) setUniDir837(activeConfig.inbound_837_folder || "");
+          if (activeConfig.inbound_recon_folder !== undefined) setUniDirRecon(activeConfig.inbound_recon_folder || "");
           if (activeConfig.inbound_835_folder !== undefined) setUniDir835(activeConfig.inbound_835_folder || "");
           if (activeConfig.outbound_mir_folder !== undefined) setUniDirMir(activeConfig.outbound_mir_folder || "");
         } else {
@@ -124,6 +127,7 @@ export default function ConnectionsView({
           if (activeConfig.port !== undefined) setInPort(activeConfig.port ? String(activeConfig.port) : "22");
           if (activeConfig.username !== undefined) setInUser(activeConfig.username || "");
           if (activeConfig.inbound_837_folder !== undefined) setInDir837(activeConfig.inbound_837_folder || "");
+          if (activeConfig.inbound_recon_folder !== undefined) setInDirRecon(activeConfig.inbound_recon_folder || "");
           if (activeConfig.inbound_835_folder !== undefined) setInDir835(activeConfig.inbound_835_folder || "");
 
           if (activeConfig.outbound_host !== undefined) setOutHost(activeConfig.outbound_host || "");
@@ -162,6 +166,7 @@ export default function ConnectionsView({
       auth_method: uniAuth,
       trust_unknown_key: uniTrust,
       inbound_837_folder: uniDir837,
+      inbound_recon_folder: uniDirRecon,
       inbound_835_folder: uniDir835,
       outbound_mir_folder: uniDirMir,
     };
@@ -229,6 +234,7 @@ export default function ConnectionsView({
       password: inPass,
       auth_method: inAuth,
       inbound_837_folder: inDir837,
+      inbound_recon_folder: inDirRecon,
       inbound_835_folder: inDir835,
 
       outbound_host: outHost,
@@ -708,6 +714,18 @@ export default function ConnectionsView({
               </div>
 
               <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--ink-2)", marginBottom: "4px" }}>
+                  RECON inbound folder <span style={{ color: "var(--ink-3)", fontWeight: "normal" }}>optional</span>
+                </label>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input type="text" value={uniDirRecon} onChange={(e) => setUniDirRecon(e.target.value)} style={{ flex: 1, padding: "8px 10px", fontSize: "12px", border: "1px solid var(--line)", borderRadius: "4px" }} />
+                  <button type="button" className="btn secondary" style={{ padding: "7px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => onOpenSftpBrowser({ initialPath: uniDirRecon, onSelectFolder: setUniDirRecon, host: uniHost, port: uniPort, user: uniUser, pass: uniPass || lastUniPassRef.current, sshKey: uniSshKey || lastUniSshKeyRef.current, auth: uniAuth })}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "14px" }}>
                 <label
                   style={{
                     display: "block",
@@ -1066,6 +1084,16 @@ export default function ConnectionsView({
                       >
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                       </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--ink-2)", marginBottom: "4px" }}>RECON inbound folder optional</label>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <input type="text" value={inDirRecon} onChange={(e) => setInDirRecon(e.target.value)} style={{ flex: 1, padding: "7px 9px", fontSize: "12px", border: "1px solid var(--line)", borderRadius: "4px" }} />
+                    <button type="button" className="btn secondary" style={{ padding: "6px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => onOpenSftpBrowser({ initialPath: inDirRecon, onSelectFolder: setInDirRecon, host: inHost, port: inPort, user: inUser, pass: inPass || lastInPassRef.current, sshKey: inSshKey || lastInSshKeyRef.current, auth: inAuth })}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1 2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                     </button>
                   </div>
                 </div>
@@ -1520,6 +1548,11 @@ export default function ConnectionsView({
                     >
                       📁 837 Reference (.837 / .x12):{" "}
                       <code>{activeConfig.inbound_837_folder}</code>
+                    </div>
+                  )}
+                  {activeConfig.inbound_recon_folder && (
+                    <div style={{ padding: "4px 0", borderBottom: "1px solid var(--line)" }}>
+                      📁 RECON Inbound: <code>{activeConfig.inbound_recon_folder}</code>
                     </div>
                   )}
                   {activeConfig.outbound_mir_folder && (
