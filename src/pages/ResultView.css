@@ -50,6 +50,9 @@
 .claim-summary-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #f8fafc; }
 .claim-summary-grid b { color: var(--ink-3); font-size: 11px; text-transform: uppercase; }
 .result-detail h3 { margin: 20px 0 8px; }
+.result-file-section-heading { margin: 20px 0 8px; min-width: 0; }
+.result-file-section-heading h3 { margin: 0 0 5px; overflow-wrap: anywhere; }
+.result-file-section-heading .timezone-display { color: var(--ink-3); font-size: 12px; }
 .result-files-modal { width: min(760px, 96vw); }
 .result-files-list { display: flex; flex-direction: column; border: 1px solid var(--line, #e2e8f0); border-radius: 8px; overflow: hidden; }
 .result-file-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--line, #e2e8f0); }
