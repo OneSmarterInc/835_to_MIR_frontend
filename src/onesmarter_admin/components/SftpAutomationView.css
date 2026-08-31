@@ -25,18 +25,17 @@
 .sftp-auto-fields .btn-gray {
   width: 100%;
   min-width: 0;
-  min-height: 46px;
+  min-height: 36px;
 }
-.sftp-auto-toggle { display: flex; align-items: center; gap: 9px; min-height: 46px; white-space: nowrap; }
-.sftp-auto-toggle input { width: 17px; height: 17px; }
+.sftp-auto-toggle { display: flex; align-items: center; gap: 7px; min-height: 36px; white-space: nowrap; }
+.sftp-auto-toggle input { width: 15px; height: 15px; }
 .sftp-auto-set-time {
-  display: grid;
-  grid-template-columns: minmax(300px, auto) minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
-  min-height: 88px;
+  gap: 8px;
   margin-top: auto;
-  padding: 20px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   background: var(--wash, #f6f8fa);
 }
@@ -44,9 +43,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding-left: 18px;
+  gap: 6px;
+  padding-left: 10px;
   border-left: 1px solid var(--line);
 }
 .sftp-auto-message { margin-top: 12px; padding: 10px 12px; border-left: 3px solid; }
@@ -71,6 +69,6 @@
   .sftp-auto-config { min-height: 0; padding: 24px; }
   .sftp-auto-fields { grid-template-columns: 1fr; }
   .sftp-auto-toggle { min-height: auto; }
-  .sftp-auto-set-time { grid-template-columns: 1fr; margin-top: 24px; }
-  .sftp-auto-set-time > span { padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .sftp-auto-set-time { margin-top: 24px; }
+  .sftp-auto-set-time > span { flex-basis: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); }
 }
