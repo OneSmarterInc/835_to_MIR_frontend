@@ -66,6 +66,12 @@ export default function App({ user, onLogout }) {
     const params = new URLSearchParams(window.location.search);
     return params.get('client') || '';
   });
+  // Distinguish an explicit Global selection (empty client ID) from the
+  // initial state before a client has ever been selected.
+  const [hasInitializedClientSelection, setHasInitializedClientSelection] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has('client');
+  });
   const [clientState, setClientState] = useState(null);
   const [offboardingState, setOffboardingState] = useState(null);
   const [activeNav, setActiveNav] = useState(() => {
@@ -213,8 +219,9 @@ export default function App({ user, onLogout }) {
       const data = await fetchClients();
       const list = data.results || data || [];
       setClients(list);
-      if (list.length > 0 && !activeClientId) {
+      if (list.length > 0 && !hasInitializedClientSelection) {
         setActiveClientId(list[0].id);
+        setHasInitializedClientSelection(true);
       }
     } catch (err) {
       console.error('Failed to load clients:', err);
@@ -306,6 +313,7 @@ export default function App({ user, onLogout }) {
 
   const handleSelectClient = (clientId) => {
     setActiveClientId(clientId);
+    setHasInitializedClientSelection(true);
     loadClientWorkflow(clientId);
   };
 
