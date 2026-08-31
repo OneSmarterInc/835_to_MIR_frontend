@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { deleteNote, fetchNotes } from '../services/api';
 import './StepNotesHistory.css';
-import { formatDateTimeWithZones } from '../../utils/timezone';
+import TimeDisplay from '../../components/TimeDisplay';
 
 export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   const [notes, setNotes] = useState([]);
@@ -91,7 +91,7 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
             <div className="step-note-history-meta">
               <b>{note.author || 'Administrator'}</b>
               <span className="step-note-history-actions">
-                {note.created_at && <span>{formatDateTimeWithZones(note.created_at)}</span>}
+                {note.created_at && <TimeDisplay value={note.created_at} />}
                 {note.id && <button type="button" onClick={() => handleDelete(note)} disabled={deletingId === note.id} title="Delete note" aria-label="Delete note">🗑</button>}
               </span>
             </div>

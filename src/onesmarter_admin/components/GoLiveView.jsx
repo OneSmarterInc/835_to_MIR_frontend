@@ -9,12 +9,11 @@ import {
 import FeedbackModal from './modals/FeedbackModal';
 import ConfirmModal from './modals/ConfirmModal';
 import StepNotesHistory from './StepNotesHistory';
+import TimeDisplay from '../../components/TimeDisplay';
 import {
   EASTERN_TIME_ZONE,
-  formatDateTimeWithZones,
   scheduleTimeLabel,
   scheduleTimeZoneOptions,
-  shouldShowTimeZoneSelector,
 } from '../../utils/timezone';
 
 function toISODate(val) {
@@ -428,7 +427,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                             <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.production_date) || 'N/A'}</div>
                             <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.production_time, step.extra?.schedule?.timezone)}</div>
-                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><b>Eastern / local:</b> {formatDateTimeWithZones(step.extra.schedule.scheduled_at)}</div>}
+                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} /></div>}
                           </div>
                         </div>
                       )}
@@ -509,14 +508,12 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                             style={{ padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px', width: '110px' }}
                           />
                         </div>
-                        {shouldShowTimeZoneSelector() && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
-                            <select value={productionTimezone} onChange={(e) => setProductionTimezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
-                              {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                            </select>
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
+                          <select value={productionTimezone} onChange={(e) => setProductionTimezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
+                            {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </select>
+                        </div>
                         <div style={{ flex: 1, minWidth: '180px' }}>
                           <input
                             style={{ width: '100%', padding: '4px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px' }}

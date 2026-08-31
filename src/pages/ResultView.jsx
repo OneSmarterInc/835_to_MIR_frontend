@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./ResultView.css";
-import { formatDateTimeWithZones } from "../utils/timezone";
+import TimeDisplay from "../components/TimeDisplay";
 
 function authHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -20,7 +20,7 @@ async function apiJson(url, options = {}) {
   return data;
 }
 const money = (value) => Number(value || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
-const showDate = (value) => formatDateTimeWithZones(value);
+const showDate = (value) => <TimeDisplay value={value} />;
 const label = (value) => ({ NOT_IN_MIR: "Not in MIR", NOT_IN_RECON: "Not in RECON", SIGNATURE_MISMATCH: "Signature mismatch", CLEAR: "Clear", PARTIALLY_PAID: "Partially paid", OVERPAID: "Overpaid", UNPAID: "Unpaid", AMOUNT_MISMATCH: "Amount mismatch" }[value] || value);
 const tone = (value) => value === "CLEAR" ? "ok" : ["NOT_IN_MIR", "NOT_IN_RECON", "UNPAID"].includes(value) ? "idle" : "bad";
 const STATUS_OPTIONS = ["CLEAR", "NOT_IN_MIR", "NOT_IN_RECON", "SIGNATURE_MISMATCH", "PARTIALLY_PAID", "OVERPAID", "UNPAID", "AMOUNT_MISMATCH"];

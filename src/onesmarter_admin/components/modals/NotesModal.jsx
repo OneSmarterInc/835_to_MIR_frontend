@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
 import { fetchNotes, addNote, deleteNote } from '../../services/api';
 import '../StepNotesHistory.css';
-import { formatDateTimeWithZones } from '../../../utils/timezone';
+import TimeDisplay from '../../../components/TimeDisplay';
 
 export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTitle }) {
   const [notes, setNotes] = useState([]);
@@ -80,7 +80,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
               <div className="step-note-history-meta">
                 <b>{n.author}</b>
                 <span className="step-note-history-actions">
-                  <span>{formatDateTimeWithZones(n.created_at)}</span>
+                  <TimeDisplay value={n.created_at} />
                   <button type="button" onClick={() => handleDeleteNote(n)} disabled={deletingId === n.id} title="Delete note" aria-label="Delete note">🗑</button>
                 </span>
               </div>

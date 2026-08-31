@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   formatDateTimeWithZones,
@@ -11,15 +12,29 @@ const summer = '2026-07-15T14:00:00Z';
 const outsideUs = formatDateTimeWithZones(winter, {
   localTimeZone: 'Asia/Kolkata',
 });
-assert.match(outsideUs, /Eastern: .*10:00 AM EST/);
+assert.match(outsideUs, /US Eastern \(America\/New_York\): .*10:00 AM EST/);
 assert.match(outsideUs, /Local \(Asia\/Kolkata\): .*08:30 PM GMT\+5:30/);
 assert.equal(shouldShowTimeZoneSelector('Asia/Kolkata'), true);
 
 const insideUs = formatDateTimeWithZones(summer, {
   localTimeZone: 'America/New_York',
 });
-assert.match(insideUs, /^Eastern: .*10:00 AM EDT$/);
+assert.match(insideUs, /^US Eastern \(America\/New_York\): .*10:00 AM EDT$/);
 assert.doesNotMatch(insideUs, /Local/);
 assert.equal(shouldShowTimeZoneSelector('America/New_York'), false);
+
+for (const component of [
+  'src/onesmarter_admin/components/StepRung.jsx',
+  'src/onesmarter_admin/components/GoLiveView.jsx',
+]) {
+  const source = readFileSync(component, 'utf8');
+  assert.match(source, /<label[^>]*>Timezone:<\/label>/);
+  assert.doesNotMatch(source, /shouldShowTimeZoneSelector\(\)/);
+}
+
+const timeDisplay = readFileSync('src/components/TimeDisplay.jsx', 'utf8');
+assert.match(timeDisplay, /parts\.eastern\.label/);
+assert.match(timeDisplay, /parts\.local\.label/);
+assert.match(timeDisplay, /display: 'inline-grid'/);
 
 console.log('Timezone formatting regression checks passed.');

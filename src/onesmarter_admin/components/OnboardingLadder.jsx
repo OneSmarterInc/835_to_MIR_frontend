@@ -4,16 +4,7 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import { postStepData } from '../services/api';
 import ConfirmModal from './modals/ConfirmModal';
 import FeedbackModal from './modals/FeedbackModal';
-
-function formatDate(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
+import TimeDisplay from '../../components/TimeDisplay';
 
 export default function OnboardingLadder({ client, steps, roles, clients, onSelectClient, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
   const [returnPrompt, setReturnPrompt] = useState({ isOpen: false, pendingKey: '', stepName: '' });
@@ -140,7 +131,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         <div className="metric">
           <div className="v" id="m-complete">{doneCount} / {totalSteps}</div>
           <div className="l">Steps Complete</div>
-          <div className="d" id="m-started">Started — {formatDate(client.created_at)}</div>
+          <div className="d" id="m-started">Started — <TimeDisplay value={client.created_at} /></div>
         </div>
         <div className="metric">
           <div className="v" id="m-waiting">{activeStepNum}</div>
@@ -153,7 +144,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
           <div className="d" id="m-stage">Stage: {stageName}</div>
         </div>
         <div className="metric">
-          <div className="v" id="m-move">{formatDate(client.updated_at)}</div>
+          <div className="v" id="m-move"><TimeDisplay value={client.updated_at} /></div>
           <div className="l">Last Activity</div>
           <div className="d" id="m-move-d">Activity logged</div>
         </div>

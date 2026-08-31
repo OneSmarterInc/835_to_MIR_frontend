@@ -36,12 +36,32 @@ export function formatInZone(date, timeZone, includeSeconds = false) {
 }
 
 export function formatDateTimeWithZones(value, options = {}) {
+  const parts = dateTimeZoneParts(value, options);
+  if (!parts.valid) return parts.fallback;
+  const eastern = `${parts.eastern.label}: ${parts.eastern.value}`;
+  if (!parts.local) return eastern;
+  return `${eastern} · ${parts.local.label}: ${parts.local.value}`;
+}
+
+export function dateTimeZoneParts(value, options = {}) {
   const date = validDate(value);
-  if (!date) return value || '—';
+  if (!date) return { valid: false, fallback: value || '—' };
   const localZone = options.localTimeZone || browserTimeZone();
-  const eastern = `Eastern: ${formatInZone(date, EASTERN_TIME_ZONE, options.includeSeconds)}`;
-  if (isUnitedStatesTimeZone(localZone) || localZone === EASTERN_TIME_ZONE) return eastern;
-  return `${eastern} · Local (${localZone}): ${formatInZone(date, localZone, options.includeSeconds)}`;
+  const parts = {
+    valid: true,
+    eastern: {
+      label: `US Eastern (${EASTERN_TIME_ZONE})`,
+      value: formatInZone(date, EASTERN_TIME_ZONE, options.includeSeconds),
+    },
+    local: null,
+  };
+  if (!isUnitedStatesTimeZone(localZone) && localZone !== EASTERN_TIME_ZONE) {
+    parts.local = {
+      label: `Local (${localZone})`,
+      value: formatInZone(date, localZone, options.includeSeconds),
+    };
+  }
+  return parts;
 }
 
 export function formatEasternDate(value) {

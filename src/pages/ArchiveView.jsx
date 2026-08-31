@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import FileActionButtons from "../components/FileActionButtons";
+import TimeDisplay from "../components/TimeDisplay";
 
 export default function ArchiveView({
   metrics,
@@ -411,7 +412,7 @@ export default function ArchiveView({
                   onClick={() => handleSortHeader("date")}
                   style={{ fontSize: "11px", letterSpacing: "0.05em" }}
                 >
-                  835 DATE{" "}
+                  835 DATE / TIME{" "}
                   <span className="sort-arrow">
                     {sortKey === "date" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
@@ -484,7 +485,6 @@ export default function ArchiveView({
                 </tr>
               ) : (
                 pageItems.map((f) => {
-                  const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
                   const mirName =
                     f.output_filename ||
@@ -554,7 +554,7 @@ export default function ArchiveView({
 
                   return (
                     <tr key={f.id}>
-                      <td className="num">{upDate}</td>
+                      <td className="num" style={{ minWidth: "210px", whiteSpace: "normal" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
                       <td className="num" style={{ fontWeight: 600, fontSize: "11.5px" }}>
                         {shortId}
                       </td>

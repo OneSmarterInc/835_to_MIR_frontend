@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-
-/**
- * Format ISO date string into DD/MM/YYYY
- */
-function formatDate(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
+import TimeDisplay from '../../components/TimeDisplay';
 
 /**
  * Stage Badge Renderer matching compliance status design tokens
@@ -167,7 +155,6 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
               const isProd = (c.stage || '').toLowerCase() === 'production';
               const displayOwner = c.owner || 'Unassigned';
               const displayClaims = c.claimsSystem || c.claims_system || 'Unknown';
-              const displayDate = formatDate(c.liveSince || c.live_since || c.created_at);
               const progressPct = c.progress_pct || 0;
 
               return (
@@ -182,7 +169,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
                   <td>
                     <span style={{ color: 'var(--ink-2)' }}>{displayClaims}</span>
                   </td>
-                  <td className="num" style={{ color: 'var(--ink-2)' }}>{displayDate}</td>
+                  <td className="num" style={{ color: 'var(--ink-2)', minWidth: '210px' }}><TimeDisplay value={c.liveSince || c.live_since || c.created_at} /></td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ flex: 1, background: 'var(--line-soft)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>

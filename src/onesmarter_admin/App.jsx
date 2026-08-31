@@ -19,7 +19,7 @@ import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
-import { formatDateTimeWithZones } from '../utils/timezone';
+import TimeDisplay from '../components/TimeDisplay';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -713,7 +713,7 @@ export default function App({ user, onLogout }) {
                   ) : (
                     getSortedAuditLogs().map((log) => (
                       <tr key={log.id}>
-                        <td className="num">{formatDateTimeWithZones(log.timestamp, { includeSeconds: true })}</td>
+                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.timestamp} includeSeconds /></td>
                         <td
                           style={{ cursor: 'pointer' }}
                           onClick={() => setAuditModuleFilter(auditModuleFilter === (log.module || 'SYSTEM') ? '' : (log.module || 'SYSTEM'))}
@@ -761,7 +761,7 @@ export default function App({ user, onLogout }) {
                   ) : (
                     recentLogins.map((log) => (
                       <tr key={log.id}>
-                        <td className="num">{formatDateTimeWithZones(log.login_time)}</td>
+                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.login_time} /></td>
                         <td><b>{log.username}</b></td>
                         <td><code>{log.ip_address}</code></td>
                         <td style={{ fontSize: '12px', color: 'var(--ink-2)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -772,7 +772,7 @@ export default function App({ user, onLogout }) {
                             {log.status}
                           </span>
                         </td>
-                        <td className="num">{formatDateTimeWithZones(log.logout_time)}</td>
+                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.logout_time} /></td>
                       </tr>
                     ))
                   )}

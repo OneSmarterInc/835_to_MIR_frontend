@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { safeFetchJson } from "../utils/api";
+import TimeDisplay from "../components/TimeDisplay";
 
 export default function ContactsView() {
   const [contacts, setContacts] = useState([]);
@@ -82,7 +83,7 @@ export default function ContactsView() {
                       {c.phone || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
+                      <TimeDisplay value={c.created_at} />
                     </td>
                   </tr>
                 ))

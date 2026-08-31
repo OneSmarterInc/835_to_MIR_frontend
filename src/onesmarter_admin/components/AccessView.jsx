@@ -3,7 +3,7 @@ import { fetchAccessInfo, fetchClients, createUser, updateUser, deleteUser } fro
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import UserDetailsModal from './modals/UserDetailsModal';
-import { formatDateTimeWithZones } from '../../utils/timezone';
+import TimeDisplay from '../../components/TimeDisplay';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -174,7 +174,7 @@ export default function AccessView({ currentUser }) {
         </div>
         <div className="metric">
           <div className="v" style={{ fontSize: '18px' }}>
-            {accessData?.last_login ? formatDateTimeWithZones(accessData.last_login) : accessData ? 'Never' : 'Loading...'}
+            {accessData?.last_login ? <TimeDisplay value={accessData.last_login} /> : accessData ? 'Never' : 'Loading...'}
           </div>
           <div className="l">Last Login</div>
           <div className="d">Dynamic database record</div>
@@ -256,7 +256,7 @@ export default function AccessView({ currentUser }) {
                       {member.mfa}
                     </span>
                   </td>
-                  <td className="num">{formatDateTimeWithZones(member.last_login)}</td>
+                  <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={member.last_login} /></td>
                   <td><span className="tag ok">{member.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
                     {((member.role === 'Admin' || member.role === 'Super Admin') && !(currentUser?.role === 'Super Admin' || currentUser?.is_superuser)) ? (
