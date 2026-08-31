@@ -364,9 +364,13 @@ export default function ConversionsView({
         const sftp837Files = Array.isArray(completedData.sftp_837_files)
           ? completedData.sftp_837_files
           : [];
-        if (sftp837Files.length) {
-          const importedCount = sftp837Files.filter((item) => !item.already_exists).length;
-          const existingCount = sftp837Files.length - importedCount;
+        const sftpReconFiles = Array.isArray(completedData.sftp_recon_files)
+          ? completedData.sftp_recon_files
+          : [];
+        const importedReferenceFiles = [...sftp837Files, ...sftpReconFiles];
+        if (importedReferenceFiles.length) {
+          const importedCount = importedReferenceFiles.filter((item) => !item.already_exists).length;
+          const existingCount = importedReferenceFiles.length - importedCount;
           setFile837Subtext(
             `SFTP: ${importedCount} new 837/RECON file(s) imported` +
             (existingCount ? `, ${existingCount} already imported` : ``)
@@ -562,7 +566,7 @@ export default function ConversionsView({
               className="btn-gray"
               onClick={handleStartBatchConversion}
               disabled={startingBatch}
-              title="Test SFTP Inbound Batch Conversion: Reads all files from inbound SFTP folder, validates, archives, converts to MIR, uploads to outbound SFTP, and deletes original file from inbound SFTP."
+              title="Test SFTP Inbound Batch Conversion: Processes 835 and RECON files from their configured folders, updates MIR and reconciliation results, and removes successfully processed source files from SFTP."
             >
               <svg
                 width="15"

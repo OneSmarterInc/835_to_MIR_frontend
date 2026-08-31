@@ -10,7 +10,8 @@ assert.match(app, /<SftpAutomationView/, 'admin navigation must render the autom
 assert.match(page, /api\/admin\/sftp-automation\//, 'page must use the protected automation API');
 assert.match(page, /type="time"/, 'page must accept a scheduled time');
 assert.match(page, /scheduleTimeZoneOptions/, 'page must expose timezone selection');
-assert.match(page, /All Client Schedules/, 'page must list every client schedule');
+assert.doesNotMatch(page, /All Client Schedules/, 'the removed all-client schedule table must stay hidden');
+assert.match(page, /Automation Run Summary/, 'the selected-client run summary must remain available');
 for (const operation of ['835 to MIR', '837 Reference', 'RECON']) {
   assert.match(page, new RegExp(operation), `page must expose an independent ${operation} schedule`);
 }

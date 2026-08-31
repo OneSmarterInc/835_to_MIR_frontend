@@ -123,11 +123,6 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     }
   };
 
-  const clientSchedules = clients.flatMap((client) => automationTypes.map((type) => ({
-    client, type,
-    schedule: schedules.find((item) => String(item.client_id) === String(client.id) && item.automation_type === type.value) || null,
-  })));
-
   return <section className="view on sftp-auto-view">
     <div className="eyebrow">Scheduled Operations</div>
     <h1>SFTP Automation</h1>
@@ -155,11 +150,6 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       })}
       {message && <div className={`sftp-auto-message ${message.kind}`}>{message.text}</div>}
     </div>
-
-    <h2 className="sec">All Client Schedules</h2>
-    <div className="card sftp-auto-table-wrap"><table className="datatable"><thead><tr><th>Client</th><th>Automation</th><th>Set Time</th><th>Next Run</th><th>Last Run</th><th>Status</th></tr></thead><tbody>
-      {clientSchedules.length ? clientSchedules.map(({ client, type, schedule }) => <tr key={`${client.id}-${type.value}`}><td><b>{client.name}</b><small>{client.client_code || client.code || '—'}</small></td><td><b>{type.label}</b></td><td>{schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}</td><td>{schedule?.next_run_at ? <TimeDisplay value={schedule.next_run_at} /> : '—'}</td><td>{schedule?.last_run_at ? <TimeDisplay value={schedule.last_run_at} /> : '—'}</td><td><span className={`tag ${schedule?.enabled ? 'ok' : 'idle'}`}>{schedule ? (schedule.enabled ? 'Enabled' : 'Disabled') : 'Not scheduled'}</span></td></tr>) : <tr><td colSpan="6" className="sftp-auto-none">No clients available.</td></tr>}
-    </tbody></table></div>
 
     <div className="sftp-auto-runs-heading"><div><h2 className="sec">Automation Run Summary</h2><p className="sub">Every scheduled invocation and its complete file-flow summary.</p></div><button type="button" className="btn-gray" onClick={() => loadData()} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button></div>
     <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Scheduled / Duration</th><th>Client / Type</th><th>835 Inputs</th><th>837 / RECON Inputs</th><th>MIR Outputs</th><th>Counts</th><th>Status / Error</th></tr></thead><tbody>
