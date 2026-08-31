@@ -22,6 +22,8 @@ export default function SftpBrowserModal({
   const [folders, setFolders] = useState([]);
   const [files, setFiles] = useState([]);
   const [parentPath, setParentPath] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [ingesting, setIngesting] = useState(false);
   const cacheRef = useRef({});
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export default function SftpBrowserModal({
       setFolders(Array.isArray(data.folders) ? data.folders : []);
       setFiles(Array.isArray(data.files) ? data.files : []);
       setParentPath(data.parent_path || null);
+      setSelectedFile(null);
 
       if (recordHistory) {
         setNavHistory((prev) => {
@@ -112,6 +115,19 @@ export default function SftpBrowserModal({
     }
   };
 
+
+  const useAs837Reference = async () => {
+    if (!selectedFile || ingesting) return;
+    setIngesting(true); setError(null);
+    try {
+      const res = await fetch("/edi835/api/sftp/837-ingest/", { method: "POST", headers: getAuthHeaders({"Content-Type":"application/json", Accept:"application/json"}), body: JSON.stringify({config_id: String(configId), filename: selectedFile.name}) });
+      const data = await res.json();
+      if (!res.ok || data.success === false) throw new Error(data.error || "Failed to process 837 reference.");
+      setSelectedFile(null);
+      alert(data.already_exists ? "This 837 reference was already processed." : "837 reference processed successfully and is now available in Results.");
+    } catch (err) { setError(err.message || "Failed to process 837 reference."); }
+    finally { setIngesting(false); }
+  };
 
   const navigateBack = () => {
     if (navIndex > 0) {
@@ -321,7 +337,7 @@ export default function SftpBrowserModal({
                   !error &&
                   files.map((file, idx) => (
                     <tr key={idx}>
-                      <td style={{ color: "var(--ink-2)" }}>📄 {file.name}</td>
+                      <td style={{ color: "var(--ink-2)" }}>📄 {file.name} {/(^|[^0-9])837([^0-9]|$)|\\.(837|x12|edi)$/i.test(file.name) && <span className="tag ok" style={{ marginLeft: "8px", fontSize: "9px" }}>837 REFERENCE</span>}</td>
                       <td>
                         <span className="tag idle" style={{ fontSize: "9.5px" }}>
                           FILE
