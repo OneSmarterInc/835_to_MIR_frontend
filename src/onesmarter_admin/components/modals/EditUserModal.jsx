@@ -57,7 +57,8 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
         mobile: mobile.trim(),
         email: email.trim(),
         role,
-        is_staff: role === 'Admin',
+        is_staff: role === 'Admin' || role === 'Super Admin',
+        is_superuser: role === 'Super Admin',
         client_id: role === 'User' ? selectedClientId : null
       };
       if (newPassword) {
