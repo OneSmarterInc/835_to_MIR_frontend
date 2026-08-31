@@ -4,7 +4,7 @@
 .sftp-auto-client-select { flex: 1 1 760px; width: 100%; min-width: 0; max-width: 980px; }
 .sftp-auto-config {
   box-sizing: border-box;
-  min-height: 360px;
+  min-height: 0;
   padding: 32px;
   display: flex;
   flex-direction: column;
@@ -34,7 +34,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: auto;
+  margin-top: 18px;
   padding: 11px 12px;
   border: 1px solid var(--line);
   background: var(--wash, #f6f8fa);
