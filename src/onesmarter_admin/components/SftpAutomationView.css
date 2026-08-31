@@ -2,15 +2,53 @@
 .sftp-auto-client-bar { display: flex; align-items: center; gap: 18px; padding: 16px 20px; margin: 18px 0; border: 1px solid var(--line); background: var(--paper); }
 .sftp-auto-client-bar label { flex: 0 0 auto; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .sftp-auto-client-select { flex: 1 1 760px; width: 100%; min-width: 0; max-width: 980px; }
-.sftp-auto-config { padding: 18px; }
+.sftp-auto-config {
+  box-sizing: border-box;
+  min-height: 360px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
 .sftp-auto-config-list { display: grid; gap: 14px; }
-.sftp-auto-config h2 { margin: 4px 0 14px; }
-.sftp-auto-fields { display: grid; grid-template-columns: minmax(150px, 190px) minmax(240px, 1fr) auto auto; gap: 12px; align-items: end; }
+.sftp-auto-config h2 { margin: 6px 0 10px; }
+.sftp-auto-config > div:first-child .sub { margin-bottom: 0; max-width: 760px; }
+.sftp-auto-fields {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(280px, 1fr) auto minmax(170px, auto);
+  gap: 18px;
+  align-items: end;
+  margin-top: 30px;
+}
 .sftp-auto-fields label:not(.sftp-auto-toggle) { display: grid; gap: 5px; font-weight: 600; }
-.sftp-auto-fields input[type="time"], .sftp-auto-fields select { width: 100%; min-width: 0; }
-.sftp-auto-toggle { display: flex; align-items: center; gap: 7px; min-height: 38px; white-space: nowrap; }
-.sftp-auto-set-time { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; padding: 11px 12px; border: 1px solid var(--line); background: var(--wash, #f6f8fa); }
-.sftp-auto-set-time > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 10px; border-left: 1px solid var(--line); }
+.sftp-auto-fields input[type="time"],
+.sftp-auto-fields select,
+.sftp-auto-fields .btn-gray {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+}
+.sftp-auto-toggle { display: flex; align-items: center; gap: 9px; min-height: 46px; white-space: nowrap; }
+.sftp-auto-toggle input { width: 17px; height: 17px; }
+.sftp-auto-set-time {
+  display: grid;
+  grid-template-columns: minmax(300px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  min-height: 88px;
+  margin-top: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: var(--wash, #f6f8fa);
+}
+.sftp-auto-set-time > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
 .sftp-auto-message { margin-top: 12px; padding: 10px 12px; border-left: 3px solid; }
 .sftp-auto-message.ok { border-color: var(--teal); background: #edf8f5; }
 .sftp-auto-message.bad { border-color: var(--brick); background: #fff0ed; color: var(--brick); }
@@ -30,7 +68,9 @@
 @media (max-width: 900px) {
   .sftp-auto-client-bar { align-items: stretch; flex-direction: column; }
   .sftp-auto-client-select { flex-basis: auto; max-width: none; }
+  .sftp-auto-config { min-height: 0; padding: 24px; }
   .sftp-auto-fields { grid-template-columns: 1fr; }
   .sftp-auto-toggle { min-height: auto; }
-  .sftp-auto-set-time > span { flex-basis: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .sftp-auto-set-time { grid-template-columns: 1fr; margin-top: 24px; }
+  .sftp-auto-set-time > span { padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--line); }
 }
