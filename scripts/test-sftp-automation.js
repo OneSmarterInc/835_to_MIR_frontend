@@ -15,6 +15,8 @@ for (const operation of ['835 to MIR', '837 Reference', 'RECON']) {
   assert.match(page, new RegExp(operation), `page must expose an independent ${operation} schedule`);
 }
 assert.match(clientSftp, /inbound_recon_folder/, 'SFTP settings must save a dedicated RECON folder');
+assert.match(page, /savingType === type\.value/, 'only the clicked schedule button may show its saving state');
+assert.doesNotMatch(page, /disabled=\{saving \|\|/, 'schedule cards must not share one global saving button state');
 for (const label of ['835 Inputs', '837 / RECON Inputs', 'MIR Outputs', 'Status / Error']) {
   assert.match(page, new RegExp(label.replace('/', '\\/')), `run table missing ${label}`);
 }

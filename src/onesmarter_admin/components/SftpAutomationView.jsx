@@ -36,7 +36,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const [runs, setRuns] = useState([]);
   const [forms, setForms] = useState({});
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingType, setSavingType] = useState(null);
   const [message, setMessage] = useState(null);
   const selectedClient = clients.find((item) => String(item.id) === String(selectedClientId));
   const zones = useMemo(() => {
@@ -102,7 +102,8 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       setMessage({ kind: 'bad', text: 'Select a client first.' });
       return;
     }
-    setSaving(true);
+    if (savingType) return;
+    setSavingType(automationType);
     setMessage(null);
     try {
       const form = forms[automationType] || {};
@@ -117,7 +118,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     } catch (error) {
       setMessage({ kind: 'bad', text: error.message });
     } finally {
-      setSaving(false);
+      setSavingType(null);
     }
   };
 
@@ -149,7 +150,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
             <label>Run time<input type="time" value={form.run_time} onChange={(event) => updateForm(type.value, 'run_time', event.target.value)} /></label>
             <label>Timezone<select value={form.timezone} onChange={(event) => updateForm(type.value, 'timezone', event.target.value)}>{zones.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
             <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => updateForm(type.value, 'enabled', event.target.checked)} />Automation enabled</label>
-            <button type="button" className="btn-gray" disabled={saving || !selectedClientId} onClick={() => saveSchedule(type.value)}>{saving ? 'Saving…' : `Save ${type.value} Schedule`}</button>
+            <button type="button" className="btn-gray" disabled={savingType === type.value || !selectedClientId} onClick={() => saveSchedule(type.value)}>{savingType === type.value ? 'Saving…' : `Save ${type.value} Schedule`}</button>
           </div>
           <div className="sftp-auto-set-time"><b>Set time:</b> {schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}{schedule?.next_run_at && schedule.enabled && <span><b>Next run:</b><TimeDisplay value={schedule.next_run_at} /></span>}</div>
         </div>;
