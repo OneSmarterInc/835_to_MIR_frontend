@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDateTimeWithZones } from "../utils/timezone";
 
 export default function FlowView({
   metrics,
@@ -308,7 +309,7 @@ export default function FlowView({
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
             <span className="k">Last connection test</span>
             <span className="v" id="flowOutboundLastTest" style={{ color: "var(--ink-3)" }}>
-              {outboundConfig ? outboundConfig.last_tested_at || "–" : "–"}
+              {outboundConfig ? formatDateTimeWithZones(outboundConfig.last_tested_at) : "–"}
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0" }}>

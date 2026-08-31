@@ -9,6 +9,13 @@ import {
 import FeedbackModal from './modals/FeedbackModal';
 import ConfirmModal from './modals/ConfirmModal';
 import StepNotesHistory from './StepNotesHistory';
+import {
+  EASTERN_TIME_ZONE,
+  formatDateTimeWithZones,
+  scheduleTimeLabel,
+  scheduleTimeZoneOptions,
+  shouldShowTimeZoneSelector,
+} from '../../utils/timezone';
 
 function toISODate(val) {
   if (!val) return '';
@@ -57,6 +64,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
   // Step 4 Schedule
   const [productionDate, setProductionDate] = useState('');
   const [productionTime, setProductionTime] = useState('');
+  const [productionTimezone, setProductionTimezone] = useState(EASTERN_TIME_ZONE);
   const [productionNotes, setProductionNotes] = useState('');
   const step4DatePickerRef = useRef(null);
 
@@ -100,6 +108,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
       if (step4?.extra?.schedule) {
         setProductionDate(formatToMMDDYYYY(step4.extra.schedule.production_date) || '');
         setProductionTime(step4.extra.schedule.production_time || '');
+        setProductionTimezone(step4.extra.schedule.timezone || EASTERN_TIME_ZONE);
         setProductionNotes(step4.extra.schedule.notes || '');
       }
 
@@ -198,7 +207,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const newState = await saveGoLiveSchedule(selectedClientId, productionDate.trim(), productionTime.trim(), productionNotes.trim());
+      const newState = await saveGoLiveSchedule(selectedClientId, productionDate.trim(), productionTime.trim(), productionNotes.trim(), productionTimezone);
       setGoliveState(newState);
       setSuccessMessage(`Step 4: Production Schedule set for ${productionDate} ${productionTime ? `at ${productionTime}` : '(time TBD)'}.`);
       if (onClientUpdated) {
@@ -418,7 +427,8 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Schedule Configuration</div>
                           <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                             <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.production_date) || 'N/A'}</div>
-                            <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.production_time || 'N/A'}</div>
+                            <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.production_time, step.extra?.schedule?.timezone)}</div>
+                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><b>Eastern / local:</b> {formatDateTimeWithZones(step.extra.schedule.scheduled_at)}</div>}
                           </div>
                         </div>
                       )}
@@ -489,7 +499,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time (EST) *:</label>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time *:</label>
                           <input
                             type="time"
                             required
@@ -499,6 +509,14 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                             style={{ padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px', width: '110px' }}
                           />
                         </div>
+                        {shouldShowTimeZoneSelector() && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
+                            <select value={productionTimezone} onChange={(e) => setProductionTimezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
+                              {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            </select>
+                          </div>
+                        )}
                         <div style={{ flex: 1, minWidth: '180px' }}>
                           <input
                             style={{ width: '100%', padding: '4px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px' }}

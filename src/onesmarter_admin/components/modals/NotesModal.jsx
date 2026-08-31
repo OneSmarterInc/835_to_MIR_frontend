@@ -2,18 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
 import { fetchNotes, addNote, deleteNote } from '../../services/api';
 import '../StepNotesHistory.css';
-
-function formatDateTime(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-}
+import { formatDateTimeWithZones } from '../../../utils/timezone';
 
 export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTitle }) {
   const [notes, setNotes] = useState([]);
@@ -91,7 +80,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
               <div className="step-note-history-meta">
                 <b>{n.author}</b>
                 <span className="step-note-history-actions">
-                  <span>{formatDateTime(n.created_at)}</span>
+                  <span>{formatDateTimeWithZones(n.created_at)}</span>
                   <button type="button" onClick={() => handleDeleteNote(n)} disabled={deletingId === n.id} title="Delete note" aria-label="Delete note">🗑</button>
                 </span>
               </div>

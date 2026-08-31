@@ -4,24 +4,19 @@ import FeedbackModal from './modals/FeedbackModal';
 import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
 import StepNotesHistory from './StepNotesHistory';
+import {
+  EASTERN_TIME_ZONE,
+  formatDateTimeWithZones,
+  scheduleTimeLabel,
+  scheduleTimeZoneOptions,
+  shouldShowTimeZoneSelector,
+} from '../../utils/timezone';
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = { ...extra };
   if (token) headers['Authorization'] = `Token ${token}`;
   return headers;
-}
-
-function formatDateTime(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
 function toISODate(val) {
@@ -219,6 +214,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, step.actionType]);
   const [s13Time, setS13Time] = useState(step.extra?.schedule?.scheduled_time || '10:00');
+  const [s13Timezone, setS13Timezone] = useState(step.extra?.schedule?.timezone || EASTERN_TIME_ZONE);
   const [s13Notes, setS13Notes] = useState(step.extra?.schedule?.notes || '');
 
   const [stText, setStText] = useState(step.extra?.submission?.submission_text || '');
@@ -498,7 +494,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
         scheduled_date: s13Date.trim(),
         scheduled_time: s13Time.trim(),
-        timezone: 'Eastern (ET)',
+        timezone: s13Timezone,
         notes: s13Notes.trim()
       });
       onRefresh();
@@ -569,7 +565,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
         {latestUp && (
           <div className="ev">
-            📄 Filed: <b>{latestUp.original_filename}</b> ({formatDateTime(latestUp.uploaded_at)})
+            📄 Filed: <b>{latestUp.original_filename}</b> ({formatDateTimeWithZones(latestUp.uploaded_at)})
           </div>
         )}
 
@@ -1351,7 +1347,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Schedule Configuration</div>
                     <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                       <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || 'N/A'}</div>
-                      <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.scheduled_time || 'N/A'}</div>
+                      <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.scheduled_time, step.extra?.schedule?.timezone)}</div>
+                      {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><b>Eastern / local:</b> {formatDateTimeWithZones(step.extra.schedule.scheduled_at)}</div>}
                     </div>
                   </div>
                 )}
@@ -1429,7 +1426,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time (EST) *:</label>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time *:</label>
                     <input
                       type="time"
                       style={{ width: '110px', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px' }}
@@ -1437,6 +1434,14 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       onChange={(e) => setS13Time(e.target.value)}
                     />
                   </div>
+                  {shouldShowTimeZoneSelector() && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
+                      <select value={s13Timezone} onChange={(e) => setS13Timezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
+                        {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div style={{ flex: 1, minWidth: '180px' }}>
                     <input
                       style={{ width: '100%', padding: '4px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px' }}
@@ -1467,7 +1472,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                           await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_13_schedule/save/`, {
                             scheduled_date: '',
                             scheduled_time: '',
-                            timezone: 'Eastern (ET)',
+                            timezone: s13Timezone,
                             notes: 'Skipped — Go Live scheduling is optional.'
                           });
                           await onRefresh();

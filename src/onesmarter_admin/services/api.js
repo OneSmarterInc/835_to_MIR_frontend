@@ -492,13 +492,14 @@ export async function saveGoLiveSFTP(clientId, payload) {
   return data;
 }
 
-export async function saveGoLiveSchedule(clientId, productionDate, productionTime, notes) {
+export async function saveGoLiveSchedule(clientId, productionDate, productionTime, notes, timezone = 'America/New_York') {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/4/schedule/`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       production_date: productionDate,
       production_time: productionTime,
+      timezone,
       notes: notes
     })
   });

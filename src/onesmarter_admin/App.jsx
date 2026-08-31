@@ -19,24 +19,9 @@ import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
+import { formatDateTimeWithZones } from '../utils/timezone';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
-
-function formatDateTime(isoStr) {
-  if (!isoStr) return '—';
-  try {
-    const d = new Date(isoStr);
-    if (isNaN(d.getTime())) return isoStr;
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-  } catch (e) {
-    return isoStr;
-  }
-}
 
 function renderAuditDetails(details) {
   if (!details) return '—';
@@ -728,7 +713,7 @@ export default function App({ user, onLogout }) {
                   ) : (
                     getSortedAuditLogs().map((log) => (
                       <tr key={log.id}>
-                        <td className="num">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
+                        <td className="num">{formatDateTimeWithZones(log.timestamp, { includeSeconds: true })}</td>
                         <td
                           style={{ cursor: 'pointer' }}
                           onClick={() => setAuditModuleFilter(auditModuleFilter === (log.module || 'SYSTEM') ? '' : (log.module || 'SYSTEM'))}
@@ -776,7 +761,7 @@ export default function App({ user, onLogout }) {
                   ) : (
                     recentLogins.map((log) => (
                       <tr key={log.id}>
-                        <td className="num">{formatDateTime(log.login_time)}</td>
+                        <td className="num">{formatDateTimeWithZones(log.login_time)}</td>
                         <td><b>{log.username}</b></td>
                         <td><code>{log.ip_address}</code></td>
                         <td style={{ fontSize: '12px', color: 'var(--ink-2)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -787,7 +772,7 @@ export default function App({ user, onLogout }) {
                             {log.status}
                           </span>
                         </td>
-                        <td className="num">{formatDateTime(log.logout_time)}</td>
+                        <td className="num">{formatDateTimeWithZones(log.logout_time)}</td>
                       </tr>
                     ))
                   )}

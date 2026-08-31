@@ -1,24 +1,9 @@
 import React from 'react';
 import CenteredModal from './CenteredModal';
+import { formatDateTimeWithZones } from '../../../utils/timezone';
 
 export default function UserDetailsModal({ isOpen, onClose, user }) {
   if (!user) return null;
-
-  function formatDate(isoStr) {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      if (isNaN(d.getTime())) return isoStr;
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
-      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-    } catch (e) {
-      return isoStr;
-    }
-  }
 
   return (
     <CenteredModal isOpen={isOpen} onClose={onClose}>
@@ -62,7 +47,7 @@ export default function UserDetailsModal({ isOpen, onClose, user }) {
 
         <div style={{ borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Last System Login</span>
-          <span style={{ fontSize: '13px', color: 'var(--ink)' }}>{formatDate(user.last_login || user.created_at)}</span>
+          <span style={{ fontSize: '13px', color: 'var(--ink)' }}>{formatDateTimeWithZones(user.last_login || user.created_at)}</span>
         </div>
 
         <div>

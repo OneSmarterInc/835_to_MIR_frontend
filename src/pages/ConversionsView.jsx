@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import FileActionButtons from "../components/FileActionButtons";
+import { formatDateTimeWithZones, formatEasternDate } from "../utils/timezone";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -776,8 +777,8 @@ export default function ConversionsView({
                 </tr>
               ) : (
                 pageItems.map((f) => {
-                  const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
-                  const upTime = f.uploaded_at ? f.uploaded_at.substring(11, 19) : "—";
+                  const upDate = formatEasternDate(f.uploaded_at);
+                  const upTime = formatDateTimeWithZones(f.uploaded_at, { includeSeconds: true });
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
                   const mirName =
                     f.output_filename ||

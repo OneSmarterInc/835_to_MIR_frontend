@@ -1,19 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { deleteNote, fetchNotes } from '../services/api';
 import './StepNotesHistory.css';
-
-function formatDateTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { formatDateTimeWithZones } from '../../utils/timezone';
 
 export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   const [notes, setNotes] = useState([]);
@@ -103,7 +91,7 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
             <div className="step-note-history-meta">
               <b>{note.author || 'Administrator'}</b>
               <span className="step-note-history-actions">
-                {note.created_at && <span>{formatDateTime(note.created_at)}</span>}
+                {note.created_at && <span>{formatDateTimeWithZones(note.created_at)}</span>}
                 {note.id && <button type="button" onClick={() => handleDelete(note)} disabled={deletingId === note.id} title="Delete note" aria-label="Delete note">🗑</button>}
               </span>
             </div>

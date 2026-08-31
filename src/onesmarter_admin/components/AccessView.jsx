@@ -3,6 +3,7 @@ import { fetchAccessInfo, fetchClients, createUser, updateUser, deleteUser } fro
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import UserDetailsModal from './modals/UserDetailsModal';
+import { formatDateTimeWithZones } from '../../utils/timezone';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -150,22 +151,6 @@ export default function AccessView({ currentUser }) {
     });
   };
 
-  function formatDate(isoStr) {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      if (isNaN(d.getTime())) return isoStr;
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
-      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-    } catch (e) {
-      return isoStr;
-    }
-  }
-
   const sortedMembers = getSortedMembers();
 
   return (
@@ -189,7 +174,7 @@ export default function AccessView({ currentUser }) {
         </div>
         <div className="metric">
           <div className="v" style={{ fontSize: '18px' }}>
-            {accessData?.last_login ? formatDate(accessData.last_login) : accessData ? 'Never' : 'Loading...'}
+            {accessData?.last_login ? formatDateTimeWithZones(accessData.last_login) : accessData ? 'Never' : 'Loading...'}
           </div>
           <div className="l">Last Login</div>
           <div className="d">Dynamic database record</div>
@@ -271,7 +256,7 @@ export default function AccessView({ currentUser }) {
                       {member.mfa}
                     </span>
                   </td>
-                  <td className="num">{formatDate(member.last_login)}</td>
+                  <td className="num">{formatDateTimeWithZones(member.last_login)}</td>
                   <td><span className="tag ok">{member.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
                     {((member.role === 'Admin' || member.role === 'Super Admin') && !(currentUser?.role === 'Super Admin' || currentUser?.is_superuser)) ? (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { formatDateTimeWithZones } from "../utils/timezone";
 
 async function readJsonResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -1583,7 +1584,7 @@ export default function ConnectionsView({
                   const rowPort = isOutbound ? c.outbound_port : c.port;
                   const rowUsername = isOutbound ? c.outbound_username : c.username;
                   const hostPort = rowHost ? `${rowHost}:${rowPort || 22}` : "—";
-                  const lastTested = c.last_tested_at || "—";
+                  const lastTested = formatDateTimeWithZones(c.last_tested_at);
                   const status = c.status || "CONFIGURED";
                   const tagClass =
                     status === "FAILED"
