@@ -31,7 +31,7 @@ function getStageBadge(stage) {
   return <span className="tag work">Onboarding Pending</span>;
 }
 
-export default function ClientsTable({ clients = [], onSelectClient, onOpenAddClient, onDeleteClient }) {
+export default function ClientsTable({ clients = [], onSelectClient, onOpenAddClient, onDeleteClient, canPermanentlyDelete = false }) {
   const [filterStage, setFilterStage] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -188,7 +188,33 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{displayOwner}</span>
+                    {canPermanentlyDelete && displayOwner === 'System Admin' ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDeleteClient?.(c);
+                        }}
+                        aria-label={`Permanently delete ${c.name}`}
+                        title={`Permanently delete ${c.name}`}
+                        style={{
+                          appearance: 'none',
+                          border: 0,
+                          padding: 0,
+                          margin: 0,
+                          background: 'transparent',
+                          color: 'var(--ink)',
+                          font: 'inherit',
+                          fontWeight: 600,
+                          textAlign: 'left',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {displayOwner}
+                      </button>
+                    ) : (
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{displayOwner}</span>
+                    )}
                   </td>
                   {/* <td style={{ textAlign: 'center' }}>
                     <button

@@ -315,11 +315,11 @@ export default function App({ user, onLogout }) {
     setIsRevokeOpen(true);
   };
 
-  const handleConfirmRevoke = async () => {
+  const handleConfirmRevoke = async ({ confirmationName, password }) => {
     if (!revokeTarget?.id) return;
     setRevokeLoading(true);
     try {
-      await deleteClient(revokeTarget.id);
+      await deleteClient(revokeTarget.id, confirmationName, password);
       await loadClients();
       if (activeClientId === revokeTarget.id) {
         setActiveClientId(null);
@@ -494,6 +494,7 @@ export default function App({ user, onLogout }) {
               }}
               onOpenAddClient={() => setIsAddClientOpen(true)}
               onDeleteClient={handleOpenRevoke}
+              canPermanentlyDelete={Boolean(currentUser?.is_superuser || currentUser?.role === 'Super Admin')}
             />
           )}
 

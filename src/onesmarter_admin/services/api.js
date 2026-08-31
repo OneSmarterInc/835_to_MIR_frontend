@@ -127,13 +127,15 @@ export async function createClient(clientPayload) {
   return { success: true, client: clientObj };
 }
 
-export async function deleteClient(clientId) {
-  const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
+export async function deleteClient(clientId, confirmationName, password) {
+  const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/delete/`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ confirmation_name: confirmationName, password })
   });
-  if (!res.ok) throw new Error('Failed to delete client');
-  return true;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete client');
+  return data;
 }
 
 export async function downloadTemplateFile(clientId, stepKey, title, ext) {
