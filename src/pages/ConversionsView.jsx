@@ -359,6 +359,19 @@ export default function ConversionsView({
       }
 
       if (completedData.success) {
+        const sftp837Files = Array.isArray(completedData.sftp_837_files)
+          ? completedData.sftp_837_files
+          : [];
+        if (sftp837Files.length) {
+          const importedCount = sftp837Files.filter((item) => !item.already_exists).length;
+          const existingCount = sftp837Files.length - importedCount;
+          setFile837Subtext(
+            `SFTP: ${importedCount} new 837/RECON file(s) imported` +
+            (existingCount ? `, ${existingCount} already imported` : ``)
+          );
+        } else {
+          setFile837Subtext("No new 837/RECON files found in the configured SFTP folder.");
+        }
         if (onRefreshData) onRefreshData();
       } else {
         setValidationError(completedData.error || completedData.message || "Batch conversion failed.");
