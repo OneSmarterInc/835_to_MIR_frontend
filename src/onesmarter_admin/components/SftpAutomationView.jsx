@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import TimeDisplay from '../../components/TimeDisplay';
 import ClientSelectDropdown from './ClientSelectDropdown';
@@ -39,6 +39,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const [loading, setLoading] = useState(false);
   const [savingType, setSavingType] = useState(null);
   const [message, setMessage] = useState(null);
+  const formClientIdRef = useRef(null);
   const selectedClient = clients.find((item) => String(item.id) === String(selectedClientId));
   const zones = useMemo(() => {
     const options = scheduleTimeZoneOptions();
@@ -73,7 +74,10 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
             enabled: schedule?.enabled !== false,
           };
         });
-        setForms(defaults);
+        if (formClientIdRef.current !== String(selectedClientId)) {
+          formClientIdRef.current = String(selectedClientId);
+          setForms(defaults);
+        }
       }
     } catch (error) {
       if (!quiet) setMessage({ kind: 'bad', text: error.message });
@@ -89,6 +93,8 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   }, [loadData]);
 
   const selectClient = (value) => {
+    formClientIdRef.current = null;
+    setForms({});
     setSelectedClientId(value);
     onSelectClient?.(value);
     setMessage(null);
