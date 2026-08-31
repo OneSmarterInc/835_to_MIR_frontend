@@ -20,6 +20,7 @@ import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import TimeDisplay from '../components/TimeDisplay';
+import SftpAutomationView from './components/SftpAutomationView';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -451,6 +452,9 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
             <span>Result</span>
           </button>
+          <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
+            <span>SFTP Automation</span>
+          </button>
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>
           <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
@@ -541,6 +545,14 @@ export default function App({ user, onLogout }) {
               clients={clients}
               isAdmin={true}
               initialClientId={activeClientId}
+            />
+          )}
+
+          {activeNav === 'sftp-automation' && (
+            <SftpAutomationView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
             />
           )}
 

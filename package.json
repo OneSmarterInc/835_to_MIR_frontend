@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test:result-sorting": "node scripts/test-result-sorting.js",
+    "test:sftp-automation": "node scripts/test-sftp-automation.js",
     "test:timezone": "node scripts/test-timezone-formatting.js",
     "preview": "vite preview"
   },
