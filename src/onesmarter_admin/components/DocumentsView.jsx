@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
+import OffboardedClientBanner from './OffboardedClientBanner';
 
 export default function DocumentsView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
@@ -129,6 +130,11 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
           <p className="sub">Executed legal agreements, compliance certificates, and evidence files associated with <b>{currentClient?.name}</b>.</p>
         </div>
       </div>
+
+      <OffboardedClientBanner
+        client={currentClient}
+        detail="This client is offboarded. The documents below are retained for historical, read-only review."
+      />
 
       {errorMessage && (
         <div className="note" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)' }}>
