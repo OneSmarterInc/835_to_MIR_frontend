@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetchClientEdiFiles, downloadEdiFile, pushEdiFileToSftp } from '../services/api';
 import TimeDisplay from '../../components/TimeDisplay';
+import { showAppAlert } from '../../components/AppDialog';
 
 function canonicalMirFilename(file) {
   return file?.mir_filename || file?.output_filename || file?.combined_filename || '';
@@ -81,12 +82,12 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
       const blob = await res.blob(); const urlObj = URL.createObjectURL(blob); const a = document.createElement('a');
       a.href = urlObj; a.download = `EDI_Archive_${type}_${Date.now()}.zip`; document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(urlObj); a.remove(); }, 1000);
-    } catch (err) { alert('ZIP Download error: ' + err.message); }
+    } catch (err) { await showAppAlert('ZIP Download error: ' + err.message, { title: 'Download Failed', tone: 'error' }); }
   };
 
   const handleDownloadMir = async (file) => {
     const mirName = canonicalMirFilename(file);
-    if (!mirName) { alert('The configured MIR filename is not available for this conversion yet.'); return; }
+    if (!mirName) { await showAppAlert('The configured MIR filename is not available for this conversion yet.', { title: 'MIR Not Available', tone: 'info' }); return; }
     try {
       // Use the same canonical name displayed in MIR OUTPUT as the browser
       // download name. This is intentionally explicit for the Admin Files page.
@@ -103,13 +104,13 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    } catch (err) { console.error('Download MIR error:', err); alert(`Unable to download MIR: ${err.message}`); }
+    } catch (err) { console.error('Download MIR error:', err); await showAppAlert(`Unable to download MIR: ${err.message}`, { title: 'Download Failed', tone: 'error' }); }
   };
 
   const handlePushMir = async (file) => {
     setPushingId(file.id);
-    try { const result = await pushEdiFileToSftp(file.id); alert(`✓ ${result.message}`); await loadEdiFiles(selectedClientId); }
-    catch (err) { alert(`Unable to push MIR to SFTP: ${err.message}`); }
+    try { const result = await pushEdiFileToSftp(file.id); await showAppAlert(result.message, { title: 'MIR Sent', tone: 'success' }); await loadEdiFiles(selectedClientId); }
+    catch (err) { await showAppAlert(`Unable to push MIR to SFTP: ${err.message}`, { title: 'SFTP Transfer Failed', tone: 'error' }); }
     finally { setPushingId(null); }
   };
 
