@@ -3,6 +3,7 @@ import CenteredModal from './CenteredModal';
 import { fetchNotes, addNote, deleteNote } from '../../services/api';
 import '../StepNotesHistory.css';
 import TimeDisplay from '../../../components/TimeDisplay';
+import { showAppConfirm } from '../../../components/AppDialog';
 
 export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTitle }) {
   const [notes, setNotes] = useState([]);
@@ -29,7 +30,10 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
   };
 
   const handleDeleteNote = async (note) => {
-    if (!note.id || deletingId || !window.confirm('Delete this note?')) return;
+    if (!note.id || deletingId) return;
+    if (!await showAppConfirm('Delete this note? This action cannot be undone.', {
+      title: 'Delete Note?', confirmLabel: 'Delete Note', danger: true, tone: 'error',
+    })) return;
     try {
       setDeletingId(note.id);
       setNoteError('');
