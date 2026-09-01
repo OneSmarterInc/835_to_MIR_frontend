@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import FileActionButtons from "../components/FileActionButtons";
 import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
@@ -708,8 +707,8 @@ export default function ConversionsView({
 
       {/* CONVERSIONS TABLE */}
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "16px" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <table style={{ width: "100%", maxWidth: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th
@@ -768,14 +767,13 @@ export default function ConversionsView({
                     {sortKey === "status" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
                 </th>
-                <th>ACTION</th>
               </tr>
             </thead>
             <tbody>
               {pageItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="9"
+                    colSpan="8"
                     style={{ padding: "26px", textAlign: "center", color: "var(--ink-3)" }}
                   >
                     No conversion runs match search query.
@@ -815,15 +813,15 @@ export default function ConversionsView({
                         {shortId}
                       </td>
                       <td className="num">{upDate}</td>
-                      <td className="num" style={{ minWidth: "210px" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
+                      <td className="num" style={{ color: "var(--ink-2)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {f.original_filename}
                       </td>
                       <td className="num" style={{ color: "var(--ink-3)" }}>
                         —
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ color: "var(--ink-2)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {f.status === "ARCHIVED" ? mirName : "—"}
                       </td>
                       <td>
@@ -847,9 +845,6 @@ export default function ConversionsView({
                         >
                           {convertingId === f.id ? "CONVERTING..." : f.status}
                         </span>
-                      </td>
-                      <td className="num" style={{ fontSize: "11px" }}>
-                        <FileActionButtons onView={() => onOpenFileModal(f.id)} onDownload={f.status === "ARCHIVED" ? () => handleDownloadMir(mirName, "", f.id) : null} viewTitle="View / Edit Code" downloadTitle="Download .mir File" />
                       </td>
                     </tr>
                   );
