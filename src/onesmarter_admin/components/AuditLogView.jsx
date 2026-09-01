@@ -99,7 +99,7 @@ export default function AuditLogView({ clients = [] }) {
     <div className={`card audit-table-card${loading ? ' loading' : ''}`}>
       <div className="audit-table-wrap">
         <table className="audit-table"><thead><tr>
-          {[['timestamp', 'When'], ['module', 'Module'], ['action', 'Action'], ['client', 'Client']].map(([field, label]) => <th key={field}><button type="button" onClick={() => changeSort(field)}>{label} <span>{sortIcon(field)}</span></button></th>)}
+          {[['timestamp', 'When (EST)'], ['module', 'Module'], ['action', 'Action'], ['client', 'Client']].map(([field, label]) => <th key={field}><button type="button" onClick={() => changeSort(field)}>{label} <span>{sortIcon(field)}</span></button></th>)}
           <th>Details</th><th><button type="button" onClick={() => changeSort('performed_by')}>Performed by <span>{sortIcon('performed_by')}</span></button></th>
         </tr></thead><tbody>
           {!loading && logs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : logs.map((log) => <tr key={log.id}>

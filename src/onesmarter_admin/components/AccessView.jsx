@@ -233,7 +233,7 @@ export default function AccessView({ currentUser }) {
                   Client {renderSortIcon('client')}
                 </th>
                 <th>MFA Status</th>
-                <th>Last Login</th>
+                <th>Last Login (EST)</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'center', width: '80px' }}>Actions</th>
               </tr>

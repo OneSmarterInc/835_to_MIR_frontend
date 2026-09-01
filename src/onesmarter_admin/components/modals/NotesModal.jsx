@@ -84,7 +84,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
               <div className="step-note-history-meta">
                 <b>{n.author}</b>
                 <span className="step-note-history-actions">
-                  <TimeDisplay value={n.created_at} />
+                  <TimeDisplay value={n.created_at} easternOnly />
                   <button type="button" onClick={() => handleDeleteNote(n)} disabled={deletingId === n.id} title="Delete note" aria-label="Delete note">🗑</button>
                 </span>
               </div>

@@ -310,7 +310,7 @@ export default function ArchiveView({
                   onClick={() => handleSortHeader("date")}
                   style={{ fontSize: "11px", letterSpacing: "0.05em" }}
                 >
-                  835 DATE / TIME{" "}
+                  835 DATE / TIME (EST){" "}
                   <span className="sort-arrow">
                     {sortKey === "date" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>

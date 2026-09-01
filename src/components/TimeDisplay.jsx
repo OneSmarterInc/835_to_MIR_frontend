@@ -20,6 +20,17 @@ export default function TimeDisplay({ value, includeSeconds = false, easternOnly
     letterSpacing: '0.02em',
   };
 
+  if (easternOnly) {
+    return (
+      <span
+        className={`timezone-display ${className}`.trim()}
+        style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'normal' }}
+      >
+        {parts.eastern.value}
+      </span>
+    );
+  }
+
   return (
     <span
       className={`timezone-display ${className}`.trim()}
@@ -39,7 +50,7 @@ export default function TimeDisplay({ value, includeSeconds = false, easternOnly
         <span style={labelStyle}>{parts.eastern.label}</span>
         <span>{parts.eastern.value}</span>
       </span>
-      {!easternOnly && parts.local && (
+      {parts.local && (
         <span style={rowStyle}>
           <span style={labelStyle}>{parts.local.label}</span>
           <span>{parts.local.value}</span>

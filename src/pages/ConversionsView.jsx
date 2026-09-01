@@ -767,7 +767,7 @@ export default function ConversionsView({
                   className={`sortable ${sortKey === "time" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("time")}
                 >
-                  TIMESTAMP{" "}
+                  TIMESTAMP (EST){" "}
                   <span className="sort-arrow">
                     {sortKey === "time" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>

@@ -57,7 +57,7 @@ export default function ContactsView() {
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Name</th>
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Email</th>
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Phone</th>
-                <th style={{ textAlign: "left", padding: "12px 16px" }}>Added On</th>
+                <th style={{ textAlign: "left", padding: "12px 16px" }}>Added On (EST)</th>
               </tr>
             </thead>
             <tbody>

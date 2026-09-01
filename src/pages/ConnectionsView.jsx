@@ -1591,7 +1591,7 @@ export default function ConnectionsView({
                 <th>835 INBOUND PATH</th>
                 <th>MIR OUTBOUND PATH</th>
                 <th>STATUS</th>
-                <th>LAST TESTED</th>
+                <th>LAST TESTED (EST)</th>
                 <th>ACTION</th>
               </tr>
             </thead>

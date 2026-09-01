@@ -165,7 +165,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         <div className="metric">
           <div className="v" id="m-complete">{doneCount} / {totalSteps}</div>
           <div className="l">Steps Complete</div>
-          <div className="d" id="m-started">Started — <TimeDisplay value={client.created_at} /></div>
+          <div className="d" id="m-started">Started — <TimeDisplay value={client.created_at} easternOnly /></div>
         </div>
         <div className="metric">
           <div className="v" id="m-waiting">{activeStepNum}</div>
@@ -178,7 +178,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
           <div className="d" id="m-stage">Stage: {stageName}</div>
         </div>
         <div className="metric">
-          <div className="v" id="m-move"><TimeDisplay value={client.updated_at} /></div>
+          <div className="v" id="m-move"><TimeDisplay value={client.updated_at} easternOnly /></div>
           <div className="l">Last Activity</div>
           <div className="d" id="m-move-d">Activity logged</div>
         </div>

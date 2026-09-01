@@ -95,7 +95,7 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
             <div className="step-note-history-meta">
               <b>{note.author || 'Administrator'}</b>
               <span className="step-note-history-actions">
-                {note.created_at && <TimeDisplay value={note.created_at} />}
+                {note.created_at && <TimeDisplay value={note.created_at} easternOnly />}
                 {note.id && <button type="button" onClick={() => handleDelete(note)} disabled={deletingId === note.id} title="Delete note" aria-label="Delete note">🗑</button>}
               </span>
             </div>

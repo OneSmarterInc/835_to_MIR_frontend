@@ -570,7 +570,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
         {latestUp && (
           <div className="ev">
-            📄 Filed: <b>{latestUp.original_filename}</b> <TimeDisplay value={latestUp.uploaded_at} />
+            📄 Filed: <b>{latestUp.original_filename}</b> <TimeDisplay value={latestUp.uploaded_at} easternOnly />
           </div>
         )}
 
@@ -1355,7 +1355,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                       <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || 'N/A'}</div>
                       <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.scheduled_time, step.extra?.schedule?.timezone)}</div>
-                      {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} /></div>}
+                      {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} easternOnly /></div>}
                     </div>
                   </div>
                 )}
