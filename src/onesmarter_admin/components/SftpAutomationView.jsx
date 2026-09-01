@@ -6,6 +6,15 @@ import { canonicalTimeZone, EASTERN_TIME_ZONE, scheduleTimeLabel, scheduleTimeZo
 import './SftpAutomationView.css';
 import OffboardedClientBanner from './OffboardedClientBanner';
 
+const LIVE_RUN_STATUSES = new Set([
+  'SCHEDULED',
+  'QUEUED',
+  'PENDING',
+  'RUNNING',
+  'PROCESSING',
+  'IN_PROGRESS',
+]);
+
 function authHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
   return token ? { ...extra, Authorization: `Token ${token}` } : extra;
@@ -42,6 +51,10 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const [message, setMessage] = useState(null);
   const formClientIdRef = useRef(null);
   const selectedClient = clients.find((item) => String(item.id) === String(selectedClientId));
+  const hasLiveRun = useMemo(() => runs.some((run) => {
+    const status = String(run?.status || '').trim().toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
+    return LIVE_RUN_STATUSES.has(status);
+  }), [runs]);
   const zones = useMemo(() => {
     const options = scheduleTimeZoneOptions();
     const clientZone = canonicalTimeZone(selectedClient?.timezone);
@@ -89,9 +102,13 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (!hasLiveRun) return undefined;
     const interval = window.setInterval(() => loadData(true), 5000);
     return () => window.clearInterval(interval);
-  }, [loadData]);
+  }, [hasLiveRun, loadData]);
 
   const selectClient = (value) => {
     formClientIdRef.current = null;

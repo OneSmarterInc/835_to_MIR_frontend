@@ -12,6 +12,11 @@ assert.match(page, /type="time"/, 'page must accept a scheduled time');
 assert.match(page, /scheduleTimeZoneOptions/, 'page must expose timezone selection');
 assert.doesNotMatch(page, /All Client Schedules/, 'the removed all-client schedule table must stay hidden');
 assert.match(page, /Automation Run Summary/, 'the selected-client run summary must remain available');
+assert.match(page, /LIVE_RUN_STATUSES/, 'automatic refresh must be controlled by live run statuses');
+assert.match(page, /if \(!hasLiveRun\) return undefined/, 'idle and completed run summaries must not poll automatically');
+for (const status of ['SCHEDULED', 'QUEUED', 'RUNNING', 'PROCESSING', 'IN_PROGRESS']) {
+  assert.match(page, new RegExp(`'${status}'`), `automatic refresh must continue while a run is ${status}`);
+}
 for (const operation of ['835 to MIR', '837 Reference', 'RECON']) {
   assert.match(page, new RegExp(operation), `page must expose an independent ${operation} schedule`);
 }
