@@ -4,6 +4,7 @@ import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import UserDetailsModal from './modals/UserDetailsModal';
 import TimeDisplay from '../../components/TimeDisplay';
+import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -54,7 +55,7 @@ export default function AccessView({ currentUser }) {
 
   const handleCreateUser = async (userData) => {
     if ((userData.role === 'Admin' || userData.role === 'Super Admin') && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot create Admin or Super Admin accounts.");
+      await showAppAlert("Standard Admins cannot create Admin or Super Admin accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     await createUser(userData);
@@ -68,7 +69,7 @@ export default function AccessView({ currentUser }) {
     const tryingToPromote = updatedData.role === 'Admin' || updatedData.role === 'Super Admin';
 
     if ((targetIsAdmin || tryingToPromote) && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot modify Admin/Super Admin roles or accounts.");
+      await showAppAlert("Standard Admins cannot modify Admin/Super Admin roles or accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     await updateUser(userId, updatedData);
@@ -79,7 +80,7 @@ export default function AccessView({ currentUser }) {
   const handleDeleteUser = async (member) => {
     const isTargetAdmin = member.role === 'Admin' || member.role === 'Super Admin' || member.is_staff || member.is_superuser;
     if (isTargetAdmin && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot delete Admin or Super Admin accounts.");
+      await showAppAlert("Standard Admins cannot delete Admin or Super Admin accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     const isCurrentUser = member.email === currentUser?.email;
@@ -87,7 +88,12 @@ export default function AccessView({ currentUser }) {
       ? `WARNING: You are about to delete your own administrative account (${member.email}). Are you sure you want to proceed?`
       : `Are you sure you want to delete the ${member.role.toLowerCase()} account (${member.email})?`;
       
-    if (window.confirm(confirmMsg)) {
+    if (await showAppConfirm(confirmMsg, {
+      title: isCurrentUser ? 'Delete Your Account?' : 'Delete Account?',
+      confirmLabel: 'Delete Account',
+      danger: true,
+      tone: 'error',
+    })) {
       try {
         setLoading(true);
         await deleteUser(member.id);
