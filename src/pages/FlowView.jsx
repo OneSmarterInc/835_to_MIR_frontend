@@ -5,8 +5,7 @@ export default function FlowView({
   metrics,
   recentFiles,
   inboundConfig,
-  outboundConfig,
-  onNavigateTab,
+  outboundConfig
 }) {
   const todayDateStr = new Date().toISOString().substring(0, 10);
 
@@ -23,13 +22,6 @@ export default function FlowView({
             mapping, then the output is ready for the configured MPL delivery path.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-sftp"
-          onClick={() => onNavigateTab("conn")}
-        >
-          SFTP connection
-        </button>
       </div>
 
       {/* DYNAMIC PIPELINE TRACK */}
