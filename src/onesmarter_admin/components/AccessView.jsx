@@ -5,6 +5,7 @@ import EditUserModal from './modals/EditUserModal';
 import UserDetailsModal from './modals/UserDetailsModal';
 import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
+import { isAdministrativeAccount, isSuperAdminAccount } from '../utils/adminRoles';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -51,7 +52,7 @@ export default function AccessView({ currentUser }) {
     }
   }
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   const handleCreateUser = async (userData) => {
     if ((userData.role === 'Admin' || userData.role === 'Super Admin') && !isSuperAdmin) {
@@ -65,7 +66,7 @@ export default function AccessView({ currentUser }) {
 
   const handleEditUser = async (userId, updatedData) => {
     const targetUser = accessData?.staff?.find(u => u.id === userId);
-    const targetIsAdmin = targetUser?.role === 'Admin' || targetUser?.role === 'Super Admin' || targetUser?.is_staff || targetUser?.is_superuser;
+    const targetIsAdmin = isAdministrativeAccount(targetUser);
     const tryingToPromote = updatedData.role === 'Admin' || updatedData.role === 'Super Admin';
 
     if ((targetIsAdmin || tryingToPromote) && !isSuperAdmin) {
@@ -78,7 +79,7 @@ export default function AccessView({ currentUser }) {
   };
 
   const handleDeleteUser = async (member) => {
-    const isTargetAdmin = member.role === 'Admin' || member.role === 'Super Admin' || member.is_staff || member.is_superuser;
+    const isTargetAdmin = isAdministrativeAccount(member);
     if (isTargetAdmin && !isSuperAdmin) {
       await showAppAlert("Standard Admins cannot delete Admin or Super Admin accounts.", { title: 'Access Denied', tone: 'error' });
       return;
@@ -265,7 +266,7 @@ export default function AccessView({ currentUser }) {
                   <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={member.last_login} easternOnly /></td>
                   <td><span className="tag ok">{member.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
-                    {((member.role === 'Admin' || member.role === 'Super Admin') && !(currentUser?.role === 'Super Admin' || currentUser?.is_superuser)) ? (
+                    {(isAdministrativeAccount(member) && !isSuperAdmin) ? (
                       <span style={{ color: 'var(--ink-3)', fontSize: '12px' }} title="Admins cannot manage other Admins/Super Admins">🔒</span>
                     ) : (
                       <div style={{ display: 'flex', justifyContent: 'center' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
 import { showAppAlert, showAppConfirm } from '../../../components/AppDialog';
+import { isSuperAdminAccount } from '../../utils/adminRoles';
 
 export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clients, user, currentUser }) {
   const [name, setName] = useState('');
@@ -12,7 +13,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   useEffect(() => {
     if (user) {

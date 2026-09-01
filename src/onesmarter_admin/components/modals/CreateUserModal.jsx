@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CenteredModal from './CenteredModal';
+import { isSuperAdminAccount } from '../../utils/adminRoles';
 
 export default function CreateUserModal({ isOpen, onClose, onSave, clients, currentUser }) {
   const [name, setName] = useState('');
@@ -11,7 +12,7 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   const handleCloseModal = () => {
     setErrorMsg('');
