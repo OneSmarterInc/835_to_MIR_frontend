@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./ResultView.css";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
+import { showAppAlert } from "../components/AppDialog";
+import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
 
 function authHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -111,6 +113,20 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       setSearch(""); setActiveSearch(""); await loadResults(1, "", sort, statusFilter);
     } catch (error) { setMessage({ kind: "error", text: error.message }); } finally { setBusy(false); }
   };
+  const handleReconFileChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) return setSelectedFile(null);
+    const extensionError = validateFileExtensions([file], "RECON");
+    if (extensionError) {
+      event.target.value = "";
+      setSelectedFile(null);
+      setMessage({ kind: "error", text: extensionError });
+      await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
+      return;
+    }
+    setSelectedFile(file);
+    setMessage(null);
+  };
   const openClaim = async (row) => {
     try {
       setDetail(await apiJson(`/edi835/api/reconciliation/claims/${row.mir_claim_id}/`));
@@ -174,7 +190,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     <div className="start-conversion-card result-process-card">
       {isAdmin && <div className="result-client-bar"><label>Associate with Client:</label><div className="result-client-select"><ClientSelectDropdown clients={clients} value={clientId} onChange={setClientId} includeGlobal fullWidth /></div></div>}
       <div className="start-conversion-header"><h2>Upload RECON</h2><div className="step-pills"><span className="step-pill active">1 · UPLOAD</span><span className="step-arrow">→</span><span className="step-pill">2 · PROCESS</span><span className="step-arrow">→</span><span className="step-pill">3 · RECONCILE</span></div></div>
-      <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} /><div className="subtext">{selectedFile ? selectedFile.name : "Any RECON filename or extension, including .p7a"}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
+      <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" accept={fileAccept("RECON")} onChange={handleReconFileChange} /><div className="subtext">{selectedFile ? selectedFile.name : "Select a supported RECON file."}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
     <div className="filters-bar result-filters"><select className="result-status-select" value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><div className="result-global-search"><input type="search" value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value) { statusFilterRef.current = ""; setStatusFilter(""); } }} placeholder="Search MIR/RECON data · separate multiple values with commas" aria-label="Search all MIR and RECON results; separate multiple values with commas" /></div><button type="button" className="btn-gray result-files-button" onClick={openUploadedFiles}>Uploaded RECON files</button><span className="runs-counter">{data.total_claims ?? rows.length} reconciliation claims · all processed RECON files</span></div>

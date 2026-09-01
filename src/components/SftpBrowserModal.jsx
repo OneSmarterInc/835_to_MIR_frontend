@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { showAppAlert } from "./AppDialog";
+import { validateFileExtensions } from "../utils/fileTypes";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -119,6 +120,12 @@ export default function SftpBrowserModal({
 
   const useAs837Reference = async () => {
     if (!selectedFile || ingesting) return;
+    const extensionError = validateFileExtensions([{ name: selectedFile.name }], "837");
+    if (extensionError) {
+      setError(extensionError);
+      await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
+      return;
+    }
     setIngesting(true); setError(null);
     try {
       const res = await fetch("/edi835/api/sftp/837-ingest/", { method: "POST", headers: getAuthHeaders({"Content-Type":"application/json", Accept:"application/json"}), body: JSON.stringify({config_id: String(configId), filename: selectedFile.name}) });

@@ -6,6 +6,7 @@ import ClientSftpModal from './ClientSftpModal';
 import StepNotesHistory from './StepNotesHistory';
 import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
+import { fileAccept, validateFileExtensions } from '../../utils/fileTypes';
 import {
   EASTERN_TIME_ZONE,
   scheduleTimeLabel,
@@ -246,14 +247,14 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const handleStep7Upload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
-    const allowed = ['835', 'x12', 'edi', 'txt', 'dat', '35', 'ansi', 'rem'];
-    if (!allowed.includes(ext)) {
+    const extensionError = validateFileExtensions([file], '835');
+    if (extensionError) {
+      e.target.value = '';
       setFeedback({
         isOpen: true,
         kind: 'bad',
         title: 'Upload Error',
-        content: `Unsupported file type (.${ext}). Upload a valid 835/X12 file (.835, .x12, .edi, .txt, .dat, .35, .ansi, .rem).`,
+        content: extensionError,
         checks: []
       });
       return;
@@ -938,7 +939,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     ) : (
                       '⬆ Validate 835 & Push MIR'
                     )}
-                    <input type="file" hidden accept=".835,.x12,.edi,.txt,.dat,.35,.ansi,.rem" onChange={handleStep7Upload} disabled={validating835} />
+                    <input type="file" hidden accept={fileAccept('835')} onChange={handleStep7Upload} disabled={validating835} />
                   </label>
                 </div>
               </div>

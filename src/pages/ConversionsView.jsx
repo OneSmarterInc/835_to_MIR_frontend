@@ -4,6 +4,7 @@ import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 import { showAppAlert } from "../components/AppDialog";
+import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -79,6 +80,16 @@ export default function ConversionsView({
   const handle835FileChange = async (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
+    const extensionError = validateFileExtensions(files, "835");
+    if (extensionError) {
+      e.target.value = "";
+      setSelectedFilesList([]);
+      setEdiText("");
+      setFile835Subtext("No 835 files selected.");
+      setValidationError(extensionError);
+      await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
+      return;
+    }
 
     if (files.length === 1) {
       const file = files[0];
@@ -113,8 +124,15 @@ export default function ConversionsView({
   };
 
   // 837 File Input change
-  const handle837FileChange = (e) => {
+  const handle837FileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
+      const extensionError = validateFileExtensions(e.target.files, "837");
+      if (extensionError) {
+        e.target.value = "";
+        setFile837Subtext("No 837 reference selected.");
+        await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
+        return;
+      }
       setFile837Subtext(
         "Selected: " + e.target.files[0].name + " (optional reference)"
       );
@@ -153,6 +171,7 @@ export default function ConversionsView({
       };
 
       const res = await fetch("/api/validate/", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -210,6 +229,7 @@ export default function ConversionsView({
       };
 
       const res = await fetch("/api/convert/", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -243,6 +263,7 @@ export default function ConversionsView({
     setConvertingId(fileId);
     try {
       const res = await fetch("/api/convert/", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId, client_id: selectedClientId || undefined }),
@@ -503,7 +524,7 @@ export default function ConversionsView({
             <div className="c-box-label">REQUIRED &bull; 835 INPUT</div>
             <input
               type="file"
-              accept=".835,.853,.x12,.txt,.edi,*/*"
+              accept={fileAccept("835")}
               multiple
               onChange={handle835FileChange}
             />
@@ -513,7 +534,7 @@ export default function ConversionsView({
           {/* OPTIONAL 837 REFERENCE BOX */}
           <div className="c-box">
             <div className="c-box-label">OPTIONAL &bull; 837 REFERENCE ONLY</div>
-            <input type="file" accept=".837,.x12,.txt,*/*" onChange={handle837FileChange} />
+            <input type="file" accept={fileAccept("837")} onChange={handle837FileChange} />
             <div className="subtext">{file837Subtext}</div>
           </div>
 
