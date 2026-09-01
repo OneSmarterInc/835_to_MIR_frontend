@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import TimeDisplay from "../components/TimeDisplay";
+import { showAppAlert, showAppConfirm } from "../components/AppDialog";
 
 async function readJsonResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -191,7 +192,7 @@ export default function ConnectionsView({
       setTestResult(data);
 
       if (res.ok && data.success) {
-        alert("✓ SFTP connection successful");
+        await showAppAlert("SFTP connection successful.", { title: "Connection Successful", tone: "success" });
         const saveRes = await fetch("/edi835/api/sftp/save/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -210,11 +211,11 @@ export default function ConnectionsView({
         }
         if (onRefreshSftp) onRefreshSftp();
       } else {
-        alert("✕ " + (data.error || "SFTP connection failed"));
+        await showAppAlert(data.error || "SFTP connection failed.", { title: "Connection Failed", tone: "error" });
       }
     } catch (e) {
       setTestResult({ success: false, error: e.message });
-      alert("✕ " + (e.message || "Unable to connect to SFTP server"));
+      await showAppAlert(e.message || "Unable to connect to SFTP server.", { title: "Connection Failed", tone: "error" });
     } finally {
       setTestingUni(false);
     }
@@ -258,14 +259,14 @@ export default function ConnectionsView({
 
       const data = await res.json();
       if (data.success && data.connected) {
-        alert("✓ " + data.message);
+        await showAppAlert(data.message || "SFTP connection successful.", { title: "Connection Successful", tone: "success" });
       } else {
-        alert("❌ SFTP Connection Error:\n\n" + (data.error || "Connection failed."));
+        await showAppAlert(data.error || "Connection failed.", { title: "SFTP Connection Error", tone: "error" });
       }
 
       if (onRefreshSftp) onRefreshSftp();
     } catch (e) {
-      alert("❌ Error performing SFTP connection test.");
+      await showAppAlert("Error performing SFTP connection test.", { title: "SFTP Connection Error", tone: "error" });
     } finally {
       if (type === "inbound") setTestingIn(false);
       else setTestingOut(false);
@@ -273,7 +274,7 @@ export default function ConnectionsView({
   };
 
   const handleDeleteConfig = async (id) => {
-    if (!window.confirm("Delete this SFTP connection configuration from database?")) return;
+    if (!await showAppConfirm("Delete this SFTP connection configuration from the database?", { title: "Delete SFTP Configuration", confirmLabel: "Delete", danger: true, tone: "error" })) return;
     try {
       await fetch("/edi835/api/sftp/delete/", {
         method: "POST",
