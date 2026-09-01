@@ -196,7 +196,6 @@ export default function AccessView({ currentUser }) {
         <div className="metric">
           <div className="v">{accessData?.current_admin?.session_state || 'Active'}</div>
           <div className="l">Session State</div>
-          <div className="d">{accessData?.current_admin?.session_desc || '30-min auto-expire'}</div>
         </div>
       </div>
 
