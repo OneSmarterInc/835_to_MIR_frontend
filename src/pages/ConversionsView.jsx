@@ -3,6 +3,7 @@ import FileActionButtons from "../components/FileActionButtons";
 import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
+import { showAppAlert } from "../components/AppDialog";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -248,12 +249,12 @@ export default function ConversionsView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to convert file to MIR");
+        await showAppAlert(data.error || "Failed to convert file to MIR.", { title: "Conversion Failed", tone: "error" });
       } else {
         if (data.text) setMirOutputText(data.text);
       }
     } catch (err) {
-      alert("Error converting file: " + err.message);
+      await showAppAlert("Error converting file: " + err.message, { title: "Conversion Failed", tone: "error" });
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
@@ -314,7 +315,7 @@ export default function ConversionsView({
         a.remove();
       }, 1000);
     } catch (err) {
-      alert("Download error: " + err.message);
+      await showAppAlert("Download error: " + err.message, { title: "Download Failed", tone: "error" });
     }
   };
 
