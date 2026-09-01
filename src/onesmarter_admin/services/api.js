@@ -142,7 +142,10 @@ export async function downloadTemplateFile(clientId, stepKey, title, ext) {
   const res = await fetch(`${BASE_URL}/download/${encodeURIComponent(clientId)}/${encodeURIComponent(stepKey)}/`, {
     headers: getAuthHeaders()
   });
-  if (!res.ok) throw new Error('Download failed');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Download failed');
+  }
   const rawBlob = await res.blob();
   // Force octet-stream to prevent Adobe Acrobat extension from intercepting and losing the filename
   const blob = new Blob([rawBlob], { type: 'application/octet-stream' });
