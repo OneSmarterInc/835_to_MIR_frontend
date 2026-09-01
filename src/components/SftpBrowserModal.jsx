@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { portalFetch } from "../utils/api";
 import { showAppAlert } from "./AppDialog";
 import { validateFileExtensions } from "../utils/fileTypes";
 
@@ -70,7 +71,7 @@ export default function SftpBrowserModal({
     try {
       const payload = { config_id: normalizedConfigId, path: p };
 
-      const res = await fetch("/edi835/api/sftp/browse/", {
+      const res = await portalFetch("/edi835/api/sftp/browse/", {
         method: "POST",
         headers: getAuthHeaders({
           "Content-Type": "application/json",
@@ -128,7 +129,7 @@ export default function SftpBrowserModal({
     }
     setIngesting(true); setError(null);
     try {
-      const res = await fetch("/edi835/api/sftp/837-ingest/", { method: "POST", headers: getAuthHeaders({"Content-Type":"application/json", Accept:"application/json"}), body: JSON.stringify({config_id: String(configId), filename: selectedFile.name}) });
+      const res = await portalFetch("/edi835/api/sftp/837-ingest/", { method: "POST", headers: getAuthHeaders({"Content-Type":"application/json", Accept:"application/json"}), body: JSON.stringify({config_id: String(configId), filename: selectedFile.name}) });
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.error || "Failed to process 837 reference.");
       setSelectedFile(null);

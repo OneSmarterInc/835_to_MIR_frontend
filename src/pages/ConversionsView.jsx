@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { portalFetch } from "../utils/api";
 import FileActionButtons from "../components/FileActionButtons";
 import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
@@ -13,8 +14,6 @@ function getAuthHeaders(extra = {}) {
 }
 
 function getApiUrl(path) {
-  const configuredBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-  if (configuredBase) return `${configuredBase}${path}`;
   return path;
 }
 
@@ -177,7 +176,7 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/validate/", {
+      const res = await portalFetch("/api/validate/", {
         credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +235,7 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/convert/", {
+      const res = await portalFetch("/api/convert/", {
         credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -271,7 +270,7 @@ export default function ConversionsView({
     if (!fileId || convertingId) return;
     setConvertingId(fileId);
     try {
-      const res = await fetch("/api/convert/", {
+      const res = await portalFetch("/api/convert/", {
         credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -326,7 +325,7 @@ export default function ConversionsView({
       if (targetId) query.append("file_id", targetId);
       if (nameToSave) query.append("file_name", nameToSave);
 
-      const res = await fetch(`/api/download/?${query.toString()}`, {
+      const res = await portalFetch(`/api/download/?${query.toString()}`, {
         method: "GET",
         credentials: "include",
       });
@@ -354,7 +353,7 @@ export default function ConversionsView({
     if (isOffboarded) return;
     setStartingBatch(true);
     try {
-      const res = await fetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
+      const res = await portalFetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
         method: "POST",
         credentials: "include",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
@@ -370,7 +369,7 @@ export default function ConversionsView({
       let completedData = null;
       for (let attempt = 0; attempt < 240; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        const statusRes = await fetch(
+        const statusRes = await portalFetch(
           getApiUrl(`/edi835/api/start-batch-conversion/?job_id=${encodeURIComponent(data.job_id)}`),
           {
             method: "GET",

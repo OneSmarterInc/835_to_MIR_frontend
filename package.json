@@ -13,6 +13,7 @@
     "test:no-native-dialogs": "node scripts/test-no-native-dialogs.js",
     "test:golive-redirect": "node scripts/test-golive-redirect.js",
     "test:audit-log": "node scripts/test-audit-log.js",
+    "test:client-session": "node scripts/test-client-session-requests.js",
     "preview": "vite preview"
   },
   "dependencies": {

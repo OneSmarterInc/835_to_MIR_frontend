@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { portalFetch } from "../utils/api";
 import TimeDisplay from "../components/TimeDisplay";
 import { showAppAlert, showAppConfirm } from "../components/AppDialog";
 
@@ -72,7 +73,7 @@ export default function ConnectionsView({
     setStartingBatch(true);
     setBatchAlert(null);
     try {
-      const res = await fetch("/api/start-batch-conversion/", {
+      const res = await portalFetch("/api/start-batch-conversion/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -181,7 +182,7 @@ export default function ConnectionsView({
     setUniSshKey("");
 
     try {
-      const res = await fetch("/edi835/api/sftp/connect/", {
+      const res = await portalFetch("/edi835/api/sftp/connect/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -193,7 +194,7 @@ export default function ConnectionsView({
 
       if (res.ok && data.success) {
         await showAppAlert("SFTP connection successful.", { title: "Connection Successful", tone: "success" });
-        const saveRes = await fetch("/edi835/api/sftp/save/", {
+        const saveRes = await portalFetch("/edi835/api/sftp/save/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -250,7 +251,7 @@ export default function ConnectionsView({
     setOutPass("");
 
     try {
-      const res = await fetch("/edi835/api/sftp/save/", {
+      const res = await portalFetch("/edi835/api/sftp/save/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -276,7 +277,7 @@ export default function ConnectionsView({
   const handleDeleteConfig = async (id) => {
     if (!await showAppConfirm("Delete this SFTP connection configuration from the database?", { title: "Delete SFTP Configuration", confirmLabel: "Delete", danger: true, tone: "error" })) return;
     try {
-      await fetch("/edi835/api/sftp/delete/", {
+      await portalFetch("/edi835/api/sftp/delete/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

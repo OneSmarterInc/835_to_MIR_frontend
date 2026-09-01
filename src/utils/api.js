@@ -1,6 +1,14 @@
+export function portalFetch(url, options = {}) {
+  let requestUrl = url;
+  if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+    const parsed = new URL(url);
+    requestUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  }
+  return fetch(requestUrl, { ...options, credentials: "include" });
+}
+
 export async function safeFetchJson(url, options = {}) {
-  const fetchOptions = { credentials: "include", ...options };
-  const res = await fetch(url, fetchOptions);
+  const res = await portalFetch(url, options);
   const contentType = res.headers.get("content-type") || "";
 
   if (!contentType.includes("application/json")) {

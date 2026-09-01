@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { portalFetch } from "../utils/api";
 
 export default function FileViewerModal({ fileId, onClose }) {
   const noDataMessage = "No data available in DataTable for this record.";
@@ -23,7 +24,7 @@ export default function FileViewerModal({ fileId, onClose }) {
     setError(null);
     setActiveTab("835");
 
-    fetch(`/api/file-content/${fileId}/`, { signal: controller.signal })
+    portalFetch(`/api/file-content/${fileId}/`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("Could not retrieve file content");
         return res.json();

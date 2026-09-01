@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { portalFetch } from "../utils/api";
 import FileActionButtons from "../components/FileActionButtons";
 import TimeDisplay from "../components/TimeDisplay";
 import { showAppAlert } from "../components/AppDialog";
@@ -23,7 +24,7 @@ export default function ArchiveView({
     if (!fileId || convertingId) return;
     setConvertingId(fileId);
     try {
-      const res = await fetch("/api/convert/", {
+      const res = await portalFetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
@@ -50,7 +51,7 @@ export default function ArchiveView({
 
     setPushingId(fileId);
     try {
-      const res = await fetch("/edi835/api/sftp/push/", {
+      const res = await portalFetch("/edi835/api/sftp/push/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
@@ -93,7 +94,7 @@ export default function ArchiveView({
       if (fileId) query.append("file_id", fileId);
       if (nameToSave) query.append("file_name", nameToSave);
 
-      const res = await fetch(`/api/download/?${query.toString()}`, {
+      const res = await portalFetch(`/api/download/?${query.toString()}`, {
         method: "GET",
         credentials: "include",
       });
@@ -118,7 +119,7 @@ export default function ArchiveView({
 
   const handleDownloadZip = async (type) => {
     try {
-      const res = await fetch(`/api/download-zip/?type=${type}`, {
+      const res = await portalFetch(`/api/download-zip/?type=${type}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to generate ZIP archive");

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { portalFetch } from "../utils/api";
 import "./ResultView.css";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
@@ -11,7 +12,7 @@ function authHeaders(extra = {}) {
   return token ? { ...extra, Authorization: `Token ${token}` } : extra;
 }
 async function apiJson(url, options = {}) {
-  const response = await fetch(url, { credentials: "include", ...options, headers: authHeaders(options.headers || {}) });
+  const response = await portalFetch(url, { ...options, headers: authHeaders(options.headers || {}) });
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("application/json")) {
     await response.text();
@@ -153,7 +154,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   };
   const downloadRecon = async (file) => {
     try {
-      const response = await fetch(`/edi835/api/recon/files/${file.id}/download/`, {
+      const response = await portalFetch(`/edi835/api/recon/files/${file.id}/download/`, {
         credentials: "include",
         headers: authHeaders(),
       });
