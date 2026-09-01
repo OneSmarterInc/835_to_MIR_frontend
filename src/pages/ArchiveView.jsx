@@ -400,8 +400,8 @@ export default function ArchiveView({
 
       {/* ARCHIVE DATA TABLE */}
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "16px" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
+          <table className="datatable" style={{ width: "100%", maxWidth: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th
@@ -551,17 +551,17 @@ export default function ArchiveView({
 
                   return (
                     <tr key={f.id}>
-                      <td className="num" style={{ minWidth: "210px", whiteSpace: "normal" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
+                      <td className="num" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
                       <td className="num" style={{ fontWeight: 600, fontSize: "11.5px" }}>
                         {shortId}
                       </td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ color: "var(--ink-2)", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {f.original_filename}
                       </td>
                       <td className="num" style={{ color: "var(--ink-3)" }}>
                         —
                       </td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ color: "var(--ink-2)", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {isProcessed ? mirName : "—"}
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
