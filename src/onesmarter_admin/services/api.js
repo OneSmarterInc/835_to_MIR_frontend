@@ -304,17 +304,18 @@ export async function addEmployeeRole(roleName, description = '') {
   return data;
 }
 
-export async function fetchAuditLogs(clientId = '', module = '') {
+export async function fetchAuditLogs(filters = {}) {
   const params = new URLSearchParams();
-  if (clientId) params.append('client_id', clientId);
-  if (module) params.append('module', module);
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) params.set(key, String(value));
+  });
   const qs = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`${BASE_URL}/audit-logs/${qs}`, {
     headers: getAuthHeaders()
   });
-  if (!res.ok) throw new Error('Failed to fetch audit logs');
   const data = await res.json();
-  return data.logs || [];
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch audit logs');
+  return data;
 }
 
 // --- 1. Client Documents Service ---
