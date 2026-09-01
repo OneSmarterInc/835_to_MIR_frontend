@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { showAppAlert } from "./AppDialog";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -124,7 +125,7 @@ export default function SftpBrowserModal({
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.error || "Failed to process 837 reference.");
       setSelectedFile(null);
-      alert(data.already_exists ? "This 837 reference was already processed." : "837 reference processed successfully and is now available in Results.");
+      await showAppAlert(data.already_exists ? "This 837 reference was already processed." : "837 reference processed successfully and is now available in Results.", { title: "837 Reference", tone: "success" });
     } catch (err) { setError(err.message || "Failed to process 837 reference."); }
     finally { setIngesting(false); }
   };
