@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import FileActionButtons from "../components/FileActionButtons";
 import TimeDisplay from "../components/TimeDisplay";
+import { showAppAlert } from "../components/AppDialog";
 
 export default function ArchiveView({
   metrics,
@@ -29,10 +30,10 @@ export default function ArchiveView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to convert file to MIR");
+        await showAppAlert(data.error || "Failed to convert file to MIR.", { title: "Conversion Failed", tone: "error" });
       }
     } catch (err) {
-      alert("Error converting file: " + err.message);
+      await showAppAlert("Error converting file: " + err.message, { title: "Conversion Failed", tone: "error" });
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
@@ -41,9 +42,9 @@ export default function ArchiveView({
 
   const handlePushToSftp = async (fileId) => {
     if (!sftpConfig || sftpConfig.status !== "CONNECTED") {
-      alert(
+      await showAppAlert(
         "⚠️ No active SFTP connection.\n\nPlease go to the Connections section, enter your SFTP host/port/credentials, and click 'Test & save connection' before pushing files."
-      );
+      , { title: "SFTP Connection Required", tone: "error" });
       return;
     }
 
@@ -56,17 +57,13 @@ export default function ArchiveView({
       });
       const data = await res.json();
       if (data.success) {
-        alert("✓ " + data.message);
+        await showAppAlert(data.message || "MIR uploaded to SFTP successfully.", { title: "Upload Successful", tone: "success" });
         if (onRefreshData) onRefreshData();
       } else {
-        alert(
-          "❌ " +
-            (data.error ||
-              "Failed to push files to SFTP server. Check server connection and credentials.")
-        );
+        await showAppAlert(data.error || "Failed to push files to SFTP server. Check server connection and credentials.", { title: "Upload Failed", tone: "error" });
       }
     } catch (e) {
-      alert("❌ Unable to reach server to push files to SFTP.");
+      await showAppAlert("Unable to reach server to push files to SFTP.", { title: "Upload Failed", tone: "error" });
     } finally {
       setPushingId(null);
     }
@@ -115,7 +112,7 @@ export default function ArchiveView({
         a.remove();
       }, 1000);
     } catch (err) {
-      alert("Download error: " + err.message);
+      await showAppAlert("Download error: " + err.message, { title: "Download Failed", tone: "error" });
     }
   };
 
@@ -138,7 +135,7 @@ export default function ArchiveView({
         a.remove();
       }, 1000);
     } catch (err) {
-      alert("ZIP Download error: " + err.message);
+      await showAppAlert("ZIP download error: " + err.message, { title: "Download Failed", tone: "error" });
     }
   };
 
