@@ -46,8 +46,8 @@ export default function UserDetailsModal({ isOpen, onClose, user }) {
         </div>
 
         <div style={{ borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Last System Login</span>
-          <TimeDisplay value={user.last_login || user.created_at} />
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Last System Login (EST)</span>
+          <TimeDisplay value={user.last_login || user.created_at} easternOnly />
         </div>
 
         <div>

@@ -436,7 +436,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                             <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.production_date) || 'N/A'}</div>
                             <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.production_time, step.extra?.schedule?.timezone)}</div>
-                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} /></div>}
+                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} easternOnly /></div>}
                           </div>
                         </div>
                       )}

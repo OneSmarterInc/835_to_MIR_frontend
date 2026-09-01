@@ -242,7 +242,7 @@ function ReconMatches({ row, onShowMore }) {
 }
 
 function FileSectionHeading({ label: sectionLabel, filename, date }) {
-  return <div className="result-file-section-heading"><h3>{sectionLabel} · {filename}</h3>{date && <TimeDisplay value={date} />}</div>;
+  return <div className="result-file-section-heading"><h3>{sectionLabel} · {filename}</h3>{date && <TimeDisplay value={date} easternOnly />}</div>;
 }
 
 function ServiceTable({ services = [] }) {

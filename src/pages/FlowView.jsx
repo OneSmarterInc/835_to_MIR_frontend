@@ -299,9 +299,9 @@ export default function FlowView({
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-            <span className="k">Last connection test</span>
+            <span className="k">Last connection test (EST)</span>
             <span className="v" id="flowOutboundLastTest" style={{ color: "var(--ink-3)" }}>
-              {outboundConfig ? <TimeDisplay value={outboundConfig.last_tested_at} /> : "–"}
+              {outboundConfig ? <TimeDisplay value={outboundConfig.last_tested_at} easternOnly /> : "–"}
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0" }}>

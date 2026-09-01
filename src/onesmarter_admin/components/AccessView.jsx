@@ -181,9 +181,9 @@ export default function AccessView({ currentUser }) {
         </div>
         <div className="metric">
           <div className="v" style={{ fontSize: '18px' }}>
-            {accessData?.last_login ? <TimeDisplay value={accessData.last_login} /> : accessData ? 'Never' : 'Loading...'}
+            {accessData?.last_login ? <TimeDisplay value={accessData.last_login} easternOnly /> : accessData ? 'Never' : 'Loading...'}
           </div>
-          <div className="l">Last Login</div>
+          <div className="l">Last Login (EST)</div>
           <div className="d">Dynamic database record</div>
         </div>
         <div className="metric">
