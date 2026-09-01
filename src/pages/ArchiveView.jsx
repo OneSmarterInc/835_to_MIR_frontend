@@ -402,6 +402,18 @@ export default function ArchiveView({
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "16px" }}>
         <div style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
           <table className="datatable" style={{ width: "100%", maxWidth: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "7%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th
@@ -611,7 +623,7 @@ export default function ArchiveView({
                           {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
-                      <td className="num" style={{ fontSize: "11px" }}>
+                      <td className="num" style={{ fontSize: "11px", whiteSpace: "nowrap", overflow: "visible" }}>
                         <FileActionButtons onView={() => onOpenFileModal(f.id)} onDownload={isProcessed ? () => handleDownloadMir(mirName, f.mir_text, f.id) : null} viewTitle="View / Edit Code" downloadTitle="Download .mir File" />
                       </td>
                     </tr>
