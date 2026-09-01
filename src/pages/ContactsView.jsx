@@ -83,7 +83,7 @@ export default function ContactsView() {
                       {c.phone || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <TimeDisplay value={c.created_at} />
+                      <TimeDisplay value={c.created_at} easternOnly />
                     </td>
                   </tr>
                 ))

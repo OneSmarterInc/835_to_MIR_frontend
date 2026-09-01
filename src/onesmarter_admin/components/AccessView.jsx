@@ -262,7 +262,7 @@ export default function AccessView({ currentUser }) {
                       {member.mfa}
                     </span>
                   </td>
-                  <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={member.last_login} /></td>
+                  <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={member.last_login} easternOnly /></td>
                   <td><span className="tag ok">{member.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
                     {((member.role === 'Admin' || member.role === 'Super Admin') && !(currentUser?.role === 'Super Admin' || currentUser?.is_superuser)) ? (

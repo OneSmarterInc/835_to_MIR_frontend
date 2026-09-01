@@ -2,7 +2,7 @@ import React from 'react';
 
 import { dateTimeZoneParts } from '../utils/timezone';
 
-export default function TimeDisplay({ value, includeSeconds = false, className = '' }) {
+export default function TimeDisplay({ value, includeSeconds = false, easternOnly = false, className = '' }) {
   const parts = dateTimeZoneParts(value, { includeSeconds });
   if (!parts.valid) return <span className={className}>{parts.fallback}</span>;
 
@@ -39,7 +39,7 @@ export default function TimeDisplay({ value, includeSeconds = false, className =
         <span style={labelStyle}>{parts.eastern.label}</span>
         <span>{parts.eastern.value}</span>
       </span>
-      {parts.local && (
+      {!easternOnly && parts.local && (
         <span style={rowStyle}>
           <span style={labelStyle}>{parts.local.label}</span>
           <span>{parts.local.value}</span>

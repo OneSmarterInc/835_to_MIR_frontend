@@ -1670,7 +1670,7 @@ export default function ConnectionsView({
                           {status}
                         </span>
                       </td>
-                      <td className="num" style={{ minWidth: "210px" }}><TimeDisplay value={c.last_tested_at} /></td>
+                      <td className="num" style={{ minWidth: "210px" }}><TimeDisplay value={c.last_tested_at} easternOnly /></td>
                       <td
                         className="num"
                         style={{

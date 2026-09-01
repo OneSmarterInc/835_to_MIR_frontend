@@ -169,7 +169,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
                   <td>
                     <span style={{ color: 'var(--ink-2)' }}>{displayClaims}</span>
                   </td>
-                  <td className="num" style={{ color: 'var(--ink-2)', minWidth: '210px' }}><TimeDisplay value={c.liveSince || c.live_since || c.created_at} /></td>
+                  <td className="num" style={{ color: 'var(--ink-2)', minWidth: '210px' }}><TimeDisplay value={c.liveSince || c.live_since || c.created_at} easternOnly /></td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ flex: 1, background: 'var(--line-soft)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>

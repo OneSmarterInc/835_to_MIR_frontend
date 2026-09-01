@@ -836,7 +836,7 @@ export default function ConversionsView({
                         {shortId}
                       </td>
                       <td className="num">{upDate}</td>
-                      <td className="num" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
+                      <td className="num" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds easternOnly /></td>
                       <td className="num" style={{ color: "var(--ink-2)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {f.original_filename}
                       </td>

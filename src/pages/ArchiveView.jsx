@@ -563,7 +563,7 @@ export default function ArchiveView({
 
                   return (
                     <tr key={f.id}>
-                      <td className="num" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds /></td>
+                      <td className="num" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds easternOnly /></td>
                       <td className="num" style={{ fontWeight: 600, fontSize: "11.5px" }}>
                         {shortId}
                       </td>

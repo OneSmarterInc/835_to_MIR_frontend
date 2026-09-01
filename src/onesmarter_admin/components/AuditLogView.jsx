@@ -81,7 +81,7 @@ export default function AuditLogView({ clients = [] }) {
 
     <div className="card audit-filter-card">
       <div className="audit-search-row">
-        <label className="audit-search"><span>Search all logs</span><input type="search" value={filters.search} onChange={(event) => updateFilter('search', event.target.value)} placeholder="Search action, details, client, module, or user…" /></label>
+        <label className="audit-search"><span>Universal search</span><input type="search" value={filters.search} onChange={(event) => updateFilter('search', event.target.value)} placeholder="Search time, client, user, module, action, or details…" aria-label="Search every value in the complete audit log" /></label>
         <button type="button" className="btn-gray" onClick={clearFilters} disabled={!hasFilters}>Clear filters</button>
       </div>
       <div className="audit-filter-grid">
@@ -102,7 +102,7 @@ export default function AuditLogView({ clients = [] }) {
         <th>Details</th><th><button type="button" onClick={() => changeSort('performed_by')}>Performed by <span>{sortIcon('performed_by')}</span></button></th>
       </tr></thead><tbody>
         {!loading && logs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : logs.map((log) => <tr key={log.id}>
-          <td className="audit-when"><TimeDisplay value={log.timestamp} includeSeconds /></td>
+          <td className="audit-when"><TimeDisplay value={log.timestamp} includeSeconds easternOnly /></td>
           <td><button type="button" className="tag audit-filter-tag" onClick={() => updateFilter('module', log.module || 'SYSTEM')}>{log.module || 'SYSTEM'}</button></td>
           <td><button type="button" className="tag ok audit-filter-tag" onClick={() => updateFilter('action', log.action)}>{log.action}</button></td>
           <td><button type="button" className="audit-client-link" onClick={() => log.client_id && updateFilter('client_id', log.client_id)} disabled={!log.client_id}>{log.client_name || log.client || 'System'}</button></td>
