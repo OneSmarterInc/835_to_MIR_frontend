@@ -2,9 +2,27 @@ import React, { useState } from 'react';
 import CenteredModal from './CenteredModal';
 import { createClient } from '../../services/api';
 
+const US_STATES = [
+  ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'],
+  ['CA', 'California'], ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'],
+  ['FL', 'Florida'], ['GA', 'Georgia'], ['HI', 'Hawaii'], ['ID', 'Idaho'],
+  ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'], ['KS', 'Kansas'],
+  ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'],
+  ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'],
+  ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'],
+  ['NH', 'New Hampshire'], ['NJ', 'New Jersey'], ['NM', 'New Mexico'], ['NY', 'New York'],
+  ['NC', 'North Carolina'], ['ND', 'North Dakota'], ['OH', 'Ohio'], ['OK', 'Oklahoma'],
+  ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'], ['SC', 'South Carolina'],
+  ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'],
+  ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'],
+  ['WI', 'Wisconsin'], ['WY', 'Wyoming'],
+];
+
 export default function AddClientModal({ isOpen, onClose, onClientCreated, existingClients = [] }) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [address, setAddress] = useState('');
+  const [state, setState] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -13,13 +31,13 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     setErrorMsg('');
     const trimmedName = name.trim();
     const trimmedCode = code.trim();
+    const trimmedAddress = address.trim();
 
     if (!trimmedName) {
       setErrorMsg('Client legal name is required.');
       return;
     }
 
-    // Client-side duplicate check (case-insensitive name & code)
     if (existingClients.some(c => c.name && c.name.toLowerCase() === trimmedName.toLowerCase())) {
       setErrorMsg(`Duplicate client: A client named "${trimmedName}" already exists in the system.`);
       return;
@@ -33,12 +51,16 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     try {
       const response = await createClient({
         name: trimmedName,
-        code: trimmedCode || undefined
+        code: trimmedCode || undefined,
+        address: trimmedAddress || undefined,
+        state: state || undefined,
       });
-      
+
       await onClientCreated(response.client);
       setName('');
       setCode('');
+      setAddress('');
+      setState('');
       setErrorMsg('');
       onClose();
     } catch (err) {
@@ -57,7 +79,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     <CenteredModal isOpen={isOpen} onClose={handleCloseModal}>
       <div className="modal-t">Add New Client</div>
       <p className="modal-b">Create a client record in the database and automatically generate their sequential onboarding compliance workflow.</p>
-      
+
       {errorMsg && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.1)',
@@ -91,6 +113,26 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
             value={code}
             onChange={(e) => { setCode(e.target.value); setErrorMsg(''); }}
           />
+        </div>
+        <div className="field">
+          <label>Address</label>
+          <input
+            placeholder="e.g. 123 Main Street"
+            value={address}
+            onChange={(e) => { setAddress(e.target.value); setErrorMsg(''); }}
+          />
+        </div>
+        <div className="field">
+          <label>State</label>
+          <select
+            value={state}
+            onChange={(e) => { setState(e.target.value); setErrorMsg(''); }}
+          >
+            <option value="">Select a state</option>
+            {US_STATES.map(([abbr, stateName]) => (
+              <option key={abbr} value={abbr}>{stateName}</option>
+            ))}
+          </select>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
