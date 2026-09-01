@@ -104,7 +104,7 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
             </div>
           </div>
         </div>
-      )}}
+      )}
     </>
   );
 }
