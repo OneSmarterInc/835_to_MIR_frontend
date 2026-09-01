@@ -371,6 +371,27 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .rup{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .step-custom-box{margin-top:12px;padding:12px;background:#F9FBFC;border:1px solid var(--line-soft);border-radius:2px}
 
+/* ---------- locked onboarding history ---------- */
+.onboarding-history-view{width:100%;max-width:100%;min-width:0;overflow:hidden}
+.onboarding-history-header>div{width:100%;min-width:0}
+.onboarding-client-heading{display:grid;grid-template-columns:minmax(240px,420px) minmax(0,1fr);align-items:center;gap:16px;margin:5px 0 8px}
+.onboarding-client-heading h1{margin:0;white-space:nowrap;overflow-wrap:normal}
+.onboarding-client-select{min-width:0}
+.onboarding-lock-notice{box-sizing:border-box;width:100%;margin:0 0 16px;padding:16px 18px;border:1px solid var(--brick);border-left-width:5px;background:var(--brick-bg);color:var(--brick)}
+.onboarding-lock-notice>div{margin-top:5px;font-size:12px;line-height:1.5}
+.onboarding-history-list{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
+.onboarding-history-rung{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:start;gap:14px;padding:16px 18px}
+.onboarding-history-rung .mark{margin:0}
+.onboarding-history-rung>.tag{align-self:start;white-space:nowrap}
+.onboarding-file-name{max-width:100%;margin-top:6px;font-size:12px;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+
+@media (max-width:760px){
+  .onboarding-client-heading{grid-template-columns:1fr;gap:10px}
+  .onboarding-client-heading h1{white-space:normal}
+  .onboarding-history-rung{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:14px 12px}
+  .onboarding-history-rung>.tag{grid-column:2;justify-self:start}
+}
+
 /* ---------- centered modals ---------- */
 .modal {
   position: fixed;
