@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { deleteNote, fetchNotes } from '../services/api';
 import './StepNotesHistory.css';
 import TimeDisplay from '../../components/TimeDisplay';
+import { showAppConfirm } from '../../components/AppDialog';
 
 export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   const [notes, setNotes] = useState([]);
@@ -11,7 +12,10 @@ export default function StepNotesHistory({ clientId, stepKey, latestNote }) {
   const [error, setError] = useState('');
 
   const handleDelete = async (note) => {
-    if (!note.id || deletingId || !window.confirm('Delete this note?')) return;
+    if (!note.id || deletingId) return;
+    if (!await showAppConfirm('Delete this note? This action cannot be undone.', {
+      title: 'Delete Note?', confirmLabel: 'Delete Note', danger: true, tone: 'error',
+    })) return;
     try {
       setDeletingId(note.id);
       setError('');
