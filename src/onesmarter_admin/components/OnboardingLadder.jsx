@@ -29,7 +29,9 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
     if (focusStep && steps && steps.length > 0) {
       hasScrolledRef.current = true;
       const scrollTimer = setTimeout(() => {
-        const el = document.getElementById(`step-${focusStep}`) || document.getElementById(`step-rung-${focusStep}`);
+        const displayStepElement = Array.from(document.querySelectorAll('[data-display-step-number]'))
+          .find((node) => node.dataset.displayStepNumber === String(focusStep));
+        const el = displayStepElement || document.getElementById(`step-${focusStep}`) || document.getElementById(`step-rung-${focusStep}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           el.classList.add('highlight-flash');
