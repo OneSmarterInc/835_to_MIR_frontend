@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
+  canonicalTimeZone,
   formatDateTimeWithZones,
+  scheduleTimeLabel,
   shouldShowTimeZoneSelector,
 } from '../src/utils/timezone.js';
+
+assert.equal(canonicalTimeZone('Asia/Calcutta'), 'Asia/Kolkata');
+assert.match(scheduleTimeLabel('13:29', 'Asia/Calcutta'), /13:29.*India Standard Time.*Asia\/Kolkata/);
 
 const winter = '2026-01-15T15:00:00Z';
 const summer = '2026-07-15T14:00:00Z';
