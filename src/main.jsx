@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { AppDialogProvider } from './components/AppDialog.jsx'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
@@ -45,7 +46,7 @@ if (BACKEND_URL) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <AppDialogProvider><App /></AppDialogProvider>
   </StrictMode>,
 )
 //test
