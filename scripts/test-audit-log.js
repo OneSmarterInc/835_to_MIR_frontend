@@ -7,6 +7,7 @@ const api = fs.readFileSync(new URL('../src/onesmarter_admin/services/api.js', i
 
 assert.doesNotMatch(app, /Recent Administrator Login History/);
 assert.match(app, /<AuditLogView clients=\{clients\}/);
+assert.match(view, /import '\.\/AuditLogView\.css'/, 'Audit Log component and stylesheet must ship together');
 for (const filter of ['search', 'client_id', 'module', 'action', 'performed_by', 'date_from', 'date_to']) {
   assert.match(view, new RegExp(filter), `Audit Log must include ${filter} filtering`);
 }
