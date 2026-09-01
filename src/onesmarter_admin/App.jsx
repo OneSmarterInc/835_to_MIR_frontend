@@ -8,6 +8,7 @@ import FilesView from './components/FilesView';
 import GoLiveView from './components/GoLiveView';
 import AccessView from './components/AccessView';
 import DefaultConfigsView from './components/DefaultConfigsView';
+import AuditLogView from './components/AuditLogView';
 import AddClientModal from './components/modals/AddClientModal';
 import NotesModal from './components/modals/NotesModal';
 import AddRoleModal from './components/modals/AddRoleModal';
@@ -19,32 +20,9 @@ import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
-import TimeDisplay from '../components/TimeDisplay';
 import SftpAutomationView from './components/SftpAutomationView';
 
-import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
-
-function renderAuditDetails(details) {
-  if (!details) return '—';
-  const match = details.match(/^(.*?) changed from '(.*?)' to '(.*?)'(.*)$/i);
-  if (match) {
-    const [, prefix, oldVal, newVal, suffix] = match;
-    return (
-      <span>
-        {prefix && <span>{prefix} </span>}
-        <span style={{ textDecoration: 'line-through', color: 'var(--brick)', opacity: 0.85, marginRight: '4px' }}>
-          '{oldVal}'
-        </span>
-        <span style={{ color: 'var(--ink-2)', marginRight: '4px', fontWeight: 600 }}>→</span>
-        <span style={{ fontWeight: 600, color: 'var(--teal)' }}>
-          '{newVal}'
-        </span>
-        {suffix && <span> {suffix}</span>}
-      </span>
-    );
-  }
-  return details;
-}
+import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
@@ -77,12 +55,6 @@ export default function App({ user, onLogout }) {
     return 'clients';
   });
   const [roles, setRoles] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [recentLogins, setRecentLogins] = useState([]);
-  const [auditClientFilter, setAuditClientFilter] = useState('');
-  const [auditModuleFilter, setAuditModuleFilter] = useState('');
-  const [auditSortField, setAuditSortField] = useState('timestamp');
-  const [auditSortDirection, setAuditSortDirection] = useState('desc');
   const [adminTrackedFiles, setAdminTrackedFiles] = useState([]);
 
   const [adminViewerFileId, setAdminViewerFileId] = useState(null);
@@ -135,13 +107,6 @@ export default function App({ user, onLogout }) {
       window.removeEventListener('focus', onFocus);
     };
   }, [isAuthenticated, activeClientId]);
-
-  // Auto-reload audit logs whenever filters change
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadAuditLogs(auditClientFilter, auditModuleFilter);
-    }
-  }, [isAuthenticated, auditClientFilter, auditModuleFilter]);
 
   const loadAdminTrackedFiles = async () => {
     try {
@@ -228,64 +193,6 @@ export default function App({ user, onLogout }) {
     } catch (err) {
       console.error('Failed to load employee roles:', err);
     }
-  };
-
-  const loadAuditLogs = async (cid = auditClientFilter, mod = auditModuleFilter) => {
-    try {
-      const logs = await fetchAuditLogs(cid, mod);
-      setAuditLogs(logs);
-      const accessData = await fetchAccessInfo();
-      setRecentLogins(accessData.recent_logins || []);
-    } catch (err) {
-      console.error('Failed to load audit logs:', err);
-    }
-  };
-
-  const handleAuditSort = (field) => {
-    if (auditSortField === field) {
-      setAuditSortDirection(auditSortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setAuditSortField(field);
-      setAuditSortDirection('asc');
-    }
-  };
-
-  const getSortedAuditLogs = () => {
-    if (!auditLogs) return [];
-    const logs = [...auditLogs];
-    if (!auditSortField) return logs;
-    return logs.sort((a, b) => {
-      let valA = '';
-      let valB = '';
-      if (auditSortField === 'timestamp') {
-        valA = a.timestamp || '';
-        valB = b.timestamp || '';
-      } else if (auditSortField === 'module') {
-        valA = a.module || '';
-        valB = b.module || '';
-      } else if (auditSortField === 'action') {
-        valA = a.action || '';
-        valB = b.action || '';
-      } else if (auditSortField === 'client') {
-        valA = a.client_name || a.client || '';
-        valB = b.client_name || b.client || '';
-      } else if (auditSortField === 'performed_by') {
-        valA = a.performed_by || '';
-        valB = b.performed_by || '';
-      }
-      valA = valA.toString().toLowerCase();
-      valB = valB.toString().toLowerCase();
-      if (valA < valB) return auditSortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return auditSortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  };
-
-  const renderAuditSortIcon = (field) => {
-    if (auditSortField !== field) return <span style={{ marginLeft: '4px', opacity: 0.3, fontSize: '10px' }}>⇅</span>;
-    return auditSortDirection === 'asc' 
-      ? <span style={{ marginLeft: '4px', color: 'var(--teal)', fontSize: '10px' }}>▲</span>
-      : <span style={{ marginLeft: '4px', color: 'var(--teal)', fontSize: '10px' }}>▼</span>;
   };
 
   // ==========================================
@@ -676,142 +583,7 @@ export default function App({ user, onLogout }) {
           )}
 
           {activeNav === 'audit' && (
-            <section className="view on" id="v-audit">
-              <div className="hdr-row">
-                <div>
-                  <div className="eyebrow">Append Only Audit</div>
-                  <h1>Audit Log</h1>
-                  <p className="sub">Immutable audit trail of all client onboarding, document, test, go-live, and administrative actions.</p>
-                </div>
-              </div>
-
-              <div className="filters" style={{ borderBottom: '1px solid var(--line)', marginBottom: '16px' }}>
-                <select
-                  value={auditClientFilter}
-                  onChange={e => setAuditClientFilter(e.target.value)}
-                >
-                  <option value="">All Clients</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={auditModuleFilter}
-                  onChange={e => setAuditModuleFilter(e.target.value)}
-                >
-                  <option value="">All Modules</option>
-                  <option value="CLIENTS">Clients</option>
-                  <option value="DOCUMENTS">Documents</option>
-                  <option value="ONBOARDING">Onboarding</option>
-                  <option value="TEST_ENV">Test Environment</option>
-                  <option value="GO_LIVE">Go Live</option>
-                  <option value="AUTH">Authentication</option>
-                  <option value="SYSTEM">System</option>
-                  <option value="OPERATIONS">Operations</option>
-                  <option value="OFFBOARDING">Offboarding</option>
-                </select>
-
-                <span className="n">{auditLogs.length} Events Recorded</span>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th onClick={() => handleAuditSort('timestamp')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      When {renderAuditSortIcon('timestamp')}
-                    </th>
-                    <th onClick={() => handleAuditSort('module')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Module {renderAuditSortIcon('module')}
-                    </th>
-                    <th onClick={() => handleAuditSort('action')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Action {renderAuditSortIcon('action')}
-                    </th>
-                    <th onClick={() => handleAuditSort('client')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Client {renderAuditSortIcon('client')}
-                    </th>
-                    <th>Details</th>
-                    <th onClick={() => handleAuditSort('performed_by')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Who {renderAuditSortIcon('performed_by')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--ink-3)' }}>
-                        No audit log entries found matching criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    getSortedAuditLogs().map((log) => (
-                      <tr key={log.id}>
-                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.timestamp} includeSeconds /></td>
-                        <td
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setAuditModuleFilter(auditModuleFilter === (log.module || 'SYSTEM') ? '' : (log.module || 'SYSTEM'))}
-                          title="Click to toggle filter by this module"
-                        >
-                          <span className="tag" style={{ textTransform: 'uppercase', fontSize: '10px', cursor: 'pointer' }}>
-                            {log.module || 'SYSTEM'}
-                          </span>
-                        </td>
-                        <td><span className="tag ok">{log.action}</span></td>
-                        <td
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setAuditClientFilter(auditClientFilter === (log.client_id || '') ? '' : (log.client_id || ''))}
-                          title="Click to toggle filter by this client"
-                        >
-                          <b>{log.client_name || log.client || 'System'}</b>
-                        </td>
-                        <td>{renderAuditDetails(log.details)}</td>
-                        <td className="num">{log.performed_by || 'Admin User'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-
-              <h2 className="sec" style={{ marginTop: '28px' }}>Recent Administrator Login History</h2>
-              <table style={{ width: '100%', tableLayout: 'fixed' }}>
-                <thead>
-                  <tr>
-                    <th>Login Timestamp</th>
-                    <th>Admin Username</th>
-                    <th>IP Address</th>
-                    <th>Client User Agent</th>
-                    <th>Status</th>
-                    <th>Logout Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLogins.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--ink-3)', padding: '16px' }}>
-                        No recent logins recorded.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentLogins.map((log) => (
-                      <tr key={log.id}>
-                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.login_time} /></td>
-                        <td><b>{log.username}</b></td>
-                        <td><code>{log.ip_address}</code></td>
-                        <td style={{ fontSize: '12px', color: 'var(--ink-2)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {log.user_agent}
-                        </td>
-                        <td>
-                          <span className={`tag ${log.status === 'SUCCESS' ? 'ok' : 'bad'}`}>
-                            {log.status}
-                          </span>
-                        </td>
-                        <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={log.logout_time} /></td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </section>
+            <AuditLogView clients={clients} />
           )}
 
           {activeNav === 'ops' && (
