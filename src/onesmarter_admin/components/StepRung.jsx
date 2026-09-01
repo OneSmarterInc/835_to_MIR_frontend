@@ -560,7 +560,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   );
 
   return (
-    <div className={`rung ${stateClass}`} id={`step-${step.id}`} data-step-id={step.id}>
+    <div className={`rung ${stateClass}`} id={`step-${step.id}`} data-step-id={step.id} data-display-step-number={displayStepNumber}>
       <div className="mark">{markContent}</div>
 
       <div className="txt">
