@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import TimeDisplay from '../../components/TimeDisplay';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { EASTERN_TIME_ZONE, scheduleTimeLabel, scheduleTimeZoneOptions, timeZoneDisplayName } from '../../utils/timezone';
+import { canonicalTimeZone, EASTERN_TIME_ZONE, scheduleTimeLabel, scheduleTimeZoneOptions, timeZoneDisplayName } from '../../utils/timezone';
 import './SftpAutomationView.css';
 
 function authHeaders(extra = {}) {
@@ -43,7 +43,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const selectedClient = clients.find((item) => String(item.id) === String(selectedClientId));
   const zones = useMemo(() => {
     const options = scheduleTimeZoneOptions();
-    const clientZone = selectedClient?.timezone;
+    const clientZone = canonicalTimeZone(selectedClient?.timezone);
     if (clientZone && !options.some((option) => option.value === clientZone)) {
       options.push({ value: clientZone, label: `${timeZoneDisplayName(clientZone)} (${clientZone})` });
     }
@@ -70,7 +70,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
           const schedule = (data.schedules || []).find((item) => String(item.client_id) === String(selectedClientId) && item.automation_type === type.value);
           defaults[type.value] = {
             run_time: schedule?.run_time || '09:00',
-            timezone: schedule?.timezone || client?.timezone || EASTERN_TIME_ZONE,
+            timezone: canonicalTimeZone(schedule?.timezone || client?.timezone || EASTERN_TIME_ZONE),
             enabled: schedule?.enabled !== false,
           };
         });
@@ -117,7 +117,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       const data = await apiJson('/edi835/api/admin/sftp-automation/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: selectedClientId, automation_type: automationType, ...form }),
+        body: JSON.stringify({ client_id: selectedClientId, automation_type: automationType, ...form, timezone: canonicalTimeZone(form.timezone) }),
       });
       setMessage({ kind: 'ok', text: `${automationType} automation schedule saved.` });
       setSchedules((current) => [...current.filter((item) => !(item.client_id === data.schedule.client_id && item.automation_type === automationType)), data.schedule]);
