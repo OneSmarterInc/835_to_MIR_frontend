@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
+import { showAppAlert, showAppConfirm } from '../../../components/AppDialog';
 
 export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clients, user, currentUser }) {
   const [name, setName] = useState('');
@@ -178,7 +179,9 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
             type="button"
             className="btn"
             onClick={async () => {
-              if (window.confirm(`Are you sure you want to reset the password for ${user.email} and send a temporary password via email?`)) {
+              if (await showAppConfirm(`Reset the password for ${user.email} and email a temporary password?`, {
+                title: 'Reset Password?', confirmLabel: 'Reset & Email', tone: 'info',
+              })) {
                 setLoading(true);
                 try {
                   const res = await fetch(`/accounts/api/admin/users/${user.id}/reset-password/`, {
@@ -187,7 +190,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
                   });
                   const data = await res.json();
                   if (res.ok && data.success) {
-                    alert("✓ Reset successful: " + data.message);
+                    await showAppAlert(data.message, { title: 'Password Reset', tone: 'success' });
                     handleCloseModal();
                   } else {
                     setErrorMsg(data.error || "Failed to reset password.");
