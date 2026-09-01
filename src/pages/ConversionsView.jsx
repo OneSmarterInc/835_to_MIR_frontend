@@ -5,6 +5,7 @@ import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 import { showAppAlert } from "../components/AppDialog";
 import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
+import OffboardedClientBanner from "../onesmarter_admin/components/OffboardedClientBanner";
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -33,10 +34,13 @@ export default function ConversionsView({
   isAdmin = false,
   activeClientId = "",
   onSelectClient,
+  selectedClient,
 }) {
   const [selectedClientId, setSelectedClientId] = useState(
     isAdmin ? activeClientId || "" : ""
   );
+  const currentAdminClient = clients.find((item) => String(item.id) === String(selectedClientId)) || selectedClient;
+  const isOffboarded = isAdmin && String(currentAdminClient?.stage || '').toLowerCase() === 'offboarded';
 
   useEffect(() => {
     if (isAdmin) {
@@ -78,6 +82,7 @@ export default function ConversionsView({
 
   // 835 File Input change (Supports multiple file selection)
   const handle835FileChange = async (e) => {
+    if (isOffboarded) { e.target.value = ""; return; }
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
     const extensionError = validateFileExtensions(files, "835");
@@ -125,6 +130,7 @@ export default function ConversionsView({
 
   // 837 File Input change
   const handle837FileChange = async (e) => {
+    if (isOffboarded) { e.target.value = ""; return; }
     if (e.target.files && e.target.files.length > 0) {
       const extensionError = validateFileExtensions(e.target.files, "837");
       if (extensionError) {
@@ -152,6 +158,7 @@ export default function ConversionsView({
 
   // Validate 835 Action (Single or Multi-file)
   const handleValidate = async () => {
+    if (isOffboarded) return;
     setValidationError(null);
     setValidationReport(null);
     setMirOutputText("");
@@ -211,6 +218,7 @@ export default function ConversionsView({
 
   // Process MIR Action (Converts single or multiple 835 files into a SINGLE combined MIR file)
   const handleProcessMIR = async () => {
+    if (isOffboarded) return;
     if (selectedFilesList.length === 0 && !ediText.trim()) return;
 
     setProcessing(true);
@@ -259,6 +267,7 @@ export default function ConversionsView({
 
   // Convert file to MIR on clicking PROCESSING status in table
   const handleConvertStatusClick = async (fileId) => {
+    if (isOffboarded) return;
     if (!fileId || convertingId) return;
     setConvertingId(fileId);
     try {
@@ -342,6 +351,7 @@ export default function ConversionsView({
 
   // Start Automated SFTP Inbound Batch Pipeline
   const handleStartBatchConversion = async () => {
+    if (isOffboarded) return;
     setStartingBatch(true);
     try {
       const res = await fetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
@@ -501,6 +511,7 @@ export default function ConversionsView({
             /></div>
           </div>
         )}
+        <OffboardedClientBanner client={currentAdminClient} detail="Conversion history remains available for review. New uploads, validation, MIR processing, and SFTP batch runs are locked." />
         <div className="start-conversion-header">
           <h2>Start a conversion</h2>
           <div className="step-pills">
@@ -527,6 +538,7 @@ export default function ConversionsView({
               accept={fileAccept("835")}
               multiple
               onChange={handle835FileChange}
+              disabled={isOffboarded}
             />
             <div className="subtext">{file835Subtext}</div>
           </div>
@@ -534,7 +546,7 @@ export default function ConversionsView({
           {/* OPTIONAL 837 REFERENCE BOX */}
           <div className="c-box">
             <div className="c-box-label">OPTIONAL &bull; 837 REFERENCE ONLY</div>
-            <input type="file" accept={fileAccept("837")} onChange={handle837FileChange} />
+            <input type="file" accept={fileAccept("837")} onChange={handle837FileChange} disabled={isOffboarded} />
             <div className="subtext">{file837Subtext}</div>
           </div>
 
@@ -544,7 +556,7 @@ export default function ConversionsView({
               type="button"
               className="btn-gray"
               onClick={handleValidate}
-              disabled={validating}
+              disabled={validating || isOffboarded}
             >
               <svg
                 width="15"
@@ -566,7 +578,7 @@ export default function ConversionsView({
               type="button"
               className={isValidated && !processing ? "btn-gray" : "btn-disabled"}
               onClick={handleProcessMIR}
-              disabled={!isValidated || processing}
+              disabled={!isValidated || processing || isOffboarded}
             >
               <svg
                 width="15"
@@ -587,7 +599,7 @@ export default function ConversionsView({
               type="button"
               className="btn-gray"
               onClick={handleStartBatchConversion}
-              disabled={startingBatch}
+              disabled={startingBatch || isOffboarded}
               title="Test SFTP Inbound Batch Conversion: Processes 835 and RECON files from their configured folders, updates MIR and reconciliation results, and removes successfully processed source files from SFTP."
             >
               <svg

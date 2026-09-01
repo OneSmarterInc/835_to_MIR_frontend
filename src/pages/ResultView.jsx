@@ -4,6 +4,7 @@ import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 import { showAppAlert } from "../components/AppDialog";
 import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
+import OffboardedClientBanner from "../onesmarter_admin/components/OffboardedClientBanner";
 
 function authHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -28,8 +29,10 @@ const label = (value) => ({ NOT_IN_MIR: "Not in MIR", NOT_IN_RECON: "Not in RECO
 const tone = (value) => value === "CLEAR" ? "ok" : ["NOT_IN_MIR", "NOT_IN_RECON", "UNPAID"].includes(value) ? "idle" : "bad";
 const STATUS_OPTIONS = ["CLEAR", "NOT_IN_MIR", "NOT_IN_RECON", "SIGNATURE_MISMATCH", "PARTIALLY_PAID", "OVERPAID", "UNPAID", "AMOUNT_MISMATCH"];
 
-export default function ResultView({ clients = [], isAdmin = false, initialClientId = "" }) {
+export default function ResultView({ clients = [], isAdmin = false, initialClientId = "", selectedClient }) {
   const [clientId, setClientId] = useState(initialClientId || "");
+  const currentAdminClient = clients.find((item) => String(item.id) === String(clientId)) || selectedClient;
+  const isOffboarded = isAdmin && String(currentAdminClient?.stage || '').toLowerCase() === 'offboarded';
   const [selectedFile, setSelectedFile] = useState(null);
   const [data, setData] = useState({ claims: [], recon_files: [] });
   const [search, setSearch] = useState("");
@@ -101,6 +104,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   };
 
   const uploadAndProcess = async () => {
+    if (isOffboarded) return;
     if (!selectedFile) return setMessage({ kind: "error", text: "Select a RECON file first." });
     setBusy(true); setMessage(null);
     try {
@@ -188,10 +192,11 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   return <section className="view on result-view">
     <div className="eyebrow">Operations Studio</div><h1>Result</h1>
     <p className="sub">Compare every MIR claim with all processed RECON payment files.</p>
+    <OffboardedClientBanner client={currentAdminClient} detail="Existing reconciliation results remain available for review. New RECON uploads and processing are locked." />
     <div className="start-conversion-card result-process-card">
       {isAdmin && <div className="result-client-bar"><label>Associate with Client:</label><div className="result-client-select"><ClientSelectDropdown clients={clients} value={clientId} onChange={setClientId} includeGlobal fullWidth /></div></div>}
       <div className="start-conversion-header"><h2>Upload RECON</h2><div className="step-pills"><span className="step-pill active">1 · UPLOAD</span><span className="step-arrow">→</span><span className="step-pill">2 · PROCESS</span><span className="step-arrow">→</span><span className="step-pill">3 · RECONCILE</span></div></div>
-      <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" accept={fileAccept("RECON")} onChange={handleReconFileChange} /><div className="subtext">{selectedFile ? selectedFile.name : "Select a supported RECON file."}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
+      <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" accept={fileAccept("RECON")} onChange={handleReconFileChange} disabled={isOffboarded} /><div className="subtext">{isOffboarded ? "Uploads are locked for this offboarded client." : selectedFile ? selectedFile.name : "Select a supported RECON file."}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy || isOffboarded}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
     <div className="filters-bar result-filters"><select className="result-status-select" value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><div className="result-global-search"><input type="search" value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value) { statusFilterRef.current = ""; setStatusFilter(""); } }} placeholder="Search MIR/RECON data · separate multiple values with commas" aria-label="Search all MIR and RECON results; separate multiple values with commas" /></div><button type="button" className="btn-gray result-files-button" onClick={openUploadedFiles}>Uploaded RECON files</button><span className="runs-counter">{data.total_claims ?? rows.length} reconciliation claims · all processed RECON files</span></div>

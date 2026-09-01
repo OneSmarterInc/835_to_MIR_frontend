@@ -21,6 +21,8 @@ import ConversionsView from '../pages/ConversionsView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
+import ClientSelectDropdown from './components/ClientSelectDropdown';
+import OffboardedClientBanner from './components/OffboardedClientBanner';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -335,6 +337,7 @@ export default function App({ user, onLogout }) {
   const selectedClientIsOffboarded = String(
     clientState?.client?.stage || clients.find((client) => client.id === activeClientId)?.stage || ''
   ).toLowerCase() === 'offboarded';
+  const selectedOperationalClient = clientState?.client || clients.find((client) => client.id === activeClientId) || null;
 
   return (
     <>
@@ -456,6 +459,7 @@ export default function App({ user, onLogout }) {
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
               onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
@@ -468,6 +472,7 @@ export default function App({ user, onLogout }) {
               isAdmin={true}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
@@ -476,6 +481,7 @@ export default function App({ user, onLogout }) {
               clients={clients}
               isAdmin={true}
               initialClientId={activeClientId}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
@@ -484,11 +490,12 @@ export default function App({ user, onLogout }) {
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
           {activeNav === 'promote' && (
-            selectedClientIsOffboarded ? <section className="view on"><div className="eyebrow">Go Live</div><h1>Workflow Locked</h1><div role="status" style={{ marginTop: '16px', padding: '18px', border: '1px solid var(--brick)', borderLeftWidth: '5px', background: 'var(--brick-bg)', color: 'var(--brick)' }}><strong>This client has been permanently offboarded.</strong><div style={{ marginTop: '5px', fontSize: '12px' }}>Go Live cannot be resumed, completed, or reset for an offboarded client.</div></div></section> : <GoLiveView
+            selectedClientIsOffboarded ? <section className="view on"><div className="eyebrow">Go Live</div><h1>Workflow Locked</h1><div className="locked-view-client-bar"><label>Associate with Client:</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={handleSelectClientInGoLive} fullWidth /></div><OffboardedClientBanner client={selectedOperationalClient} detail="Go Live cannot be resumed, completed, or reset. Select another client above to continue." /></section> : <GoLiveView
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClientInGoLive}

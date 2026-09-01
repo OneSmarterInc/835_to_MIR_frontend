@@ -4,6 +4,7 @@ import TimeDisplay from '../../components/TimeDisplay';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import { canonicalTimeZone, EASTERN_TIME_ZONE, scheduleTimeLabel, scheduleTimeZoneOptions, timeZoneDisplayName } from '../../utils/timezone';
 import './SftpAutomationView.css';
+import OffboardedClientBanner from './OffboardedClientBanner';
 
 function authHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
@@ -99,6 +100,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     onSelectClient?.(value);
     setMessage(null);
   };
+  const isOffboarded = String(selectedClient?.stage || '').toLowerCase() === 'offboarded';
 
   const updateForm = (type, field, value) => setForms((current) => ({
     ...current, [type]: { ...(current[type] || {}), [field]: value },
@@ -138,6 +140,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
       <label htmlFor="sftp-auto-client">Associate with Client:</label>
       <div className="sftp-auto-client-select"><ClientSelectDropdown id="sftp-auto-client" clients={clients} value={selectedClientId} onChange={selectClient} fullWidth /></div>
     </div>
+    <OffboardedClientBanner client={selectedClient} detail="Automation schedules and future SFTP runs are permanently locked. Existing run history remains available." />
 
     <div className="sftp-auto-config-list">
       {automationTypes.map((type) => {
@@ -146,10 +149,10 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
         return <div className="card sftp-auto-config" key={type.value}>
           <div><div className="eyebrow">Daily {type.value} Schedule</div><h2>{type.label}</h2><p className="sub">{type.description}</p></div>
           <div className="sftp-auto-fields">
-            <label>Run time<input type="time" value={form.run_time} onChange={(event) => updateForm(type.value, 'run_time', event.target.value)} /></label>
-            <label>Timezone<select value={form.timezone} onChange={(event) => updateForm(type.value, 'timezone', event.target.value)}>{zones.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
-            <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => updateForm(type.value, 'enabled', event.target.checked)} />Automation enabled</label>
-            <button type="button" className="btn-gray" disabled={savingType === type.value || !selectedClientId} onClick={() => saveSchedule(type.value)}>{savingType === type.value ? 'Saving…' : `Save ${type.value} Schedule`}</button>
+            <label>Run time<input type="time" value={form.run_time} onChange={(event) => updateForm(type.value, 'run_time', event.target.value)} disabled={isOffboarded} /></label>
+            <label>Timezone<select value={form.timezone} onChange={(event) => updateForm(type.value, 'timezone', event.target.value)} disabled={isOffboarded}>{zones.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
+            <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => updateForm(type.value, 'enabled', event.target.checked)} disabled={isOffboarded} />Automation enabled</label>
+            <button type="button" className="btn-gray" disabled={savingType === type.value || !selectedClientId || isOffboarded} onClick={() => saveSchedule(type.value)}>{savingType === type.value ? 'Saving…' : `Save ${type.value} Schedule`}</button>
           </div>
           <div className="sftp-auto-set-time"><b>Set time:</b> {schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}{schedule?.next_run_at && schedule.enabled && <span><b>Next run:</b><TimeDisplay value={schedule.next_run_at} /></span>}</div>
         </div>;

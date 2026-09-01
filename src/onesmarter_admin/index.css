@@ -370,6 +370,11 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .rung .side{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
 .rup{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .step-custom-box{margin-top:12px;padding:12px;background:#F9FBFC;border:1px solid var(--line-soft);border-radius:2px}
+.offboarded-client-banner{display:grid;gap:5px;box-sizing:border-box;width:100%;margin:14px 0 18px;padding:15px 18px;border:1px solid var(--brick);border-left-width:5px;background:var(--brick-bg);color:var(--brick)}
+.offboarded-client-banner strong{font-size:14px}
+.offboarded-client-banner span{font-size:12px;line-height:1.5}
+.locked-view-client-bar{display:grid;grid-template-columns:auto minmax(240px,560px);align-items:center;gap:12px;margin-top:16px}
+@media(max-width:620px){.locked-view-client-bar{grid-template-columns:1fr}}
 
 /* ---------- locked onboarding history ---------- */
 .onboarding-history-view{width:100%;max-width:100%;min-width:0;overflow:hidden}

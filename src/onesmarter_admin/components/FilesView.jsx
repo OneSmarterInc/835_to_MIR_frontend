@@ -4,12 +4,13 @@ import { fetchClientEdiFiles, downloadEdiFile, pushEdiFileToSftp } from '../serv
 import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert } from '../../components/AppDialog';
 import EyeIcon from '../../components/EyeIcon';
+import OffboardedClientBanner from './OffboardedClientBanner';
 
 function canonicalMirFilename(file) {
   return file?.mir_filename || file?.output_filename || file?.combined_filename || '';
 }
 
-export default function FilesView({ clients = [], activeClientId, onSelectClient, onOpenFileModal }) {
+export default function FilesView({ clients = [], activeClientId, onSelectClient, onOpenFileModal, selectedClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [ediFiles, setEdiFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [showZipMenu, setShowZipMenu] = useState(false);
 
   const currentClient = selectedClientId ? clients.find(c => c.id === selectedClientId) || null : null;
+  const isOffboarded = String((currentClient || selectedClient)?.stage || '').toLowerCase() === 'offboarded';
 
   useEffect(() => {
     if (activeClientId && activeClientId !== selectedClientId) setSelectedClientId(activeClientId);
@@ -109,6 +111,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   };
 
   const handlePushMir = async (file) => {
+    if (isOffboarded) return;
     setPushingId(file.id);
     try { const result = await pushEdiFileToSftp(file.id); await showAppAlert(result.message, { title: 'MIR Sent', tone: 'success' }); await loadEdiFiles(selectedClientId); }
     catch (err) { await showAppAlert(`Unable to push MIR to SFTP: ${err.message}`, { title: 'SFTP Transfer Failed', tone: 'error' }); }
@@ -126,6 +129,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
         </div>
       </div>
       <p className="sub" style={{ marginTop: '4px', marginBottom: '20px' }}>One row represents one 835 conversion set for <b>{currentClient?.name || 'Global System Default'}</b>. The 835 input(s), optional 837 reference, MIR output, validation result, and processing result stay together.</p>
+      <OffboardedClientBanner client={currentClient || selectedClient} detail="Files and archive history remain read-only. New processing and SFTP delivery are locked." />
       {errorMessage && <div className="note" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)', marginBottom: '16px' }}><b>Error:</b> {errorMessage}</div>}
       <div className="metrics files-metrics-grid" style={{ gap: '12px', marginBottom: '20px' }}><div className="metric"><div className="v">{conversionSets}</div><div className="l">Conversion sets</div><div className="d"><span>{archivedCount}</span> physical file seals stored</div></div><div className="metric"><div className="v">{files835}</div><div className="l">835 files received</div><div className="d">Across all conversion sets</div></div><div className="metric"><div className="v">0</div><div className="l">837 references</div><div className="d">Optional - reference only</div></div><div className="metric"><div className="v">{validatedSets}</div><div className="l">Validated sets</div><div className="d">835 validation passed</div></div><div className="metric"><div className="v">{processedSets}</div><div className="l">Processed sets</div><div className="d"><span>{waitingFailed}</span> waiting/failed – <span>{valFailed}</span> validation failed</div></div></div>
       <div className="filters-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}><input type="text" placeholder="Search run, 835, 837, or MIR..." value={searchText} onChange={(e) => { setSearchText(e.target.value); setCurrentPage(1); }} style={{ padding: '7px 12px', fontSize: '12px', border: '1px solid var(--line)', borderRadius: '4px', width: '280px' }} /><span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-3)' }}>{filtered.length} sets</span></div>

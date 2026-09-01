@@ -31,8 +31,8 @@ export default function AccessView({ currentUser }) {
   async function loadClients() {
     try {
       const data = await fetchClients();
-      const list = data.results || data || [];
-      setClients(list);
+      const list = data.clients || data.results || (Array.isArray(data) ? data : []);
+      setClients(list.filter((client) => String(client.stage || '').toLowerCase() !== 'offboarded'));
     } catch (err) {
       console.error("Failed to fetch clients", err);
     }
