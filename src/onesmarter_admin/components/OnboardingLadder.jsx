@@ -106,6 +106,36 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
     return 'Onboarding Pending';
   })();
 
+  const isPermanentlyOffboarded = String(client.stage || '').toLowerCase() === 'offboarded';
+
+  if (isPermanentlyOffboarded) {
+    return (
+      <section className="view on" id="v-onboard">
+        <div className="hdr-row"><div>
+          <div className="eyebrow">Selected Client</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
+            <ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} />
+            <h1 style={{ margin: 0 }}>Onboarding History</h1>
+          </div>
+          <p className="sub">This client has been permanently offboarded. Onboarding cannot be resumed or restarted.</p>
+        </div></div>
+        <div role="status" style={{ padding: '18px', border: '1px solid var(--brick)', borderLeftWidth: '5px', background: 'var(--brick-bg)', color: 'var(--brick)', marginBottom: '16px' }}>
+          <strong>Onboarding permanently locked</strong>
+          <div style={{ marginTop: '5px', fontSize: '12px' }}>All previous onboarding steps are preserved below for read-only review. Upload, save, complete, delete, and redo actions are unavailable.</div>
+        </div>
+        <div className="ladder">
+          {steps.map((step) => (
+            <div className="rung" key={`${client.id}-${step.id}`} style={{ padding: '12px 0' }}>
+              <div className="mark" style={{ background: step.done ? 'var(--teal)' : 'var(--surface-2)', color: step.done ? '#fff' : 'var(--ink-3)' }}>{step.done ? '✓' : '—'}</div>
+              <div className="txt"><h3>{step.title}</h3><div className="meta">{step.done ? 'Completed before offboarding' : 'Not completed'} · Read only</div>{step.latestUpload?.original_filename && <div style={{ marginTop: '5px', fontSize: '12px' }}>Filed: <b>{step.latestUpload.original_filename}</b></div>}</div>
+              <span className="tag bad">Locked</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   let currentPhase = null;
 
   // Use natural database step sequence

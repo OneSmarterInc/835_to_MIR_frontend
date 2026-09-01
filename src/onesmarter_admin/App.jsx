@@ -332,6 +332,10 @@ export default function App({ user, onLogout }) {
     );
   }
 
+  const selectedClientIsOffboarded = String(
+    clientState?.client?.stage || clients.find((client) => client.id === activeClientId)?.stage || ''
+  ).toLowerCase() === 'offboarded';
+
   return (
     <>
       <Header
@@ -484,7 +488,7 @@ export default function App({ user, onLogout }) {
           )}
 
           {activeNav === 'promote' && (
-            <GoLiveView
+            selectedClientIsOffboarded ? <section className="view on"><div className="eyebrow">Go Live</div><h1>Workflow Locked</h1><div role="status" style={{ marginTop: '16px', padding: '18px', border: '1px solid var(--brick)', borderLeftWidth: '5px', background: 'var(--brick-bg)', color: 'var(--brick)' }}><strong>This client has been permanently offboarded.</strong><div style={{ marginTop: '5px', fontSize: '12px' }}>Go Live cannot be resumed, completed, or reset for an offboarded client.</div></div></section> : <GoLiveView
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClientInGoLive}

@@ -41,6 +41,11 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   const [offboarding, setOffboarding] = useState(false);
 
   const currentClient = clients.find(c => c.id === activeClientId);
+  const finalized = Boolean(
+    offboardingState?.locked ||
+    offboardingState?.finalized ||
+    String(currentClient?.stage || '').toLowerCase() === 'offboarded'
+  );
 
   const getStepStatus = (stepNum) => {
     if (!offboardingState || !offboardingState.steps) return 'PENDING';
@@ -55,7 +60,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   };
 
   const handleFileUpload = async (stepNum, file) => {
-    if (!activeClientId) return;
+    if (!activeClientId || finalized) return;
     try {
       await completeOffboardingStep(activeClientId, stepNum, file);
       onRefresh();
@@ -65,7 +70,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   };
 
   const handleComplete = async (stepNum) => {
-    if (!activeClientId) return;
+    if (!activeClientId || finalized) return;
     try {
       await completeOffboardingStep(activeClientId, stepNum);
       onRefresh();
@@ -75,7 +80,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   };
 
   const handleRedo = async (stepNum) => {
-    if (!activeClientId) return;
+    if (!activeClientId || finalized) return;
     try {
       await redoOffboardingStep(activeClientId, stepNum);
       onRefresh();
@@ -113,7 +118,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
   };
 
   const handleDestroyKeys = async () => {
-    if (confirmInput.trim() !== currentClient?.name?.trim() || offboarding) return;
+    if (finalized || confirmInput.trim() !== currentClient?.name?.trim() || offboarding) return;
     try {
       setOffboarding(true);
       await completeOffboardingStep(activeClientId, 3);
@@ -156,6 +161,13 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
         </div>
       </div>
       <p className="sub">Cryptographic key destruction and certified data return upon client contract conclusion.</p>
+
+      {finalized && (
+        <div role="status" style={{ marginTop: '16px', padding: '16px 18px', border: '1px solid var(--brick)', borderLeftWidth: '5px', background: 'var(--brick-bg)', color: 'var(--brick)' }}>
+          <strong>Offboarding finalized — workflow permanently locked</strong>
+          <div style={{ marginTop: '5px', fontSize: '12px', lineHeight: 1.5 }}>This client cannot be reactivated or onboarded again. Completed offboarding records remain available below as read-only history.</div>
+        </div>
+      )}
       
       {!activeClientId ? (
         <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', color: 'var(--mute)' }}>
@@ -171,7 +183,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
               <div className="meta">Effective date registered in database</div>
               
               <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {!step1Done ? (
+                {!step1Done && !finalized ? (
                   <label className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '4px', fontSize: '12px' }}>
                     <span>📎 Upload PDF / Doc</span>
                     <input 
@@ -185,7 +197,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                       }}
                     />
                   </label>
-                ) : (
+                ) : step1Done && !finalized ? (
                   <button 
                     type="button" 
                     className="btn" 
@@ -196,9 +208,9 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   >
                     <RedoIcon />
                   </button>
-                )}
+                ) : <span className="tag bad">Locked</span>}
 
-                <button 
+                {!finalized && <button
                   type="button" 
                   className="btn" 
                   onClick={() => onOpenNotes('offboard_step_1', 'Termination Notice Recorded')}
@@ -207,7 +219,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   style={iconOnlyButtonStyle}
                 >
                   <NotesIcon />
-                </button>
+                </button>}
               </div>
 
               {step1Done && step1Doc && (
@@ -227,7 +239,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
               <div className="meta">Exported in standard format with intact digital signatures</div>
               
               <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {!step2Done ? (
+                {!step2Done && !finalized ? (
                   <button
                     type="button"
                     onClick={handleArchiveDownload}
@@ -250,7 +262,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                     <ZipIcon />
                     <span>{archiveDownloading ? 'Preparing Archive…' : 'Download Archive (835, MIR & RECON)'}</span>
                   </button>
-                ) : (
+                ) : step2Done && !finalized ? (
                   <button 
                     type="button" 
                     className="btn" 
@@ -261,9 +273,9 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   >
                     <RedoIcon />
                   </button>
-                )}
+                ) : <span className="tag bad">Locked</span>}
                 
-                <button 
+                {!finalized && <button
                   type="button" 
                   className="btn" 
                   onClick={() => onOpenNotes('offboard_step_2', 'Archive Returned to Client')}
@@ -272,7 +284,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                   style={iconOnlyButtonStyle}
                 >
                   <NotesIcon />
-                </button>
+                </button>}
               </div>
               <StepNotesHistory clientId={activeClientId} stepKey="offboard_step_2" />
             </div>
@@ -286,7 +298,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
               <div className="meta" style={{ color: 'var(--brick)', fontWeight: '600' }}>PERMANENT OFFBOARDING — ALL USER ACCESS WILL BE REVOKED</div>
               
               <div style={{ marginTop: '12px' }}>
-                {!step3Done ? (
+                {!step3Done && !finalized ? (
                   <button 
                     type="button" 
                     className="btn danger" 
@@ -303,14 +315,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ color: 'var(--brick)', fontWeight: 'bold' }}>✓ Client has been offboarded. All user access revoked.</span>
-                    <button 
-                      type="button" 
-                      className="btn" 
-                      onClick={() => handleRedo(3)}
-                      style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      🔄 Undo Offboard
-                    </button>
+                    <span className="tag bad">Permanent</span>
                   </div>
                 )}
               </div>
@@ -320,7 +325,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       )}
 
       {/* Confirmation Modal */}
-      {isConfirmOpen && (
+      {isConfirmOpen && !finalized && (
         <div className="modal on" onClick={() => !offboarding && setIsConfirmOpen(false)}>
           <div
             className="modal-card"
