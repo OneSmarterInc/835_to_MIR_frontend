@@ -23,6 +23,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
   const [code, setCode] = useState('');
   const [address, setAddress] = useState('');
   const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +55,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
         code: trimmedCode || undefined,
         address: trimmedAddress || undefined,
         state: state || undefined,
+        zip_code: zipCode.trim() || undefined,
       });
 
       await onClientCreated(response.client);
@@ -61,6 +63,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
       setCode('');
       setAddress('');
       setState('');
+      setZipCode('');
       setErrorMsg('');
       onClose();
     } catch (err) {
@@ -120,6 +123,15 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
             placeholder="e.g. 123 Main Street"
             value={address}
             onChange={(e) => { setAddress(e.target.value); setErrorMsg(''); }}
+          />
+        </div>
+        <div className="field">
+          <label>ZIP Code</label>
+          <input
+            placeholder="e.g. 10001 or 10001-1234"
+            value={zipCode}
+            maxLength={10}
+            onChange={(e) => { setZipCode(e.target.value); setErrorMsg(''); }}
           />
         </div>
         <div className="field">
