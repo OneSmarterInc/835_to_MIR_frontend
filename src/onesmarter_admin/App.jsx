@@ -14,7 +14,6 @@ import AddRoleModal from './components/modals/AddRoleModal';
 import RedoConfirmModal from './components/modals/RedoConfirmModal';
 import RevokeClientModal from './components/modals/RevokeClientModal';
 import FeedbackModal from './components/modals/FeedbackModal';
-import ConfirmModal from './components/modals/ConfirmModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
@@ -51,7 +50,6 @@ export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     if (user) return user;
     try {
@@ -67,12 +65,6 @@ export default function App({ user, onLogout }) {
   const [activeClientId, setActiveClientId] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('client') || '';
-  });
-  // Distinguish an explicit Global selection (empty client ID) from the
-  // initial state before a client has ever been selected.
-  const [hasInitializedClientSelection, setHasInitializedClientSelection] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.has('client');
   });
   const [clientState, setClientState] = useState(null);
   const [offboardingState, setOffboardingState] = useState(null);
@@ -221,9 +213,8 @@ export default function App({ user, onLogout }) {
       const data = await fetchClients();
       const list = data.results || data || [];
       setClients(list);
-      if (list.length > 0 && !hasInitializedClientSelection) {
+      if (list.length > 0 && !activeClientId) {
         setActiveClientId(list[0].id);
-        setHasInitializedClientSelection(true);
       }
     } catch (err) {
       console.error('Failed to load clients:', err);
@@ -315,12 +306,17 @@ export default function App({ user, onLogout }) {
 
   const handleSelectClient = (clientId) => {
     setActiveClientId(clientId);
-    setHasInitializedClientSelection(true);
     loadClientWorkflow(clientId);
   };
 
   const handleSelectClientInGoLive = (clientId) => {
     setActiveClientId(clientId);
+    loadClientWorkflow(clientId);
+  };
+
+  const handleGoLiveCompleted = (clientId) => {
+    setActiveClientId(clientId);
+    setActiveNav('onboard');
     loadClientWorkflow(clientId);
   };
 
@@ -392,10 +388,6 @@ export default function App({ user, onLogout }) {
     setIsAuthenticated(true);
   };
 
-  const requestSignOut = () => {
-    setIsLogoutConfirmOpen(true);
-  };
-
   const handleSignOut = async () => {
     if (onLogout) {
       await onLogout();
@@ -421,7 +413,7 @@ export default function App({ user, onLogout }) {
         activeClientId={activeClientId}
         currentClient={currentClient}
         onSelectClient={handleSelectClient}
-        onSignOut={requestSignOut}
+        onSignOut={handleSignOut}
         currentUser={currentUser}
       />
     );
@@ -430,25 +422,12 @@ export default function App({ user, onLogout }) {
   return (
     <>
       <Header
-        onSignOut={requestSignOut}
+        onSignOut={handleSignOut}
         currentUser={currentUser}
         onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         isSidebarOpen={isSidebarOpen}
       />
 
-      <ConfirmModal
-        isOpen={isLogoutConfirmOpen}
-        onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={async () => {
-          setIsLogoutConfirmOpen(false);
-          await handleSignOut();
-        }}
-        title="Confirm Logout"
-        message="Are you sure you want to log out?"
-        confirmText="Logout"
-        cancelText="Cancel"
-        kind="danger"
-      />
       <div className="shell">
         {isSidebarOpen && (
           <button
@@ -597,6 +576,7 @@ export default function App({ user, onLogout }) {
               activeClientId={activeClientId}
               onSelectClient={handleSelectClientInGoLive}
               onClientUpdated={() => { loadClients(); loadClientWorkflow(activeClientId); }}
+              onGoLiveCompleted={handleGoLiveCompleted}
               onOpenNotes={handleOpenNotes}
             />
           )}
