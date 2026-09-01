@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function Topbar({ user, onToggleDrawer, onLogout }) {
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
   return (
+    <>
     <div className="topbar">
       <div className="topbar-brand-group">
         <button
@@ -33,7 +36,7 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
             type="button"
             className="btn-topbar-logout"
             title="Logout"
-            onClick={onLogout}
+            onClick={() => setIsLogoutConfirmOpen(true)}
           >
             <svg
               viewBox="0 0 24 24"
@@ -52,5 +55,18 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
         </div>
       )}
     </div>
+      {isLogoutConfirmOpen && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setIsLogoutConfirmOpen(false)}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="client-logout-title" onClick={(event) => event.stopPropagation()}>
+            <div id="client-logout-title" className="modal-t">Confirm Logout</div>
+            <div className="modal-b" style={{ marginTop: "10px" }}>Are you sure you want to log out?</div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+              <button type="button" className="btn" onClick={() => setIsLogoutConfirmOpen(false)}>Cancel</button>
+              <button type="button" className="btn danger" onClick={async () => { setIsLogoutConfirmOpen(false); await onLogout?.(); }}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
