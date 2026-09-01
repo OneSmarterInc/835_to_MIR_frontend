@@ -56,17 +56,55 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
       )}
     </div>
       {isLogoutConfirmOpen && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setIsLogoutConfirmOpen(false)}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="client-logout-title" onClick={(event) => event.stopPropagation()}>
-            <div id="client-logout-title" className="modal-t">Confirm Logout</div>
-            <div className="modal-b" style={{ marginTop: "10px" }}>Are you sure you want to log out?</div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
-              <button type="button" className="btn" onClick={() => setIsLogoutConfirmOpen(false)}>Cancel</button>
-              <button type="button" className="btn danger" onClick={async () => { setIsLogoutConfirmOpen(false); await onLogout?.(); }}>Logout</button>
+        <div
+          role="presentation"
+          onClick={() => setIsLogoutConfirmOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147483647,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="client-logout-title"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "400px",
+              background: "#fff",
+              color: "#1f2937",
+              borderRadius: "10px",
+              padding: "24px",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            <div id="client-logout-title" style={{ fontSize: "20px", fontWeight: 700 }}>
+              Confirm Logout
+            </div>
+            <div style={{ marginTop: "10px", color: "#5f6b78" }}>
+              Are you sure you want to log out?
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "22px" }}>
+              <button type="button" className="btn" onClick={() => setIsLogoutConfirmOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn danger" onClick={async () => {
+                setIsLogoutConfirmOpen(false);
+                await onLogout?.();
+              }}>
+                Logout
+              </button>
             </div>
           </div>
         </div>
-      )}
+      )}}
     </>
   );
 }
