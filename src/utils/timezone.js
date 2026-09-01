@@ -1,8 +1,17 @@
 export const EASTERN_TIME_ZONE = 'America/New_York';
 
+const TIME_ZONE_ALIASES = {
+  'Asia/Calcutta': 'Asia/Kolkata',
+};
+
+export function canonicalTimeZone(zone) {
+  const value = String(zone || '').trim();
+  return TIME_ZONE_ALIASES[value] || value || EASTERN_TIME_ZONE;
+}
+
 export function browserTimeZone() {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || EASTERN_TIME_ZONE;
+    return canonicalTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   } catch {
     return EASTERN_TIME_ZONE;
   }
@@ -76,14 +85,15 @@ export function formatEasternDate(value) {
 }
 
 export function timeZoneDisplayName(zone) {
+  const canonicalZone = canonicalTimeZone(zone);
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
+      timeZone: canonicalZone,
       timeZoneName: 'long',
     }).formatToParts(new Date());
-    return parts.find((part) => part.type === 'timeZoneName')?.value || zone;
+    return parts.find((part) => part.type === 'timeZoneName')?.value || canonicalZone;
   } catch {
-    return zone;
+    return canonicalZone;
   }
 }
 
@@ -108,5 +118,6 @@ export function scheduleTimeZoneOptions() {
 
 export function scheduleTimeLabel(time, zone = EASTERN_TIME_ZONE) {
   if (!time) return 'N/A';
-  return `${time} — ${timeZoneDisplayName(zone)} (${zone})`;
+  const canonicalZone = canonicalTimeZone(zone);
+  return `${time} — ${timeZoneDisplayName(canonicalZone)} (${canonicalZone})`;
 }
