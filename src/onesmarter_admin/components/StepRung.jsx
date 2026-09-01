@@ -7,6 +7,7 @@ import StepNotesHistory from './StepNotesHistory';
 import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
 import { fileAccept, validateFileExtensions } from '../../utils/fileTypes';
+import { cleanNationalNumber, PHONE_COUNTRIES, toE164, validateNationalNumber } from '../../utils/phone';
 import {
   EASTERN_TIME_ZONE,
   scheduleTimeLabel,
@@ -65,7 +66,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [s4Name, setS4Name] = useState('');
   const [s4Role, setS4Role] = useState('Technical Contact');
   const [s4Email, setS4Email] = useState('');
-  const [s4CountryCode, setS4CountryCode] = useState('+1');
+  const [s4CountryCode, setS4CountryCode] = useState('US');
   const [s4Phone, setS4Phone] = useState('');
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [showAllUsers, setShowAllUsers] = useState(false);
@@ -111,11 +112,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const s4PhoneError = (() => {
     const trimmed = s4Phone.trim();
     if (!trimmed) return '';
-    const fullPhone = `${s4CountryCode}${trimmed}`;
-    const digits = fullPhone.replace(/\D/g, '');
-    if (digits.length < 7 || digits.length > 15) {
-      return 'Phone must have 7 to 15 digits.';
-    }
+    const validationError = validateNationalNumber(s4CountryCode, trimmed, false);
+    if (validationError) return validationError;
+    const fullPhone = toE164(s4CountryCode, trimmed);
     if (s4Existing.some(c => (c.phone || '').trim() === fullPhone)) {
       return 'Phone number already exists.';
     }
@@ -168,6 +167,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [s9Email, setS9Email] = useState('');
   const [s9Password, setS9Password] = useState('');
   const [s9Mobile, setS9Mobile] = useState('');
+  const [s9CountryCode, setS9CountryCode] = useState('US');
 
   const datePickerRef = useRef(null);
   const [s13Date, setS13Date] = useState(() => formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || '');
@@ -324,7 +324,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       return;
     }
 
-    const fullPhone = s4Phone.trim() ? `${s4CountryCode}${s4Phone.trim()}` : '';
+    const fullPhone = s4Phone.trim() ? toE164(s4CountryCode, s4Phone) : '';
 
     try {
       setSavingContact(true);
@@ -446,8 +446,13 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
   const handleStep9CreateUser = async () => {
     if (creatingUser) return;
-    if (!s9Name.trim() || !s9Email.trim() || !s9Password) {
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Name, Email, and Password are required.', checks: [] });
+    if (!s9Name.trim() || !s9Email.trim() || !s9Password || !s9Mobile.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Name, Email, Mobile, and Password are required.', checks: [] });
+      return;
+    }
+    const mobileError = validateNationalNumber(s9CountryCode, s9Mobile);
+    if (mobileError) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Invalid Mobile Number', content: mobileError, checks: [] });
       return;
     }
     try {
@@ -456,7 +461,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         name: s9Name,
         email: s9Email,
         password: s9Password,
-        mobile: s9Mobile,
+        mobile: toE164(s9CountryCode, s9Mobile),
+        country_code: s9CountryCode,
         role: 'User',
         clients: [clientId]
       });
@@ -709,10 +715,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         value={s4CountryCode}
                         onChange={(e) => setS4CountryCode(e.target.value)}
                       >
-                        <option value="+1">+1 (US)</option>
-                        <option value="+44">+44 (UK)</option>
-                        <option value="+91">+91 (IN)</option>
-                        <option value="+61">+61 (AU)</option>
+                        {PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.iso} {country.code}</option>)}
                       </select>
                       <input
                         style={{
@@ -729,7 +732,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         value={s4Phone}
                         onBlur={() => setS4Touched(prev => ({ ...prev, phone: true }))}
                         onChange={(e) => {
-                          setS4Phone(e.target.value);
+                          setS4Phone(cleanNationalNumber(e.target.value));
                           setS4Touched(prev => ({ ...prev, phone: true }));
                         }}
                       />
@@ -1064,13 +1067,22 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         onChange={(e) => setS9Password(e.target.value)}
                       />
                     </div>
-                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                    <div style={{ flex: '1 1 250px', minWidth: '250px', display: 'flex', gap: '4px' }}>
+                      <select
+                        aria-label="Country code"
+                        style={{ width: '95px', padding: '6px 4px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '11.5px', background: '#fff' }}
+                        value={s9CountryCode}
+                        onChange={(e) => setS9CountryCode(e.target.value)}
+                      >
+                        {PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.iso} {country.code}</option>)}
+                      </select>
                       <input
-                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        style={{ flex: 1, minWidth: 0, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
                         type="tel"
-                        placeholder="Mobile"
+                        inputMode="numeric"
+                        placeholder="Mobile *"
                         value={s9Mobile}
-                        onChange={(e) => setS9Mobile(e.target.value)}
+                        onChange={(e) => setS9Mobile(cleanNationalNumber(e.target.value))}
                       />
                     </div>
                     <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'flex-start' }}>

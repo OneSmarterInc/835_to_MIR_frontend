@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
 import { showAppAlert, showAppConfirm } from '../../../components/AppDialog';
 import { isSuperAdminAccount } from '../../utils/adminRoles';
+import PhoneNumberField from '../../../components/PhoneNumberField';
+import { splitE164, toE164, validateNationalNumber } from '../../../utils/phone';
 
 export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clients, user, currentUser }) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [countryIso, setCountryIso] = useState('US');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('User');
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -19,7 +22,9 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
-      setMobile(user.mobile && user.mobile !== '—' ? user.mobile : '');
+      const parsedMobile = splitE164(user.mobile && user.mobile !== '—' ? user.mobile : '');
+      setCountryIso(parsedMobile.countryIso);
+      setMobile(parsedMobile.nationalNumber);
       setRole(user.role || 'User');
       setSelectedClientId(user.client_id || '');
       setNewPassword('');
@@ -52,11 +57,18 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
       return;
     }
 
+    const mobileError = validateNationalNumber(countryIso, mobile);
+    if (mobileError) {
+      setErrorMsg(mobileError);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         name: name.trim(),
-        mobile: mobile.trim(),
+        mobile: toE164(countryIso, mobile),
+        country_code: countryIso,
         email: email.trim(),
         role,
         is_staff: role === 'Admin' || role === 'Super Admin',
@@ -116,14 +128,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
             required
           />
         </div>
-        <div className="field">
-          <label>Mobile</label>
-          <input
-            placeholder="e.g. +1 555-0192"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-          />
-        </div>
+        <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
         {isSuperAdmin ? (
           <div className="field">
             <label>Role</label>
