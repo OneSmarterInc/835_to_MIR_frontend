@@ -12,6 +12,7 @@
     "test:timezone": "node scripts/test-timezone-formatting.js",
     "test:no-native-dialogs": "node scripts/test-no-native-dialogs.js",
     "test:golive-redirect": "node scripts/test-golive-redirect.js",
+    "test:audit-log": "node scripts/test-audit-log.js",
     "preview": "vite preview"
   },
   "dependencies": {
