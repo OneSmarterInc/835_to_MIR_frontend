@@ -11,6 +11,7 @@
     "test:sftp-automation": "node scripts/test-sftp-automation.js",
     "test:timezone": "node scripts/test-timezone-formatting.js",
     "test:no-native-dialogs": "node scripts/test-no-native-dialogs.js",
+    "test:golive-redirect": "node scripts/test-golive-redirect.js",
     "preview": "vite preview"
   },
   "dependencies": {
