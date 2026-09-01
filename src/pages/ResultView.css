@@ -13,7 +13,9 @@
 .result-filters label { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 12px; font-weight: 700; }
 .result-filters select { min-width: 340px; max-width: 60vw; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
 .result-filters .result-status-select { flex: 0 0 180px; width: 180px; min-width: 150px; max-width: 220px; height: 38px; padding: 7px 30px 7px 10px; color: var(--ink-2); font-size: 12px; font-weight: 600; }
-.result-filters .runs-counter { color: var(--ink-3); font-size: 12px; font-weight: 600; }
+.result-match-count { flex: 0 0 150px; height: 38px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; }
+.result-match-count strong { color: var(--ink, #172033); font-size: 17px; line-height: 1; }
+.result-match-count span { margin-top: 3px; color: var(--ink-3); font-size: 9px; font-weight: 500; letter-spacing: .08em; line-height: 1; text-transform: uppercase; white-space: nowrap; }
 .result-global-search { display: flex; align-items: center; flex: 1 1 360px; min-width: 220px; }
 .result-global-search input { width: min(560px, 100%); padding: 9px 11px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; }
 .result-files-button { flex: 0 0 auto; white-space: nowrap; }
@@ -69,5 +71,4 @@
 .result-match-amount { flex: 0 0 auto; text-align: right; }
 .result-match-amount small { margin-top: 0; }
 .result-match-total { display: flex; justify-content: flex-end; gap: 18px; padding: 14px 2px 0; }
-@media (max-width: 1050px) { .result-filters .runs-counter { flex-basis: 100%; margin-left: 0; } }
-@media (max-width: 850px) { .result-conversion-boxes { grid-template-columns: 1fr; } .result-c-actions { width: 100%; } .result-filters { align-items: stretch; flex-direction: column; } .result-filters .result-status-select { width: 100%; max-width: none; flex-basis: auto; } .result-global-search { min-width: 0; } .result-global-search input { width: 100%; } }
+@media (max-width: 850px) { .result-conversion-boxes { grid-template-columns: 1fr; } .result-c-actions { width: 100%; } .result-filters { align-items: stretch; flex-direction: column; } .result-filters .result-status-select { width: 100%; max-width: none; flex-basis: auto; } .result-match-count { width: 100%; flex-basis: 38px; } .result-global-search { min-width: 0; } .result-global-search input { width: 100%; } }
