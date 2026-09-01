@@ -315,6 +315,12 @@ export default function App({ user, onLogout }) {
   };
 
   const handleGoLiveCompleted = (clientId) => {
+    const onboardingUrl = new URL(window.location.href);
+    onboardingUrl.searchParams.set('nav', 'onboard');
+    onboardingUrl.searchParams.set('client', clientId);
+    onboardingUrl.searchParams.set('step', '14');
+    onboardingUrl.hash = 'step-14';
+    window.history.pushState({}, document.title, onboardingUrl.toString());
     setActiveClientId(clientId);
     setActiveNav('onboard');
     loadClientWorkflow(clientId);
