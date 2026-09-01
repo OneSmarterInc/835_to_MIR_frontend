@@ -1036,6 +1036,131 @@ td.num {
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
 }
 
+.archive-zip {
+  position: relative;
+  display: inline-flex;
+}
+
+.archive-zip-trigger {
+  min-height: 38px;
+  padding: 8px 13px;
+  gap: 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.archive-zip-trigger > svg:first-child {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.archive-zip-chevron {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform 0.18s ease;
+}
+
+.archive-zip-chevron.open {
+  transform: rotate(180deg);
+}
+
+.archive-zip-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  width: 292px;
+  overflow: hidden;
+  padding: 6px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #d7e0e8);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.17), 0 3px 8px rgba(15, 23, 42, 0.08);
+}
+
+.archive-zip-menu-heading {
+  padding: 7px 9px 8px;
+  color: var(--ink-3, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.archive-zip-option {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  padding: 9px;
+  color: var(--ink, #172638);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.archive-zip-option:hover,
+.archive-zip-option:focus-visible {
+  color: var(--teal, #0e6c5b);
+  background: var(--paper, #f1f5f9);
+  outline: none;
+}
+
+.archive-zip-option.featured {
+  margin-top: 4px;
+  border-top: 1px solid var(--line, #d7e0e8);
+  border-radius: 0 0 5px 5px;
+}
+
+.archive-zip-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--teal, #0e6c5b);
+  font-size: 16px;
+  font-weight: 700;
+  background: rgba(14, 108, 91, 0.09);
+  border-radius: 5px;
+}
+
+.archive-zip-option strong,
+.archive-zip-option small {
+  display: block;
+}
+
+.archive-zip-option strong {
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.archive-zip-option small {
+  color: var(--ink-3, #64748b);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .archive-zip-menu {
+    right: 0;
+    width: min(292px, calc(100vw - 32px));
+  }
+}
+
 .btn-disabled {
   background: var(--paper);
   color: var(--ink-3);

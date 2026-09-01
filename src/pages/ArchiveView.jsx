@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import FileActionButtons from "../components/FileActionButtons";
 import TimeDisplay from "../components/TimeDisplay";
 import { showAppAlert } from "../components/AppDialog";
+import ArchiveZipMenu from "../components/ArchiveZipMenu";
 
 export default function ArchiveView({
   metrics,
@@ -17,7 +18,6 @@ export default function ArchiveView({
   const [sortOrder, setSortOrder] = useState("desc");
   const [pushingId, setPushingId] = useState(null);
   const [convertingId, setConvertingId] = useState(null);
-  const [showZipMenu, setShowZipMenu] = useState(false);
 
   const handleConvertStatusClick = async (fileId) => {
     if (!fileId || convertingId) return;
@@ -117,7 +117,6 @@ export default function ArchiveView({
   };
 
   const handleDownloadZip = async (type) => {
-    setShowZipMenu(false);
     try {
       const res = await fetch(`/api/download-zip/?type=${type}`, {
         credentials: "include",
@@ -211,117 +210,7 @@ export default function ArchiveView({
           </span>
         </div>
 
-        {/* ZIP ARCHIVE DOWNLOAD BUTTON */}
-        <div style={{ position: "relative", display: "inline-block" }}>
-          <button
-            type="button"
-            className="btn-gray"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "7px 14px",
-              fontSize: "12px",
-              fontWeight: 600,
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-            onClick={() => setShowZipMenu(!showZipMenu)}
-            title="Export Archive to ZIP"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 8v13H3V8"></path>
-              <path d="M1 3h22v5H1z"></path>
-              <path d="M10 12h4"></path>
-            </svg>
-            <span>ZIP Archive</span>
-            <span style={{ fontSize: "10px", marginLeft: "2px" }}>▼</span>
-          </button>
-
-          {showZipMenu && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: "6px",
-                background: "#ffffff",
-                border: "1px solid var(--line, #e2e8f0)",
-                borderRadius: "6px",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                zIndex: 200,
-                minWidth: "210px",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #f1f5f9",
-                  fontWeight: 500,
-                }}
-                onClick={() => handleDownloadZip("mir")}
-              >
-                Download all MIR (.mir)
-              </button>
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #f1f5f9",
-                  fontWeight: 500,
-                }}
-                onClick={() => handleDownloadZip("835")}
-              >
-                Download all 835 (.x12 / .835)
-              </button>
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "var(--teal, #0d9488)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-                onClick={() => handleDownloadZip("both")}
-              >
-                Download Complete Set (.zip)
-              </button>
-            </div>
-          )}
-        </div>
+        <ArchiveZipMenu onDownload={handleDownloadZip} />
       </div>
       <p className="sub" style={{ marginTop: "4px", marginBottom: "20px" }}>
         One row represents one 835 conversion set. The 835 input(s), optional 837 reference, MIR

@@ -5,6 +5,7 @@ import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert } from '../../components/AppDialog';
 import EyeIcon from '../../components/EyeIcon';
 import OffboardedClientBanner from './OffboardedClientBanner';
+import ArchiveZipMenu from '../../components/ArchiveZipMenu';
 
 function canonicalMirFilename(file) {
   return file?.mir_filename || file?.output_filename || file?.combined_filename || '';
@@ -21,7 +22,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [showZipMenu, setShowZipMenu] = useState(false);
 
   const currentClient = selectedClientId ? clients.find(c => c.id === selectedClientId) || null : null;
   const isOffboarded = String((currentClient || selectedClient)?.stage || '').toLowerCase() === 'offboarded';
@@ -77,7 +77,6 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   const valFailed = ediFiles.filter(f => f.status === 'ERROR').length;
 
   const handleDownloadZip = async (type) => {
-    setShowZipMenu(false);
     try {
       const url = selectedClientId ? `/api/download-zip/?type=${type}&client=${encodeURIComponent(selectedClientId)}` : `/api/download-zip/?type=${type}`;
       const res = await fetch(url, { credentials: 'include' });
@@ -124,9 +123,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
         <div><div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}><h1 style={{ margin: 0 }}>Archive</h1><span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>ALL CONVERSION-SET HISTORY</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}><span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>Client:</span><ClientSelectDropdown clients={clients} value={selectedClientId} includeGlobal={true} onChange={(val) => { setSelectedClientId(val); setCurrentPage(1); if (val && onSelectClient) onSelectClient(val); }} /></div>
         </div>
-        <div style={{ position: 'relative', display: 'inline-block' }}><button type="button" className="btn-gray" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowZipMenu(!showZipMenu)} title="Export Archive to ZIP"><span>ZIP Archive</span><span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span></button>
-          {showZipMenu && <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '6px', background: '#ffffff', border: '1px solid var(--line, #e2e8f0)', borderRadius: '6px', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', zIndex: 200, minWidth: '210px', overflow: 'hidden' }}><button type="button" onClick={() => handleDownloadZip('mir')}>Download all MIR (.mir)</button><button type="button" onClick={() => handleDownloadZip('835')}>Download all 835 (.x12 / .835)</button><button type="button" onClick={() => handleDownloadZip('both')}>Download Both (MIR &amp; 835)</button></div>}
-        </div>
+        <ArchiveZipMenu onDownload={handleDownloadZip} />
       </div>
       <p className="sub" style={{ marginTop: '4px', marginBottom: '20px' }}>One row represents one 835 conversion set for <b>{currentClient?.name || 'Global System Default'}</b>. The 835 input(s), optional 837 reference, MIR output, validation result, and processing result stay together.</p>
       <OffboardedClientBanner client={currentClient || selectedClient} detail="Files and archive history remain read-only. New processing and SFTP delivery are locked." />
