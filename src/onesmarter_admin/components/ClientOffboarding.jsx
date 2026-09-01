@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { completeOffboardingStep, redoOffboardingStep } from '../services/api';
 import StepNotesHistory from './StepNotesHistory';
+import { showAppAlert } from '../../components/AppDialog';
 
 const iconOnlyButtonStyle = {
   background: 'var(--surface)',
@@ -59,7 +60,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       await completeOffboardingStep(activeClientId, stepNum, file);
       onRefresh();
     } catch (e) {
-      alert(e.message || 'Error completing step');
+      await showAppAlert(e.message || 'Error completing step', { title: 'Step Update Failed', tone: 'error' });
     }
   };
 
@@ -69,7 +70,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       await completeOffboardingStep(activeClientId, stepNum);
       onRefresh();
     } catch (e) {
-      alert(e.message || 'Error completing step');
+      await showAppAlert(e.message || 'Error completing step', { title: 'Step Update Failed', tone: 'error' });
     }
   };
 
@@ -79,7 +80,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       await redoOffboardingStep(activeClientId, stepNum);
       onRefresh();
     } catch (e) {
-      alert(e.message || 'Error undoing step');
+      await showAppAlert(e.message || 'Error undoing step', { title: 'Undo Failed', tone: 'error' });
     }
   };
 
@@ -105,7 +106,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       URL.revokeObjectURL(url);
       await handleComplete(2);
     } catch (error) {
-      alert(error.message || 'Error downloading client archive');
+      await showAppAlert(error.message || 'Error downloading client archive', { title: 'Archive Download Failed', tone: 'error' });
     } finally {
       setArchiveDownloading(false);
     }
@@ -120,7 +121,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       setConfirmInput('');
       await onRefresh();
     } catch (e) {
-      alert(e.message || 'Error offboarding client');
+      await showAppAlert(e.message || 'Error offboarding client', { title: 'Offboarding Failed', tone: 'error' });
     } finally {
       setOffboarding(false);
     }
