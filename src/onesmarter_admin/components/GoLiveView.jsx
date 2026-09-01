@@ -46,7 +46,11 @@ function formatToMMDDYYYY(val) {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-export default function GoLiveView({ clients = [], activeClientId, onSelectClient, onClientUpdated, onOpenNotes }) {
+function areAllGoLiveStepsDone(steps) {
+  return Array.isArray(steps) && steps.length === 6 && steps.every((step) => step.done);
+}
+
+export default function GoLiveView({ clients = [], activeClientId, onSelectClient, onClientUpdated, onGoLiveCompleted, onOpenNotes }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [goliveState, setGoliveState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -244,6 +248,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
   }
 
   async function handleFinalizeGoLive() {
+    const wasComplete = areAllGoLiveStepsDone(goliveState?.steps);
     setActionLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -252,7 +257,11 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
       setGoliveState(res.state);
       setSuccessMessage(`🎉 Production Successful! ${currentClient?.name} is now promoted to Live Production!`);
       if (onClientUpdated) {
-        onClientUpdated();
+        await onClientUpdated();
+      }
+      const isNowComplete = areAllGoLiveStepsDone(res.state?.steps);
+      if (!wasComplete && isNowComplete && onGoLiveCompleted) {
+        onGoLiveCompleted(selectedClientId);
       }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to finalize Go Live');
