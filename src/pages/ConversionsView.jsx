@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import FileActionButtons from "../components/FileActionButtons";
 import { formatEasternDate } from "../utils/timezone";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
@@ -767,13 +768,14 @@ export default function ConversionsView({
                     {sortKey === "status" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
                 </th>
+                <th>ACTION</th>
               </tr>
             </thead>
             <tbody>
               {pageItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     style={{ padding: "26px", textAlign: "center", color: "var(--ink-3)" }}
                   >
                     No conversion runs match search query.
@@ -845,6 +847,14 @@ export default function ConversionsView({
                         >
                           {convertingId === f.id ? "CONVERTING..." : f.status}
                         </span>
+                      </td>
+                      <td className="num" style={{ fontSize: "11px", whiteSpace: "nowrap" }}>
+                        <FileActionButtons
+                          onView={() => onOpenFileModal(f.id)}
+                          onDownload={f.status === "ARCHIVED" ? () => handleDownloadMir(mirName, "", f.id) : null}
+                          viewTitle="View / Edit Code"
+                          downloadTitle="Download .mir File"
+                        />
                       </td>
                     </tr>
                   );
