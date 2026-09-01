@@ -42,6 +42,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const [filesBusy, setFilesBusy] = useState(false);
   const [matchHistory, setMatchHistory] = useState(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState({ key: "", direction: "asc" });
   const [statusFilter, setStatusFilter] = useState("");
   const requestSequence = useRef(0);
@@ -50,7 +51,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const statusFilterRef = useRef(statusFilter);
 
   useEffect(() => { if (initialClientId) setClientId(initialClientId); }, [initialClientId]);
-  const loadResults = useCallback(async (requestedPage = 1, requestedSearch = "", requestedSort = { key: "", direction: "asc" }, requestedStatus = "") => {
+  const loadResults = useCallback(async (requestedPage = 1, requestedSearch = "", requestedSort = { key: "", direction: "asc" }, requestedStatus = "", requestedPageSize = pageSize) => {
     requestAbort.current?.abort();
     const controller = new AbortController();
     requestAbort.current = controller;
@@ -66,7 +67,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
         params.set("sort_direction", requestedSort.direction);
       }
       params.set("page", String(requestedPage));
-      params.set("page_size", "100");
+      params.set("page_size", String(requestedPageSize));
       const result = await apiJson(`/edi835/api/reconciliation/?${params}`, { signal: controller.signal });
       if (sequence !== requestSequence.current) return;
       setData(result);
@@ -76,7 +77,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
         setMessage({ kind: "error", text: error.message });
       }
     }
-  }, [clientId, isAdmin]);
+  }, [clientId, isAdmin, pageSize]);
   useEffect(() => () => requestAbort.current?.abort(), []);
   useEffect(() => { setPage(1); setSearch(""); setActiveSearch(""); }, [loadResults]);
   useEffect(() => {
@@ -194,7 +195,30 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
     <div className="filters-bar result-filters"><select className="result-status-select" value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><div className="result-global-search"><input type="search" value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value) { statusFilterRef.current = ""; setStatusFilter(""); } }} placeholder="Search MIR/RECON data · separate multiple values with commas" aria-label="Search all MIR and RECON results; separate multiple values with commas" /></div><button type="button" className="btn-gray result-files-button" onClick={openUploadedFiles}>Uploaded RECON files</button><span className="runs-counter">{data.total_claims ?? rows.length} reconciliation claims · all processed RECON files</span></div>
-    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><colgroup><col className="result-col-claim" /><col className="result-col-patient" /><col className="result-col-file" /><col className="result-col-file" /><col className="result-col-money" /><col className="result-col-money" /><col className="result-col-difference" /><col className="result-col-status" /></colgroup><thead><tr><SortableHeader label="Claim ID" sortKey="claim_id" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Patient name" sortKey="patient_name" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="MIR file" sortKey="mir_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="RECON file" sortKey="recon_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in MIR" sortKey="amount_to_pay" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in RECON" sortKey="recon_paid_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Difference" sortKey="difference_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Status" sortKey="status" sort={sort} onSort={changeSort} arrow={sortArrow} /></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id || `recon-${row.claim_id}`}><td><b>{row.claim_id || "—"}</b></td><td>{row.mir_claim_id ? <button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button> : <span>RECON-only claim</span>}<small>{row.member_id || "—"}</small></td><td>{row.mir_filename || "—"}</td><td><ReconMatches row={row} onShowMore={() => setMatchHistory(row)} /></td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.difference_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR or RECON claims match this search and status filter.</td></tr>}</tbody></table></div><div className="result-pagination"><button className="btn-gray" disabled={page <= 1 || busy} onClick={() => loadResults(page - 1, activeSearch, sort, statusFilter)}>Previous</button><span>Page {page} of {data.total_pages || 1}</span><button className="btn-gray" disabled={page >= (data.total_pages || 1) || busy} onClick={() => loadResults(page + 1, activeSearch, sort, statusFilter)}>Next</button></div></div>
+    <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><colgroup><col className="result-col-claim" /><col className="result-col-patient" /><col className="result-col-file" /><col className="result-col-file" /><col className="result-col-money" /><col className="result-col-money" /><col className="result-col-difference" /><col className="result-col-status" /></colgroup><thead><tr><SortableHeader label="Claim ID" sortKey="claim_id" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Patient name" sortKey="patient_name" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="MIR file" sortKey="mir_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="RECON file" sortKey="recon_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in MIR" sortKey="amount_to_pay" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in RECON" sortKey="recon_paid_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Difference" sortKey="difference_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Status" sortKey="status" sort={sort} onSort={changeSort} arrow={sortArrow} /></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id || `recon-${row.claim_id}`}><td><b>{row.claim_id || "—"}</b></td><td>{row.mir_claim_id ? <button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button> : <span>RECON-only claim</span>}<small>{row.member_id || "—"}</small></td><td>{row.mir_filename || "—"}</td><td><ReconMatches row={row} onShowMore={() => setMatchHistory(row)} /></td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{money(row.difference_amount)}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR or RECON claims match this search and status filter.</td></tr>}</tbody></table></div><div className="result-pagination">
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span>Rows per page:</span>
+        <select
+          value={pageSize}
+          onChange={(event) => {
+            const nextSize = Number(event.target.value);
+            setPageSize(nextSize);
+            setPage(1);
+            loadResults(1, activeSearch, sort, statusFilter, nextSize);
+          }}
+          disabled={busy}
+          aria-label="Rows per page"
+        >
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+      </div>
+      <button className="btn-gray" disabled={page <= 1 || busy} onClick={() => loadResults(page - 1, activeSearch, sort, statusFilter)}>Previous</button>
+      <span>Page {page} of {data.total_pages || 1}</span>
+      <button className="btn-gray" disabled={page >= (data.total_pages || 1) || busy} onClick={() => loadResults(page + 1, activeSearch, sort, statusFilter)}>Next</button>
+    </div></div>
     {detail && <div className="result-detail-backdrop" onClick={() => setDetail(null)}><div className="result-detail" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim reconciliation</div><h2>{detail.summary?.claim_id}</h2></div><button className="btn" onClick={() => setDetail(null)}>Close</button></div><div className="claim-summary-grid"><div><b>Patient</b><span>{detail.summary?.patient_name || "—"}</span></div><div><b>MIR / RECON services</b><span>{detail.summary?.mir_service_count} / {detail.summary?.recon_service_count}</span></div><div><b>Amount to pay</b><span>{money(detail.summary?.amount_to_pay)}</span></div><div><b>Paid / remaining</b><span>{money(detail.summary?.recon_paid_amount)} / {money(detail.summary?.remaining_amount)}</span></div></div><FileSectionHeading label="MIR services" filename={detail.mir.file} date={detail.mir.date} /><ServiceTable services={detail.mir.services} /><FileSectionHeading label="RECON services" filename={detail.recon.file || "Not in RECON"} date={detail.recon.date} /><ServiceTable services={detail.recon.services} /></div></div>}
     {filesOpen && <div className="result-detail-backdrop" onClick={() => setFilesOpen(false)}><div className="result-detail result-files-modal" role="dialog" aria-modal="true" aria-labelledby="uploaded-recon-title" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">RECON archive</div><h2 id="uploaded-recon-title">Uploaded RECON files</h2></div><button className="btn" onClick={() => setFilesOpen(false)}>Close</button></div>{filesBusy ? <div className="result-empty">Loading uploaded files…</div> : uploadedFiles.length ? <div className="result-files-list">{uploadedFiles.map((file) => <div className="result-file-row" key={file.id}><div><b>{file.original_filename}</b><small>{showDate(file.uploaded_at)} · {file.status} · {Number(file.claim_count || 0).toLocaleString()} {Number(file.claim_count || 0) === 1 ? "claim" : "claims"} · {Number(file.file_size || 0).toLocaleString()} bytes</small><small>Import Mode: {String(file.import_mode || "MANUAL").toUpperCase() === "SFTP" ? "SFTP" : "MANUAL"}</small></div><button type="button" className="btn-gray" onClick={() => downloadRecon(file)}>Download</button></div>)}</div> : <div className="result-empty">No RECON files have been uploaded in this scope.</div>}</div></div>}
     {matchHistory && <div className="result-detail-backdrop" onClick={() => setMatchHistory(null)}><div className="result-detail result-files-modal" role="dialog" aria-modal="true" aria-labelledby="recon-history-title" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim RECON history</div><h2 id="recon-history-title">{matchHistory.claim_id}</h2></div><button className="btn" onClick={() => setMatchHistory(null)}>Close</button></div><div className="result-files-list">{(matchHistory.recon_matches || []).map((match) => <div className="result-file-row" key={`${match.recon_claim_id}-${match.filename}`}><div><b>{match.filename}</b><small>{showDate(match.date)} · {match.service_count} {match.service_count === 1 ? "service" : "services"}</small></div><div className="result-match-amount"><small>Amount in this RECON</small><b>{money(match.paid_amount)}</b></div></div>)}</div><div className="result-match-total"><span>Total across all matching RECON files</span><b>{money(matchHistory.recon_paid_amount)}</b></div></div></div>}
