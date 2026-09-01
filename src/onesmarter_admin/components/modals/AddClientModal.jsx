@@ -33,6 +33,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     const trimmedName = name.trim();
     const trimmedCode = code.trim();
     const trimmedAddress = address.trim();
+    const trimmedZipCode = zipCode.trim();
 
     if (!trimmedName) {
       setErrorMsg('Client legal name is required.');
@@ -48,6 +49,11 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
       return;
     }
 
+    if (trimmedZipCode && !/^\d{5}(?:-\d{4})?$/.test(trimmedZipCode)) {
+      setErrorMsg('ZIP code must contain only numbers in 12345 or 12345-6789 format.');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await createClient({
@@ -55,7 +61,7 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
         code: trimmedCode || undefined,
         address: trimmedAddress || undefined,
         state: state || undefined,
-        zip_code: zipCode.trim() || undefined,
+        zip_code: trimmedZipCode || undefined,
       });
 
       await onClientCreated(response.client);
@@ -73,6 +79,14 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     }
   };
 
+  const handleZipChange = (e) => {
+    const value = e.target.value
+      .replace(/[^0-9-]/g, '')
+      .replace(/(?!^)-/g, '');
+    setZipCode(value.slice(0, 10));
+    setErrorMsg('');
+  };
+
   const handleCloseModal = () => {
     setErrorMsg('');
     onClose();
@@ -82,77 +96,14 @@ export default function AddClientModal({ isOpen, onClose, onClientCreated, exist
     <CenteredModal isOpen={isOpen} onClose={handleCloseModal}>
       <div className="modal-t">Add New Client</div>
       <p className="modal-b">Create a client record in the database and automatically generate their sequential onboarding compliance workflow.</p>
-
-      {errorMsg && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#ef4444',
-          borderRadius: '6px',
-          padding: '10px 14px',
-          fontSize: '13px',
-          marginBottom: '16px',
-          fontWeight: 500
-        }}>
-          ⚠️ {errorMsg}
-        </div>
-      )}
-
+      {errorMsg && <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', marginBottom: '16px', fontWeight: 500 }}>⚠️ {errorMsg}</div>}
       <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label>Client Legal Name *</label>
-          <input
-            placeholder="e.g. Apex Health Plan, Inc."
-            value={name}
-            onChange={(e) => { setName(e.target.value); setErrorMsg(''); }}
-            required
-            autoFocus
-          />
-        </div>
-        <div className="field">
-          <label>Client Code / Identifier</label>
-          <input
-            placeholder="e.g. APEXHP"
-            value={code}
-            onChange={(e) => { setCode(e.target.value); setErrorMsg(''); }}
-          />
-        </div>
-        <div className="field">
-          <label>Address</label>
-          <input
-            placeholder="e.g. 123 Main Street"
-            value={address}
-            onChange={(e) => { setAddress(e.target.value); setErrorMsg(''); }}
-          />
-        </div>
-        <div className="field">
-          <label>ZIP Code</label>
-          <input
-            placeholder="e.g. 10001 or 10001-1234"
-            value={zipCode}
-            maxLength={10}
-            onChange={(e) => { setZipCode(e.target.value); setErrorMsg(''); }}
-          />
-        </div>
-        <div className="field">
-          <label>State</label>
-          <select
-            value={state}
-            onChange={(e) => { setState(e.target.value); setErrorMsg(''); }}
-          >
-            <option value="">Select a state</option>
-            {US_STATES.map(([abbr, stateName]) => (
-              <option key={abbr} value={abbr}>{stateName}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
-          <button type="button" className="btn" onClick={handleCloseModal}>Cancel</button>
-          <button type="submit" className="btn primary" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Client'}
-          </button>
-        </div>
+        <div className="field"><label>Client Legal Name *</label><input placeholder="e.g. Apex Health Plan, Inc." value={name} onChange={(e) => { setName(e.target.value); setErrorMsg(''); }} required autoFocus /></div>
+        <div className="field"><label>Client Code / Identifier</label><input placeholder="e.g. APEXHP" value={code} onChange={(e) => { setCode(e.target.value); setErrorMsg(''); }} /></div>
+        <div className="field"><label>Address</label><input placeholder="e.g. 123 Main Street" value={address} onChange={(e) => { setAddress(e.target.value); setErrorMsg(''); }} /></div>
+        <div className="field"><label>ZIP Code</label><input type="text" inputMode="numeric" pattern="\d{5}(-\d{4})?" placeholder="e.g. 10001 or 10001-1234" value={zipCode} maxLength={10} onChange={handleZipChange} title="Enter a ZIP code in 12345 or 12345-6789 format" /></div>
+        <div className="field"><label>State</label><select value={state} onChange={(e) => { setState(e.target.value); setErrorMsg(''); }}><option value="">Select a state</option>{US_STATES.map(([abbr, stateName]) => <option key={abbr} value={abbr}>{stateName}</option>)}</select></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}><button type="button" className="btn" onClick={handleCloseModal}>Cancel</button><button type="submit" className="btn primary" disabled={loading}>{loading ? 'Creating...' : 'Create Client'}</button></div>
       </form>
     </CenteredModal>
   );
