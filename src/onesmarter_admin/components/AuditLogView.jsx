@@ -76,12 +76,12 @@ export default function AuditLogView({ clients = [] }) {
   return <section className="view on audit-view" id="v-audit">
     <div className="hdr-row">
       <div><div className="eyebrow">Append Only Audit</div><h1>Audit Log</h1><p className="sub">Search and review the complete immutable history of client and administrative activity.</p></div>
-      <div className="audit-count"><b>{pagination.total_count.toLocaleString()}</b><span>matching events</span></div>
     </div>
 
     <div className="card audit-filter-card">
       <div className="audit-search-row">
         <label className="audit-search"><span>Universal search</span><input type="search" value={filters.search} onChange={(event) => updateFilter('search', event.target.value)} placeholder="Search time, client, user, module, action, or details…" aria-label="Search every value in the complete audit log" /></label>
+        <div className="audit-count" aria-live="polite"><b>{pagination.total_count.toLocaleString()}</b><span>matching events</span></div>
         <button type="button" className="btn-gray" onClick={clearFilters} disabled={!hasFilters}>Clear filters</button>
       </div>
       <div className="audit-filter-grid">
@@ -95,21 +95,24 @@ export default function AuditLogView({ clients = [] }) {
     </div>
 
     {error && <div className="audit-error">{error}</div>}
-    <div className="audit-table-toolbar"><span>{loading ? 'Loading audit events…' : `Showing ${firstRow.toLocaleString()}–${lastRow.toLocaleString()} of ${pagination.total_count.toLocaleString()}`}</span><label>Rows per page <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label></div>
-    <div className={`card audit-table-wrap${loading ? ' loading' : ''}`}>
-      <table className="audit-table"><thead><tr>
-        {[['timestamp', 'When'], ['module', 'Module'], ['action', 'Action'], ['client', 'Client']].map(([field, label]) => <th key={field}><button type="button" onClick={() => changeSort(field)}>{label} <span>{sortIcon(field)}</span></button></th>)}
-        <th>Details</th><th><button type="button" onClick={() => changeSort('performed_by')}>Performed by <span>{sortIcon('performed_by')}</span></button></th>
-      </tr></thead><tbody>
-        {!loading && logs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : logs.map((log) => <tr key={log.id}>
-          <td className="audit-when"><TimeDisplay value={log.timestamp} includeSeconds easternOnly /></td>
-          <td><button type="button" className="tag audit-filter-tag" onClick={() => updateFilter('module', log.module || 'SYSTEM')}>{log.module || 'SYSTEM'}</button></td>
-          <td><button type="button" className="tag ok audit-filter-tag" onClick={() => updateFilter('action', log.action)}>{log.action}</button></td>
-          <td><button type="button" className="audit-client-link" onClick={() => log.client_id && updateFilter('client_id', log.client_id)} disabled={!log.client_id}>{log.client_name || log.client || 'System'}</button></td>
-          <td className="audit-details">{renderDetails(log.details)}</td>
-          <td><button type="button" className="audit-actor-link" onClick={() => updateFilter('performed_by', log.performed_by || '')}>{log.performed_by || 'Admin User'}</button></td>
-        </tr>)}
-      </tbody></table>
+    <div className="audit-table-toolbar"><span>{loading ? 'Loading audit events…' : `Showing ${firstRow.toLocaleString()}–${lastRow.toLocaleString()} of ${pagination.total_count.toLocaleString()}`}</span></div>
+    <div className={`card audit-table-card${loading ? ' loading' : ''}`}>
+      <div className="audit-table-wrap">
+        <table className="audit-table"><thead><tr>
+          {[['timestamp', 'When'], ['module', 'Module'], ['action', 'Action'], ['client', 'Client']].map(([field, label]) => <th key={field}><button type="button" onClick={() => changeSort(field)}>{label} <span>{sortIcon(field)}</span></button></th>)}
+          <th>Details</th><th><button type="button" onClick={() => changeSort('performed_by')}>Performed by <span>{sortIcon('performed_by')}</span></button></th>
+        </tr></thead><tbody>
+          {!loading && logs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : logs.map((log) => <tr key={log.id}>
+            <td className="audit-when"><TimeDisplay value={log.timestamp} includeSeconds easternOnly /></td>
+            <td><button type="button" className="tag audit-filter-tag" onClick={() => updateFilter('module', log.module || 'SYSTEM')}>{log.module || 'SYSTEM'}</button></td>
+            <td><button type="button" className="tag ok audit-filter-tag" onClick={() => updateFilter('action', log.action)}>{log.action}</button></td>
+            <td><button type="button" className="audit-client-link" onClick={() => log.client_id && updateFilter('client_id', log.client_id)} disabled={!log.client_id}>{log.client_name || log.client || 'System'}</button></td>
+            <td className="audit-details">{renderDetails(log.details)}</td>
+            <td><button type="button" className="audit-actor-link" onClick={() => updateFilter('performed_by', log.performed_by || '')}>{log.performed_by || 'Admin User'}</button></td>
+          </tr>)}
+        </tbody></table>
+      </div>
+      <div className="audit-table-footer"><label>Rows per page <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label></div>
     </div>
 
     {pagination.total_pages > 1 && <nav className="audit-pagination" aria-label="Audit log pages">
