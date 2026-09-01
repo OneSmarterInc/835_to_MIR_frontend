@@ -14,6 +14,7 @@ import AddRoleModal from './components/modals/AddRoleModal';
 import RedoConfirmModal from './components/modals/RedoConfirmModal';
 import RevokeClientModal from './components/modals/RevokeClientModal';
 import FeedbackModal from './components/modals/FeedbackModal';
+import ConfirmModal from './components/modals/ConfirmModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
@@ -50,6 +51,7 @@ export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     if (user) return user;
     try {
@@ -390,6 +392,10 @@ export default function App({ user, onLogout }) {
     setIsAuthenticated(true);
   };
 
+  const requestSignOut = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
   const handleSignOut = async () => {
     if (onLogout) {
       await onLogout();
@@ -415,7 +421,7 @@ export default function App({ user, onLogout }) {
         activeClientId={activeClientId}
         currentClient={currentClient}
         onSelectClient={handleSelectClient}
-        onSignOut={handleSignOut}
+        onSignOut={requestSignOut}
         currentUser={currentUser}
       />
     );
@@ -424,12 +430,25 @@ export default function App({ user, onLogout }) {
   return (
     <>
       <Header
-        onSignOut={handleSignOut}
+        onSignOut={requestSignOut}
         currentUser={currentUser}
         onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         isSidebarOpen={isSidebarOpen}
       />
 
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsLogoutConfirmOpen(false);
+          await handleSignOut();
+        }}
+        title="Confirm Logout"
+        message="Are you sure you want to log out?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        kind="danger"
+      />
       <div className="shell">
         {isSidebarOpen && (
           <button
