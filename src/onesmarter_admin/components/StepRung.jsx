@@ -5,6 +5,7 @@ import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
 import StepNotesHistory from './StepNotesHistory';
 import TimeDisplay from '../../components/TimeDisplay';
+import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
 import {
   EASTERN_TIME_ZONE,
   scheduleTimeLabel,
@@ -348,7 +349,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
   const handleDeleteContact = async (contact) => {
     if (!contact?.id || deletingId) return;
-    if (!window.confirm(`Delete contact ${contact.name || contact.employee_name}?`)) return;
+    if (!await showAppConfirm(`Delete contact ${contact.name || contact.employee_name}? This action cannot be undone.`, {
+      title: 'Delete Contact?', confirmLabel: 'Delete Contact', danger: true, tone: 'error',
+    })) return;
     try {
       setDeletingId(`contact-${contact.id}`);
       await deleteClientContact(clientId, contact.id);
@@ -471,7 +474,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
   const handleDeleteUser = async (user) => {
     if (!user?.id || deletingId) return;
-    if (!window.confirm(`Delete user ${user.email}?`)) return;
+    if (!await showAppConfirm(`Delete user ${user.email}? This action cannot be undone.`, {
+      title: 'Delete User?', confirmLabel: 'Delete User', danger: true, tone: 'error',
+    })) return;
     try {
       setDeletingId(`user-${user.id}`);
       await deleteClientUser(clientId, user.id);
@@ -845,7 +850,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
                                 setFeedback({ isOpen: true, kind: 'ok', title: 'Default SFTP Settings Enabled', content: detailsStr, checks: [] });
                               } catch (err) {
-                                alert("Failed to set default SFTP: " + err.message);
+                                await showAppAlert("Failed to set default SFTP: " + err.message, { title: 'SFTP Update Failed', tone: 'error' });
                               }
                             } else {
                               setS6SftpVerified(false);
@@ -1091,13 +1096,15 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     className="btn tiny"
                     type="button"
                     onClick={async () => {
-                      if (window.confirm("Do you want to transmit the verified test MIR payload to client SFTP/FTP server now?")) {
+                      if (await showAppConfirm("Do you want to transmit the verified test MIR payload to the client SFTP/FTP server now?", {
+                        title: 'Transmit Test MIR?', confirmLabel: 'Transmit', tone: 'info',
+                      })) {
                         try {
-                          const res = await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: "Test File Transmitted via SFTP/FTP successfully. " + s10Notes });
-                          alert("✓ Test payload transmitted successfully via SFTP/FTP!");
+                          await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: "Test File Transmitted via SFTP/FTP successfully. " + s10Notes });
+                          await showAppAlert("Test payload transmitted successfully via SFTP/FTP.", { title: 'Transmission Complete', tone: 'success' });
                           await onRefresh();
                         } catch (err) {
-                          alert("Transmission failed: " + err.message);
+                          await showAppAlert("Transmission failed: " + err.message, { title: 'Transmission Failed', tone: 'error' });
                         }
                       }
                     }}
