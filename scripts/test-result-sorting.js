@@ -12,6 +12,9 @@ assert.ok(source.indexOf('className="result-match-count"') < source.indexOf('cla
 assert.match(source, /hasMirAndRecon\(row\) \? money\(row\.difference_amount\) : "-"/, 'difference must be hidden when a claim exists in only MIR or RECON');
 assert.match(source, /\/edi835\/api\/reconciliation\/export\/\?\$\{params\}/, 'Excel export must use the server-side filtered export endpoint');
 assert.match(source, />\{exportBusy \? "Preparing…" : "Download XL"\}<\/button>/, 'the Result toolbar must expose the Download XL action');
+assert.doesNotMatch(source, /Operations Studio|step-pills|RECON INPUT|Select a supported RECON file/, 'the compact Result layout must omit decorative and duplicate copy');
+assert.ok(source.indexOf('className="result-compact-client"') < source.indexOf('id="recon-file-input"'), 'the client selector must appear before the RECON file input');
+assert.match(source, /className="btn-gray result-refresh-button"/, 'Refresh must be grouped with the results toolbar actions');
 
 for (const key of ['claim_id', 'patient_name', 'mir_filename', 'recon_filename', 'amount_to_pay', 'recon_paid_amount', 'difference_amount', 'status']) {
   assert.match(source, new RegExp(`sortKey="${key}"`), `missing sortable header: ${key}`);
