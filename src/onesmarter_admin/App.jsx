@@ -18,6 +18,7 @@ import FeedbackModal from './components/modals/FeedbackModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
+import AdminChecksView from './components/AdminChecksView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
@@ -137,7 +138,7 @@ export default function App({ user, onLogout }) {
 };
 
   useEffect(() => {
-    if (isAuthenticated && activeNav === 'conversions') {
+    if (isAuthenticated && (activeNav === 'conversions' || activeNav === 'checks')) {
       loadAdminTrackedFiles();
       const interval = setInterval(loadAdminTrackedFiles, 3000);
       return () => clearInterval(interval);
@@ -379,6 +380,9 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
           </button>
+          <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
+            <span>Checks</span>
+          </button>
           <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
             <span>Result</span>
           </button>
@@ -473,6 +477,15 @@ export default function App({ user, onLogout }) {
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
               selectedClient={selectedOperationalClient}
+            />
+          )}
+
+          {activeNav === 'checks' && (
+            <AdminChecksView
+              trackedFiles={adminTrackedFiles}
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
             />
           )}
 
