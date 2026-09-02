@@ -15,6 +15,7 @@
     "test:golive-redirect": "node scripts/test-golive-redirect.js",
     "test:audit-log": "node scripts/test-audit-log.js",
     "test:client-session": "node scripts/test-client-session-requests.js",
+    "test:file-viewer-auth": "node scripts/test-file-viewer-auth.js",
     "preview": "vite preview"
   },
   "dependencies": {
