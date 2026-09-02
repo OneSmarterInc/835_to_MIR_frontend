@@ -15,6 +15,7 @@ import FirstLoginPasswordPage from "./pages/FirstLoginPasswordPage";
 
 import FlowView from "./pages/FlowView";
 import ConversionsView from "./pages/ConversionsView";
+import ChecksView from "./pages/ChecksView";
 import NoticesView from "./pages/NoticesView";
 import ArchiveView from "./pages/ArchiveView";
 import ConnectionsView from "./pages/ConnectionsView";
@@ -742,6 +743,13 @@ export default function App() {
           }
 
 
+
+          {
+            activeTab==="checks" &&
+            <ChecksView
+              trackedFiles={trackedFiles}
+            />
+          }
 
           {
             activeTab==="notices" &&
