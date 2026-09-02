@@ -21,6 +21,7 @@ export default function ConversionsView({
   const [convertingId, setConvertingId] = useState(null);
   const [startingBatch, setStartingBatch] = useState(false);
   const [batchAlert, setBatchAlert] = useState(null);
+  const [partialDetails, setPartialDetails] = useState(null);
 
   const [validationReport, setValidationReport] = useState(null);
   const [validationError, setValidationError] = useState(null);
@@ -731,12 +732,19 @@ export default function ConversionsView({
                   const mirName = f.output_path
                     ? f.output_path.split("/").pop()
                     : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
+                  const hasMirOutput = Boolean(f.output_path) && ["ARCHIVED", "PARTIAL"].includes(f.status);
+                  const isAllHeld = f.status === "PARTIAL" && !hasMirOutput;
+                  const displayStatus = isAllHeld ? "HELD" : f.status;
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
                     statusTitle = "PROCESSING: 835 EDI file validated and stored in archive folder. Click to convert file into MIR.";
                   } else if (f.status === "ARCHIVED") {
                     statusTitle = "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
+                  } else if (f.status === "PARTIAL") {
+                    statusTitle = isAllHeld
+                      ? "HELD: No claims were converted. Click to view the claims and reasons."
+                      : "PARTIAL: Valid claims were converted. Click to view claims held from the output.";
                   } else if (f.status === "ERROR") {
                     statusTitle = f.error_message
                       ? `ERROR: ${f.error_message}`
@@ -762,28 +770,30 @@ export default function ConversionsView({
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
                       <td className="num" style={{ color: "var(--ink-2)" }}>
-                        {f.status === "ARCHIVED" ? mirName : "—"}
+                        {hasMirOutput ? mirName : "—"}
                       </td>
                       <td>
                         <span
                           className={`tag ${
-                            f.status === "ARCHIVED"
+                            ["ARCHIVED", "PARTIAL"].includes(f.status) && !isAllHeld
                               ? "ok"
                               : f.status === "ERROR"
                               ? "bad"
                               : "work"
                           }`}
                           style={{
-                            cursor: f.status === "PROCESSING" ? "pointer" : "default",
+                            cursor: ["PROCESSING", "PARTIAL"].includes(f.status) ? "pointer" : "default",
                           }}
                           title={statusTitle}
                           onClick={() => {
                             if (f.status === "PROCESSING") {
                               handleConvertStatusClick(f.id);
+                            } else if (f.status === "PARTIAL") {
+                              setPartialDetails(f);
                             }
                           }}
                         >
-                          {convertingId === f.id ? "CONVERTING..." : f.status}
+                          {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
                       <td
@@ -805,7 +815,7 @@ export default function ConversionsView({
                             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                           </svg>
                         </button>
-                        {f.status === "ARCHIVED" ? (
+                        {hasMirOutput ? (
                           <button
                             type="button"
                             className="btn-download"
@@ -882,6 +892,40 @@ export default function ConversionsView({
           </div>
         </div>
       </div>
+
+      {partialDetails ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setPartialDetails(null)}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="partial-title" onMouseDown={(event) => event.stopPropagation()} style={{ maxWidth: "760px", width: "calc(100% - 32px)" }}>
+            <div className="modal-header">
+              <div>
+                <h2 id="partial-title" style={{ margin: 0 }}>Unprocessed claims</h2>
+                <div style={{ color: "var(--ink-3)", fontSize: "12px", marginTop: "4px" }}>
+                  {partialDetails.delivered_claims_count || 0} converted · {partialDetails.held_claims_count || 0} held
+                </div>
+              </div>
+              <button type="button" className="modal-close" aria-label="Close" onClick={() => setPartialDetails(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+              {(partialDetails.conversion_findings || []).length ? (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr><th>Claim</th><th>Rule</th><th>Reason</th></tr></thead>
+                  <tbody>{partialDetails.conversion_findings.map((finding, index) => (
+                    <tr key={`${finding.claim_control_number || finding.claim_number || "claim"}-${finding.rule_code || index}-${index}`}>
+                      <td className="num">{finding.claim_control_number || finding.claim_number || "—"}</td>
+                      <td><span className="tag work">{finding.rule_code || "HOLD"}</span></td>
+                      <td>{finding.reason || finding.detail || "Claim requires review."}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              ) : <p>No claim-level reason was recorded for this run.</p>}
+            </div>
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              {partialDetails.output_path ? <button type="button" className="btn" onClick={() => handleDownloadMir(partialDetails.output_path.split("/").pop(), "", partialDetails.id)}>Download partial MIR</button> : null}
+              <button type="button" className="btn secondary" onClick={() => setPartialDetails(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* OPERATIONAL VIEW BANNER */}
       <div className="stub">
