@@ -35,13 +35,6 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           Checks
         </button>
         <button
-          className={`navitem ${activeTab === "code-dictionary" ? "on" : ""}`}
-          data-v="code-dictionary"
-          onClick={() => onSelectTab("code-dictionary")}
-        >
-          Code Dictionary
-        </button>
-        <button
           className={`navitem ${activeTab === "notices" ? "on" : ""}`}
           data-v="notices"
           onClick={() => onSelectTab("notices")}
@@ -57,6 +50,13 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           onClick={() => onSelectTab("archive")}
         >
           Archive
+        </button>
+        <button
+          className={`navitem ${activeTab === "code-dictionary" ? "on" : ""}`}
+          data-v="code-dictionary"
+          onClick={() => onSelectTab("code-dictionary")}
+        >
+          Code Dictionary
         </button>
         <button
           className={`navitem ${activeTab === "result" ? "on" : ""}`}

@@ -35,55 +35,33 @@ export default function CodeDictionaryView() {
   }), []);
 
   return (
-    <section className="view on table-screen">
-      <div className="eyebrow">BCBS Message and Exception Codes · MIR909</div>
-      <h1>Exception code dictionary</h1>
-      <p className="sub" style={{maxWidth:"980px"}}>
-        Every code MPL publishes, with what it means, what the source says to do about it, and any practical guidance available. Official text and accumulated guidance are kept separate.
-      </p>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:"12px",margin:"22px 0"}}>
+    <section className="view on table-screen code-dictionary-view">
+      <div className="code-dictionary-header">
+        <h1>Exception Code Dictionary</h1>
+        <div className="code-dictionary-stats">
         {[
           [tallies.total,"Codes loaded"],
           [tallies.fixable,"Fixable by the Fund"],
           [tallies.escalate,"Escalate"],
           [tallies.review,"Needs review"]
-        ].map(([value,label]) => <div key={label} className="card" style={{padding:"16px"}}><div className="num" style={{fontSize:"24px"}}>{value}</div><div style={{fontSize:"12px",color:"var(--ink-2)",marginTop:"5px"}}>{label}</div></div>)}
+        ].map(([value,label]) => <div key={label} className="code-dictionary-stat"><strong className="num">{value}</strong><span>{label}</span></div>)}
+        </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          padding: "18px 20px",
-          marginBottom: "14px",
-          background: "var(--surface)",
-          border: "1px solid var(--line)"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px", flexWrap: "wrap" }}>
-          <div>
-            <div className="eyebrow" style={{ marginBottom: "4px" }}>FILTER THE DICTIONARY</div>
-            <div style={{ fontSize: "13px", color: "var(--ink-2)" }}>Narrow the list by family, disposition, or guidance.</div>
-          </div>
+      <div className="card code-dictionary-filters">
+        <div className="code-dictionary-filter-heading">
+          <strong>Filter Codes</strong>
           {(family || disposition || guidanceFilter || search) && (
             <button
               className="btn"
               onClick={() => { setFamily(""); setDisposition(""); setGuidanceFilter(""); setSearch(""); }}
-              style={{ whiteSpace: "nowrap" }}
             >
               Clear filters
             </button>
           )}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(210px, 1fr) minmax(240px, 1fr) minmax(210px, 1fr) minmax(260px, 1.2fr)",
-            gap: "14px",
-            alignItems: "end"
-          }}
-        >
+        <div className="code-dictionary-filter-grid">
           <label style={{ display: "grid", gap: "7px" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-2)" }}>CODE FAMILY</span>
             <select className="control" style={{ width: "100%", height: "42px" }} value={family} onChange={(e)=>setFamily(e.target.value)}>
@@ -116,7 +94,7 @@ export default function CodeDictionaryView() {
         </div>
       </div>
 
-      <div style={{fontSize:"12px",color:"var(--ink-2)",margin:"8px 0 12px"}}>{filtered.length} of {CODES.length} entries shown</div>
+      <div className="code-dictionary-count">{filtered.length} of {CODES.length} entries shown</div>
 
       <div className="card" style={{padding:0,overflow:"hidden"}}>
         <div style={{overflowX:"auto"}}>

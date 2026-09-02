@@ -1692,3 +1692,32 @@ td.num {
   cursor: wait;
   opacity: 0.65;
 }
+.code-dictionary-view > .code-dictionary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.code-dictionary-header h1 { margin: 0; white-space: nowrap; }
+.code-dictionary-stats { display: grid; grid-template-columns: repeat(4, minmax(135px, 1fr)); gap: 8px; width: min(720px, 65%); }
+.code-dictionary-stat { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); background: var(--paper); }
+.code-dictionary-stat strong { flex: 0 0 auto; font-size: 19px; }
+.code-dictionary-stat span { min-width: 0; color: var(--ink-2); font-size: 11px; line-height: 1.2; }
+.code-dictionary-filters { margin-bottom: 8px; padding: 10px 12px; }
+.code-dictionary-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.code-dictionary-filter-heading .btn { padding: 6px 11px; white-space: nowrap; }
+.code-dictionary-filter-grid { display: grid; grid-template-columns: .8fr 1fr .8fr 1.25fr; gap: 10px; align-items: end; }
+.code-dictionary-filter-grid label { display: grid !important; gap: 4px !important; min-width: 0; }
+.code-dictionary-filter-grid label > span { color: var(--ink-2) !important; font-size: 10px !important; font-weight: 700 !important; letter-spacing: .08em !important; }
+.code-dictionary-filter-grid .control { box-sizing: border-box; width: 100% !important; min-width: 0; height: 36px !important; }
+.code-dictionary-count { margin: 5px 0 7px; color: var(--ink-2); font-size: 12px; }
+@media (max-width: 1050px) {
+  .code-dictionary-view > .code-dictionary-header { align-items: flex-start; flex-direction: column; }
+  .code-dictionary-stats { width: 100%; }
+  .code-dictionary-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .code-dictionary-stats, .code-dictionary-filter-grid { grid-template-columns: 1fr; }
+  .code-dictionary-stat { justify-content: space-between; }
+}
