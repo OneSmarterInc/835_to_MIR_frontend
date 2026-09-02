@@ -39,8 +39,8 @@ function FileList({ files, empty = '—' }) {
 export default function SftpAutomationView({ clients = [], activeClientId = '', onSelectClient }) {
   const automationTypes = useMemo(() => [
     { value: '835', label: '835 to MIR', description: 'Fetch 835 files, build MIR, and deliver MIR outbound.' },
-    { value: '837', label: '837 Reference', description: 'Fetch and ingest 837 reference files only.' },
     { value: 'RECON', label: 'RECON', description: 'Fetch and process RECON files from the dedicated RECON folder.' },
+    { value: '837', label: '837 Reference', description: 'Fetch and ingest 837 reference files only.' },
   ], []);
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || '');
   const [schedules, setSchedules] = useState([]);
@@ -169,7 +169,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
             <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => updateForm(type.value, 'enabled', event.target.checked)} disabled={isOffboarded} />Automation enabled</label>
             <button type="button" className="btn-gray" disabled={savingType === type.value || !selectedClientId || isOffboarded} onClick={() => saveSchedule(type.value)}>{savingType === type.value ? 'Saving…' : `Save ${type.value} Schedule`}</button>
           </div>
-          <div className="sftp-auto-set-time"><b>Set time:</b> {schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}{schedule?.next_run_at && schedule.enabled && <span><b>Next run:</b><TimeDisplay value={schedule.next_run_at} /></span>}</div>
+          <div className="sftp-auto-set-time"><b>Set time:</b> {schedule ? scheduleTimeLabel(schedule.run_time, schedule.timezone) : 'Not scheduled'}{schedule?.next_run_at && schedule.enabled && <span><b>Next run (EST):</b><TimeDisplay value={schedule.next_run_at} easternOnly /></span>}</div>
         </div>;
       })}
       {message && <div className={`sftp-auto-message ${message.kind}`}>{message.text}</div>}

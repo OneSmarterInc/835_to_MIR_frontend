@@ -1609,6 +1609,19 @@ td.num {
 .view.on .c-box .c-box-label { margin-bottom: 5px; }
 .view.on .c-box .subtext { margin-top: 3px; }
 .view.on .c-actions { align-self: center; gap: 8px; }
+.checks-page-title { margin: 0 0 10px; }
+.checks-gate-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.view.on .checks-gate-card { padding: 0; overflow: hidden; }
+.checks-gate-heading { min-height: 68px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.checks-gate-heading h2 { margin: 4px 0 0; font-size: 15px; }
+.checks-gate-body { padding: 5px 14px; }
+.checks-gate-body > div { padding: 6px 0 !important; font-size: 12px !important; }
+.checks-gate-footer { min-height: 38px; padding: 8px 14px; border-top: 1px solid var(--line-soft); color: var(--ink-2); font-size: 11px; }
+
+@media (max-width: 1050px) {
+  .checks-gate-grid { grid-template-columns: 1fr; }
+  .checks-gate-heading { min-height: 0; }
+}
 
 @media (max-width: 900px) {
   .main { padding: 18px 16px 38px; }

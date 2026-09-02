@@ -9,14 +9,14 @@
   display: flex;
   flex-direction: column;
 }
-.sftp-auto-config-list { display: grid; gap: 10px; }
+.sftp-auto-config-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
 .sftp-auto-config-heading { display: flex; align-items: baseline; gap: 12px; }
 .sftp-auto-config h2 { margin: 0; }
 .sftp-auto-config > div:first-child .sub { margin-bottom: 0; max-width: 760px; }
 .sftp-auto-fields {
   display: grid;
-  grid-template-columns: minmax(170px, 220px) minmax(280px, 1fr) auto minmax(170px, auto);
-  gap: 12px;
+  grid-template-columns: minmax(105px, .6fr) minmax(180px, 1.4fr);
+  gap: 9px 10px;
   align-items: end;
   margin-top: 10px;
 }
@@ -29,6 +29,7 @@
   min-height: 36px;
 }
 .sftp-auto-toggle { display: flex; align-items: center; gap: 7px; min-height: 36px; white-space: nowrap; }
+.sftp-auto-fields > .btn-gray { min-width: 0; white-space: nowrap; }
 .sftp-auto-toggle input { width: 15px; height: 15px; }
 .sftp-auto-set-time {
   display: flex;
@@ -49,6 +50,7 @@
   border-left: 1px solid var(--line);
 }
 .sftp-auto-message { margin-top: 12px; padding: 10px 12px; border-left: 3px solid; }
+.sftp-auto-config-list > .sftp-auto-message { grid-column: 1 / -1; }
 .sftp-auto-message.ok { border-color: var(--teal); background: #edf8f5; }
 .sftp-auto-message.bad { border-color: var(--brick); background: #fff0ed; color: var(--brick); }
 .sftp-auto-table-wrap { padding: 0; overflow-x: auto; }
@@ -64,6 +66,10 @@
 .sftp-auto-runs { min-width: 1280px !important; }
 .sftp-auto-runs .timezone-display { font-size: 11px; }
 .sftp-auto-error { color: var(--brick) !important; max-width: 300px; }
+@media (max-width: 1250px) {
+  .sftp-auto-config-list { grid-template-columns: 1fr; }
+  .sftp-auto-fields { grid-template-columns: minmax(140px, 220px) minmax(260px, 1fr) auto minmax(170px, auto); }
+}
 @media (max-width: 900px) {
   .sftp-auto-client-bar { align-items: stretch; flex-direction: column; }
   .sftp-auto-client-select { flex-basis: auto; max-width: none; }
