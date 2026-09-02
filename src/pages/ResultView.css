@@ -25,6 +25,8 @@
 .result-files-button, .result-export-button, .result-refresh-button { flex: 0 0 auto; height: 38px; white-space: nowrap; }
 .result-export-button { border-color: var(--ink, #172235); background: var(--ink, #172235); color: #fff; }
 .result-export-button:hover:not(:disabled) { border-color: #0e1724; background: #0e1724; color: #fff; }
+.result-export-button { width: 42px; min-width: 42px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.result-excel-icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .result-table-card { padding: 0 !important; overflow: hidden; margin-bottom: 16px; }
 .result-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line, #e2e8f0); color: var(--ink-2); font-size: 12px; }
 .result-table-wrap { width: 100%; overflow: auto; background: #fff; }

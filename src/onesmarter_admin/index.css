@@ -472,3 +472,23 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
   outline: none;
   border-color: var(--ochre);
 }
+
+/* Compact admin workspace while preserving every instruction and action. */
+.main{padding:20px 24px 44px}
+.view.on>.sub,.view.on>.hdr-row .sub{margin-bottom:12px;line-height:1.45}
+.view.on .hdr-row{margin-bottom:10px}
+.view.on .card{padding:12px 14px;margin-bottom:10px}
+.view.on .metrics{margin-bottom:12px}
+.view.on .metric{padding:11px 13px}
+.view.on .metric .v{font-size:21px}
+.view.on .metric .d{margin-top:3px}
+.view.on .cols{gap:10px}
+.view.on .filters,.view.on .filters-bar{gap:8px;padding:8px 10px}
+.view.on .note,.view.on .good,.view.on .stub,.view.on .status-banner{margin:10px 0;padding:9px 11px}
+.view.on table th{padding:9px 10px}
+.view.on table td{padding:9px 10px}
+.view.on h2.sec{margin:16px 0 8px}
+.ladder .phase{padding:7px 14px}
+.ladder .rung{padding:12px 14px;gap:11px}
+
+@media(max-width:900px){.main{padding:18px 16px 38px}}

@@ -376,9 +376,6 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
             <span>Documents</span>
           </button>
-          <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
-            <span>Files</span>
-          </button>
           <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
           </button>
@@ -387,6 +384,9 @@ export default function App({ user, onLogout }) {
           </button>
           <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
             <span>SFTP Automation</span>
+          </button>
+          <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
+            <span>Archive</span>
           </button>
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>

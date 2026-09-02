@@ -1577,6 +1577,34 @@ td.num {
 @media (max-width: 420px) {
   .metrics { grid-template-columns: 1fr; }
 }
+
+/* Compact application workspace: shared by client and embedded admin screens. */
+.main { padding: 20px 24px 44px; }
+.view.on > h1,
+.view.on > .hdr-row h1 { margin-top: 0; }
+.view.on > .sub,
+.view.on > .hdr-row .sub { margin-bottom: 12px; line-height: 1.45; }
+.flow-title-row { margin-bottom: 14px; }
+.view.on .card { margin-bottom: 10px; padding: 12px 14px; }
+.view.on .metrics { margin-bottom: 12px; }
+.view.on .metric { padding: 11px 13px; }
+.view.on .metric .v { font-size: 21px; }
+.view.on .metric .d { margin-top: 3px; }
+.view.on .cols { gap: 10px; }
+.view.on .filters,
+.view.on .filters-bar { gap: 8px; padding: 8px 10px; }
+.view.on .status-banner,
+.view.on .note,
+.view.on .good,
+.view.on .stub { margin: 10px 0; padding: 9px 11px; }
+.view.on table th { padding: 9px 10px; }
+.view.on table td { padding: 9px 10px; }
+.view.on h2.sec { margin: 16px 0 8px; }
+.view.on .pipe { margin-bottom: 12px; padding: 16px 14px 12px; }
+
+@media (max-width: 900px) {
+  .main { padding: 18px 16px 38px; }
+}
 /* Offboarded-client lock screen. No application navigation is mounted here. */
 .access-denied-screen {
   min-height: 100vh;
