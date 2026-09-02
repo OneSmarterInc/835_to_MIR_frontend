@@ -45,6 +45,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const [filesOpen, setFilesOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [filesBusy, setFilesBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
   const [matchHistory, setMatchHistory] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -153,6 +154,43 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       setFilesOpen(false);
     } finally { setFilesBusy(false); }
   };
+  const downloadFilteredResults = async () => {
+    setExportBusy(true);
+    setMessage(null);
+    try {
+      const params = new URLSearchParams();
+      if (isAdmin && clientId) params.set("client_id", clientId);
+      if (isAdmin && !clientId) params.set("scope", "global");
+      if (activeSearch) params.set("search", activeSearch);
+      if (statusFilter) params.set("status", statusFilter);
+      if (sort.key) {
+        params.set("sort_by", sort.key);
+        params.set("sort_direction", sort.direction);
+      }
+      const response = await portalFetch(`/edi835/api/reconciliation/export/?${params}`, {
+        credentials: "include",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || `Excel download failed (${response.status}).`);
+      }
+      const disposition = response.headers.get("content-disposition") || "";
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || "onesmarter-reconciliation.xlsx";
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage({ kind: "error", text: error.message });
+    } finally {
+      setExportBusy(false);
+    }
+  };
   const downloadRecon = async (file) => {
     try {
       const response = await portalFetch(`/edi835/api/recon/files/${file.id}/download/`, {
@@ -201,7 +239,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       <div className="conversion-boxes result-conversion-boxes"><div className="c-box"><div className="c-box-label">RECON INPUT</div><input id="recon-file-input" type="file" accept={fileAccept("RECON")} onChange={handleReconFileChange} disabled={isOffboarded} /><div className="subtext">{isOffboarded ? "Uploads are locked for this offboarded client." : selectedFile ? selectedFile.name : "Select a supported RECON file."}</div></div><div className="c-actions result-c-actions"><button className="btn-gray" onClick={uploadAndProcess} disabled={busy || isOffboarded}>{busy ? "Processing…" : "Process RECON"}</button><button className="btn-gray" onClick={() => loadResults(page, activeSearch, sort, statusFilter)} disabled={busy}>Refresh</button></div></div>
       {message && <div className={`result-message ${message.kind}`}>{message.text}</div>}
     </div>
-    <div className="filters-bar result-filters"><select className="result-status-select" value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><div className="result-match-count" aria-live="polite" aria-label={`${data.total_claims ?? rows.length} matching results`}><strong>{Number(data.total_claims ?? rows.length).toLocaleString()}</strong><span>Matching Results</span></div><div className="result-global-search"><input type="search" value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value) { statusFilterRef.current = ""; setStatusFilter(""); } }} placeholder="Search MIR/RECON data · separate multiple values with commas" aria-label="Search all MIR and RECON results; separate multiple values with commas" /></div><button type="button" className="btn-gray result-files-button" onClick={openUploadedFiles}>Uploaded RECON files</button></div>
+    <div className="filters-bar result-filters"><select className="result-status-select" value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)} aria-label="Filter reconciliation results by status"><option value="">All</option>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><div className="result-match-count" aria-live="polite" aria-label={`${data.total_claims ?? rows.length} matching results`}><strong>{Number(data.total_claims ?? rows.length).toLocaleString()}</strong><span>Matching Results</span></div><div className="result-global-search"><input type="search" value={search} onChange={(event) => { const value = event.target.value; setSearch(value); if (value) { statusFilterRef.current = ""; setStatusFilter(""); } }} placeholder="Search MIR/RECON data · separate multiple values with commas" aria-label="Search all MIR and RECON results; separate multiple values with commas" /></div><button type="button" className="btn-gray result-export-button" onClick={downloadFilteredResults} disabled={exportBusy}>{exportBusy ? "Preparing…" : "Download XL"}</button><button type="button" className="btn-gray result-files-button" onClick={openUploadedFiles}>Uploaded RECON files</button></div>
     <div className="card result-table-card"><div className="result-table-wrap"><table className="reconciliation-table"><colgroup><col className="result-col-claim" /><col className="result-col-patient" /><col className="result-col-file" /><col className="result-col-file" /><col className="result-col-money" /><col className="result-col-money" /><col className="result-col-difference" /><col className="result-col-status" /></colgroup><thead><tr><SortableHeader label="Claim ID" sortKey="claim_id" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Patient name" sortKey="patient_name" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="MIR file" sortKey="mir_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="RECON file" sortKey="recon_filename" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in MIR" sortKey="amount_to_pay" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Amount in RECON" sortKey="recon_paid_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Difference" sortKey="difference_amount" sort={sort} onSort={changeSort} arrow={sortArrow} /><SortableHeader label="Status" sortKey="status" sort={sort} onSort={changeSort} arrow={sortArrow} /></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.mir_claim_id || `recon-${row.claim_id}`}><td><b>{row.claim_id || "—"}</b></td><td>{row.mir_claim_id ? <button className="result-name-link" onClick={() => openClaim(row)}>{row.patient_name || "View claim"}</button> : <span>RECON-only claim</span>}<small>{row.member_id || "—"}</small></td><td>{row.mir_filename || "—"}</td><td><ReconMatches row={row} onShowMore={() => setMatchHistory(row)} /></td><td className="num">{money(row.amount_to_pay)}</td><td className="num">{money(row.recon_paid_amount)}</td><td className="num">{hasMirAndRecon(row) ? money(row.difference_amount) : "-"}</td><td><span className={`tag ${tone(row.status)}`}>{label(row.status)}</span></td></tr>) : <tr><td colSpan="8" className="result-empty">No MIR or RECON claims match this search and status filter.</td></tr>}</tbody></table></div><div className="result-pagination">
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "auto" }}>
         <span>Rows per page:</span>
