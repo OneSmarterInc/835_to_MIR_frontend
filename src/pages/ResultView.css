@@ -22,7 +22,7 @@
 .result-match-count span { margin-top: 3px; color: var(--ink-3); font-size: 9px; font-weight: 500; letter-spacing: .08em; line-height: 1; text-transform: uppercase; white-space: nowrap; }
 .result-global-search { display: flex; align-items: center; flex: 1 1 360px; min-width: 220px; }
 .result-global-search input { width: min(560px, 100%); padding: 9px 11px; border: 1px solid var(--line, #cbd5e1); border-radius: 4px; background: #fff; }
-.result-files-button, .result-export-button, .result-refresh-button { flex: 0 0 auto; height: 38px; white-space: nowrap; }
+.result-files-button, .result-export-button, .result-refresh-button, .result-reconciliation-button { flex: 0 0 auto; height: 38px; white-space: nowrap; }
 .result-export-button { border-color: var(--ink, #172235); background: var(--ink, #172235); color: #fff; }
 .result-export-button:hover:not(:disabled) { border-color: #0e1724; background: #0e1724; color: #fff; }
 .result-export-button { width: 42px; min-width: 42px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
@@ -80,4 +80,4 @@
 .result-match-amount small { margin-top: 0; }
 .result-match-total { display: flex; justify-content: flex-end; gap: 18px; padding: 14px 2px 0; }
 @media (max-width: 1100px) { .result-upload-row.with-client { grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr) auto; } .result-filters { flex-wrap: wrap; } .result-global-search { order: 5; flex-basis: 100%; } .result-global-search input { width: 100%; max-width: none; } }
-@media (max-width: 850px) { .result-upload-row, .result-upload-row.with-client { grid-template-columns: 1fr; } .result-process-button { width: 100%; } .result-filters { align-items: stretch; flex-direction: column; } .result-filters .result-status-select { width: 100%; max-width: none; flex-basis: auto; } .result-match-count { width: 100%; flex-basis: 38px; } .result-global-search { order: initial; min-width: 0; } .result-global-search input, .result-refresh-button, .result-export-button, .result-files-button { width: 100%; max-width: none; } }
+@media (max-width: 850px) { .result-upload-row, .result-upload-row.with-client { grid-template-columns: 1fr; } .result-process-button { width: 100%; } .result-filters { align-items: stretch; flex-direction: column; } .result-filters .result-status-select { width: 100%; max-width: none; flex-basis: auto; } .result-match-count { width: 100%; flex-basis: 38px; } .result-global-search { order: initial; min-width: 0; } .result-global-search input, .result-refresh-button, .result-reconciliation-button, .result-export-button, .result-files-button { width: 100%; max-width: none; } }

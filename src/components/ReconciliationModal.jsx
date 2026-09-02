@@ -29,7 +29,7 @@ async function apiJson(url, signal) {
   return data;
 }
 
-export default function ReconciliationModal({ fileId, onClose }) {
+export default function ReconciliationModal({ clientId = "", isAdmin = false, onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -38,11 +38,14 @@ export default function ReconciliationModal({ fileId, onClose }) {
   useEffect(() => {
     const controller = new AbortController();
     setData(null); setError(""); setShowAll(false);
-    apiJson(`/edi835/api/reconciliation/files/${fileId}/`, controller.signal)
+    const params = new URLSearchParams();
+    if (isAdmin && clientId) params.set("client_id", clientId);
+    if (isAdmin && !clientId) params.set("scope", "global");
+    apiJson(`/edi835/api/reconciliation/dashboard/?${params}`, controller.signal)
       .then(setData)
       .catch((err) => { if (err.name !== "AbortError") setError(err.message); });
     return () => controller.abort();
-  }, [fileId]);
+  }, [clientId, isAdmin]);
 
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") onClose(); };
@@ -61,7 +64,10 @@ export default function ReconciliationModal({ fileId, onClose }) {
     setExporting(true); setError("");
     try {
       const token = localStorage.getItem("onesmarter_admin_token");
-      const response = await portalFetch(`/edi835/api/reconciliation/files/${fileId}/export/`, {
+      const params = new URLSearchParams();
+      if (isAdmin && clientId) params.set("client_id", clientId);
+      if (isAdmin && !clientId) params.set("scope", "global");
+      const response = await portalFetch(`/edi835/api/reconciliation/export/?${params}`, {
         headers: token ? { Authorization: `Token ${token}` } : {},
       });
       if (!response.ok) {
@@ -70,7 +76,7 @@ export default function ReconciliationModal({ fileId, onClose }) {
       }
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
-      link.href = url; link.download = `reconciliation-${data?.source?.filename || fileId}.xlsx`;
+      link.href = url; link.download = `reconciliation-${data?.source?.client_name || "results"}.xlsx`;
       document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
     } catch (err) { setError(err.message); } finally { setExporting(false); }
   };
@@ -86,7 +92,7 @@ export default function ReconciliationModal({ fileId, onClose }) {
         {error && <div className="recon-message error">{error}</div>}
         {data && <>
           <div className="recon-context">
-            <div><div className="recon-eyebrow">{data.cycle?.processed_at ? `Processed ${new Date(data.cycle.processed_at).toLocaleString()}` : "Current persisted data"}</div><h1>{data.source?.client_name || "Reconciliation"}</h1><p>{data.source?.filename} · {data.source?.mir_filename || "MIR not generated"}{data.cycle?.filename ? ` · ${data.cycle.filename}` : ""}</p></div>
+            <div><div className="recon-eyebrow">{data.cycle?.processed_at ? `Latest RECON processed ${new Date(data.cycle.processed_at).toLocaleString()}` : "Current persisted data"}</div><h1>{data.source?.client_name || "Reconciliation"}</h1><p>{data.cycle?.filename || "No processed RECON file"} · all persisted MIR records in the selected scope</p></div>
             <span className="recon-database-badge">Live database</span>
           </div>
           {data.message && <div className="recon-message">{data.message}</div>}
