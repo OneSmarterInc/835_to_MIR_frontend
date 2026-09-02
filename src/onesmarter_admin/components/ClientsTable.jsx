@@ -76,9 +76,6 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
       <div className="hdr-row">
         <div>
           <h1>All Clients</h1>
-          <p className="sub">
-            Dynamic relational database-driven client registry for administrative management and lifecycle tracking.
-          </p>
         </div>
         <button className="btn primary" id="btn-add-client" onClick={onOpenAddClient}>
           + Add Client

@@ -305,7 +305,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
       <div className="hdr-row">
         <div>
           <div className="eyebrow">Stage Promotion</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
+          <div className="golive-workspace-heading">
             <ClientSelectDropdown
               clients={clients}
               value={selectedClientId}
@@ -318,11 +318,10 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
             />
             <h1 style={{ margin: 0 }}>Go Live Readiness</h1>
           </div>
-          <p className="sub">Sequential 6-step compliance ladder to promote <b>{currentClient?.name}</b> to full production operations.</p>
         </div>
       </div>
 
-      <div className="metrics">
+      <div className="metrics golive-metrics">
         <div className="metric">
           <div className="v">{doneCount} / 6</div>
           <div className="l">Steps Complete</div>
@@ -334,7 +333,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
           <div className="d">{activeStepTitle}</div>
         </div>
         <div className="metric">
-          <div className="v">{goliveState?.progress_pct || 0}%</div>
+          <div className="v">{Math.round((doneCount / 6) * 100)}%</div>
           <div className="l">Completion</div>
           <div className="d">Stage: {isStep6Done ? 'Production' : 'Pre-Production'}</div>
         </div>
@@ -412,7 +411,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           disabled={isWaiting || actionLoading}
                           onClick={() => handleSaveStep3SFTP(true)}
                         >
-                          {actionLoading ? 'Completing...' : '✓ Complete Step 3'}
+                          {actionLoading ? 'Submitting…' : 'Submit'}
                         </button>
                       ) : (
                         <button
@@ -539,7 +538,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                             disabled={isWaiting || actionLoading || !productionDate.trim()}
                             style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px' }}
                           >
-                            {actionLoading ? 'Saving...' : 'Save Schedule & Complete'}
+                            {actionLoading ? 'Submitting…' : 'Submit'}
                           </button>
                         </div>
                       </form>
@@ -565,7 +564,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           onClick={handleSaveStep5Comment}
                           disabled={isWaiting || actionLoading}
                         >
-                          {actionLoading ? 'Saving...' : 'Submit & Complete Step 5'}
+                          {actionLoading ? 'Submitting…' : 'Submit'}
                         </button>
                       </div>
                     </div>

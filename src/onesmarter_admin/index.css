@@ -491,4 +491,46 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .ladder .phase{padding:7px 14px}
 .ladder .rung{padding:12px 14px;gap:11px}
 
-@media(max-width:900px){.main{padding:18px 16px 38px}}
+/* Dense onboarding workspace: retain the workflow meaning with less scrolling. */
+#v-onboard .onboarding-workflow-heading,.documents-workspace-heading{display:flex;align-items:center;gap:12px;margin:2px 0 3px;min-width:0}
+#v-onboard .onboarding-workflow-heading>div,.documents-workspace-heading>div{flex:0 1 350px;min-width:220px}
+#v-onboard .onboarding-workflow-heading h1,.documents-workspace-heading h1{flex:none;margin:0;white-space:nowrap;overflow-wrap:normal}
+#v-onboard>.hdr-row{margin-bottom:8px}
+#v-onboard>.hdr-row .sub{margin-bottom:0}
+#v-onboard .onboarding-metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+#v-onboard .onboarding-metrics .metric{min-height:86px;padding:10px 13px}
+#v-onboard .onboarding-metrics .v{font-size:20px;line-height:1.25}
+#v-onboard .onboarding-metrics .l{margin-top:1px}
+#v-onboard .onboarding-metrics .d{margin-top:3px;line-height:1.35}
+#v-onboard .rung h3{margin-top:0}
+#v-onboard .rung .ev{margin-top:4px}
+#v-onboard .rung .side{gap:6px}
+#v-onboard .onboarding-workflow-note{font-size:11.5px}
+
+@media(max-width:900px){
+  .main{padding:18px 16px 38px}
+  #v-onboard .onboarding-workflow-heading,.documents-workspace-heading{align-items:stretch;flex-direction:column;gap:7px}
+  #v-onboard .onboarding-workflow-heading>div,.documents-workspace-heading>div{flex-basis:auto;min-width:0}
+  #v-onboard .onboarding-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){#v-onboard .onboarding-metrics{grid-template-columns:1fr}}
+
+/* Dense Go Live workspace aligned with onboarding. */
+#v-promote .golive-workspace-heading{display:flex;align-items:center;gap:12px;margin:2px 0 3px;min-width:0}
+#v-promote .golive-workspace-heading>div{flex:0 1 380px;min-width:220px}
+#v-promote .golive-workspace-heading h1{flex:none;margin:0;white-space:nowrap;overflow-wrap:normal}
+#v-promote>.hdr-row{margin-bottom:8px}
+#v-promote .golive-metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+#v-promote .golive-metrics .metric{min-height:82px;padding:10px 13px}
+#v-promote .golive-metrics .v{font-size:20px;line-height:1.25}
+#v-promote .golive-metrics .d{margin-top:3px}
+#v-promote .rung{padding:11px 14px}
+#v-promote .rung .side{gap:6px}
+#v-promote .step-custom-box{margin-top:7px!important}
+
+@media(max-width:900px){
+  #v-promote .golive-workspace-heading{align-items:stretch;flex-direction:column;gap:7px}
+  #v-promote .golive-workspace-heading>div{flex-basis:auto;min-width:0}
+  #v-promote .golive-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){#v-promote .golive-metrics{grid-template-columns:1fr}}

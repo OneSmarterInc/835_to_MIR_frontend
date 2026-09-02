@@ -379,14 +379,11 @@ export default function ConversionsView({
   return (
     <section className="view on table-screen" id="v-batches">
       <h1>Conversions</h1>
-      <p className="sub">
-        Start a conversion run, validate EDI 835 files, and view 30-day conversion history.
-      </p>
 
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
         {isAdmin && clients && clients.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC' }}>
+          <div className="conversion-client-row">
             <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
             <select
               value={selectedClientId}

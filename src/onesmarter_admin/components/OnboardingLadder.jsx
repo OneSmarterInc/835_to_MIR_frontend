@@ -148,7 +148,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
       <div className="hdr-row">
         <div>
           <div className="eyebrow" id="ob-eyebrow">Selected Client</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
+          <div className="onboarding-workflow-heading">
             <ClientSelectDropdown
               id="client-select-hdr"
               clients={clients}
@@ -157,11 +157,10 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
             />
             <h1 id="ob-title" style={{ margin: 0 }}>Onboarding Workflow</h1>
           </div>
-          <p className="sub">Sequential {totalSteps}-step compliance ladder. Completing the active step automatically unlocks the next step.</p>
         </div>
       </div>
 
-      <div className="metrics">
+      <div className="metrics onboarding-metrics">
         <div className="metric">
           <div className="v" id="m-complete">{doneCount} / {totalSteps}</div>
           <div className="l">Steps Complete</div>
@@ -214,7 +213,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         })}
       </div>
 
-      <div className="note">
+      <div className="note onboarding-workflow-note">
         <b>Sequential Workflow:</b> Steps unlock one by one. Use the <b>💬 Notes</b> icon on any step to record internal notes. Steps can be completed via document uploads, structured forms, or integration callbacks.
       </div>
 
@@ -222,9 +221,9 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         isOpen={returnPrompt.isOpen}
         onClose={() => setReturnPrompt({ isOpen: false, pendingKey: '', stepName: '' })}
         onConfirm={handleConfirmPendingReturn}
-        title="Complete Step Action"
-        message={`Welcome back! Did you finish work in the external tool for ${returnPrompt.stepName}? Click below to mark this step complete.`}
-        confirmText="Mark Step Complete"
+        title="Submit Step"
+        message={`Welcome back! If you finished work in the external tool for ${returnPrompt.stepName}, submit the step to continue.`}
+        confirmText="Submit"
         cancelText="Not Yet"
       />
 

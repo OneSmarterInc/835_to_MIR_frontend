@@ -752,7 +752,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       disabled={savingContact}
                       style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                     >
-                      {savingContact ? 'Saving…' : (localContacts.length > 0 ? '+ Add Contact' : 'Save & Complete')}
+                      {savingContact ? 'Saving…' : (localContacts.length > 0 ? '+ Add Contact' : 'Submit')}
                     </button>
                   </div>
                 </div>
@@ -770,7 +770,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Claim System Verification Information</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s5Text} onChange={(e) => setS5Text(e.target.value)} placeholder="e.g. Vendor hosted ClaimsCore Enterprise, SFTP outbound nightly 835 drops verified." />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
-                  <button className="btn tiny primary" onClick={handleStep5Save} disabled={savingClaim}>{savingClaim ? 'Saving…' : 'Submit & Complete Step 5'}</button>
+                  <button className="btn tiny primary" onClick={handleStep5Save} disabled={savingClaim}>{savingClaim ? 'Saving…' : 'Submit'}</button>
                 </div>
               </div>
             )}
@@ -902,7 +902,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                           disabled={Boolean(s6ApiError) || !s6ApiUrl.trim()}
                           style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                         >
-                          ✓ Save API &amp; Complete
+                          Submit
                         </button>
                       </div>
                     </>
@@ -916,7 +916,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         onClick={handleStep6Save}
                         style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                       >
-                        ✓ Complete Step 7
+                        Submit
                       </button>
                     </div>
                   )}
@@ -982,7 +982,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     placeholder="MIROUT_YYYYMMDD_hhmmss.MIR"
                   />
                   <button className="btn tiny primary" onClick={handleStep9NamingSave}>
-                    ✓ Save Naming Format &amp; Complete Step {displayStepNumber}
+                    Submit
                   </button>
                 </div>
               </div>
@@ -1092,7 +1092,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         disabled={creatingUser}
                         style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
                       >
-                        {creatingUser ? 'Creating…' : `✓ Create User & Complete Step ${displayStepNumber}`}
+                        {creatingUser ? 'Creating…' : 'Submit'}
                       </button>
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   >
                     ⚡ Transmit Test File to FTP
                   </button>
-                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit &amp; Complete Step 11</button>
+                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit</button>
                 </div>
               </div>
             )}
@@ -1353,7 +1353,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       transition: 'opacity 0.2s'
                     }}
                   >
-                    {s11Sending ? '⏳ Saving...' : '💾 Save SMTP Config & Complete'}
+                    {s11Sending ? 'Saving…' : 'Submit'}
                   </button>
                 </div>
               </div>
@@ -1475,7 +1475,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       disabled={savingSchedule}
                       style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px' }}
                     >
-                      {savingSchedule ? 'Saving…' : 'Save Schedule & Complete'}
+                      {savingSchedule ? 'Saving…' : 'Submit'}
                     </button>
                     <button
                       type="button"
@@ -1553,7 +1553,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} placeholder={step.actionType === 'text_submission_final' ? 'First production file delivered and monitored without error.' : 'All cutover checks and security safeguards passed.'} value={stText} onChange={(e) => setStText(e.target.value)} />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
                   <button className="btn tiny primary" onClick={handleTextSubmission}>
-                    {step.actionType === 'text_submission_final' ? 'Conclude Onboarding' : `Submit & Complete Step ${displayStepNumber}`}
+                    Submit
                   </button>
                 </div>
               </div>

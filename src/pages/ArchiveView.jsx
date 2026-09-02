@@ -213,11 +213,6 @@ export default function ArchiveView({
 
         <ArchiveZipMenu onDownload={handleDownloadZip} />
       </div>
-      <p className="sub" style={{ marginTop: "4px", marginBottom: "20px" }}>
-        One row represents one 835 conversion set. The 835 input(s), optional 837 reference, MIR
-        output, validation result, and processing result stay together.
-      </p>
-
       {/* 5 METRIC CARDS METRICS BAR */}
       <div
         className="metrics"

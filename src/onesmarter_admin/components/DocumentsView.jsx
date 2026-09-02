@@ -113,7 +113,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     <section className="view on table-screen" id="v-docs">
       <div className="hdr-row">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
+          <div className="documents-workspace-heading">
             <ClientSelectDropdown
               clients={clients}
               value={selectedClientId}
@@ -126,7 +126,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
             />
             <h1 style={{ margin: 0 }}>Documents &amp; Agreements</h1>
           </div>
-          <p className="sub">Executed legal agreements, compliance certificates, and evidence files associated with <b>{currentClient?.name}</b>.</p>
         </div>
       </div>
 
