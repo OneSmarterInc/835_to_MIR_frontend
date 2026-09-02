@@ -25,7 +25,6 @@ export default function ConversionsView({
   const [validationReport, setValidationReport] = useState(null);
   const [validationError, setValidationError] = useState(null);
   const [isValidated, setIsValidated] = useState(false);
-  const [selectedErrorFile, setSelectedErrorFile] = useState(null);
 
   const [mirOutputText, setMirOutputText] = useState("");
   const [copyStatus, setCopyStatus] = useState("Copy Text");
@@ -317,14 +316,6 @@ export default function ConversionsView({
       setStartingBatch(false);
     }
   };
-
-  const parseErrorDetails = (raw) => {
-    if (!raw) return { errors: [], findings: [] };
-    if (typeof raw === "object") return raw;
-    try { return JSON.parse(raw); } catch (_) { return { errors: [String(raw)], findings: [] }; }
-  };
-
-  const openErrorChecks = (file) => setSelectedErrorFile(file);
 
   // Table Sorting & Filtering
   const handleSortHeader = (key) => {
@@ -626,43 +617,6 @@ export default function ConversionsView({
           </div>
         )}
       </div>
-
-      {/* CLIENT CHECKS - ERROR FILES ONLY */}
-      <div className="card" style={{ marginTop: "18px", marginBottom: "16px", padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
-          <div className="eyebrow">Checks</div>
-          <h2 style={{ margin: "3px 0 4px", fontSize: "17px" }}>Findings on this run</h2>
-          <div style={{ fontSize: "12px", color: "var(--ink-2)" }}>Only files with an ERROR status are shown. Click a file to see what failed, which segment caused it, and where the rule comes from.</div>
-        </div>
-        {(() => {
-          const errorFiles = filtered.filter((file) => file.status === "ERROR");
-          return errorFiles.length ? <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>835 FILE</th><th>RUN</th><th>CLAIMS</th><th>STATUS</th><th>CHECKS</th></tr></thead>
-            <tbody>{errorFiles.map((file) => {
-              const d = parseErrorDetails(file.error_message);
-              const count = d.findings?.length || d.errors?.length || 1;
-              return <tr key={file.id}><td style={{ fontWeight: 600 }}>{file.original_filename}</td><td className="num">R-{String(file.id).substring(0,6).toUpperCase()}</td><td className="num">{file.claims_count || 0}</td><td><span className="tag bad">ERROR</span></td><td><button type="button" className="btn secondary" style={{ padding: "5px 10px", fontSize: "11px" }} onClick={() => openErrorChecks(file)}>View {count} finding{count === 1 ? "" : "s"}</button></td></tr>;
-            })}</tbody></table></div> : <div style={{ padding: "28px 20px", color: "var(--ink-3)", fontSize: "12.5px" }}>No files with errors for this run.</div>;
-        })()}
-      </div>
-
-      {selectedErrorFile && (() => {
-        const details = parseErrorDetails(selectedErrorFile.error_message);
-        const findings = details.findings?.length ? details.findings : (details.errors || []).map((message, i) => ({ rule_code: "835-STRUCT", rule: "Validation finding", segment: "Unknown", what_found: typeof message === "string" ? message : JSON.stringify(message), source: "OneSmarter 835 structural validation", severity: "Hold", _i: i }));
-        return <div className="card" style={{ marginBottom: "16px", padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-            <div><div className="eyebrow">Where the rules come from</div><h2 style={{ margin: "3px 0 0", fontSize: "16px" }}>{selectedErrorFile.original_filename}</h2></div>
-            <button type="button" className="btn secondary" onClick={() => setSelectedErrorFile(null)}>Close</button>
-          </div>
-          <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>RULE</th><th>SEGMENT</th><th>WHAT WE FOUND</th><th>SOURCE</th><th>SEVERITY</th></tr></thead>
-            <tbody>{findings.length ? findings.map((finding, index) => <tr key={(finding.rule_code || "835") + index}>
-              <td><div style={{ fontFamily: "var(--display)" }}>{finding.rule_code || "835-STRUCT"}</div><div style={{ fontSize: "11px", color: "var(--ink-3)", marginTop: "4px" }}>{finding.rule || "Validation rule"}</div></td>
-              <td><span className="tag work">{finding.segment || "Unknown"}</span></td><td>{finding.what_found || "Validation failed."}</td><td>{finding.source || "OneSmarter 835 structural validation"}</td><td><span className="tag bad">{finding.severity || "Hold"}</span></td>
-            </tr>) : <tr><td colSpan="5" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No structured findings are available for this older error record.</td></tr>}</tbody>
-          </table></div>
-        </div>;
-      })()}
 
       {/* FILTERS CONTROL BAR */}
       <div
