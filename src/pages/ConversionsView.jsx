@@ -1,29 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { portalFetch } from "../utils/api";
-import FileActionButtons from "../components/FileActionButtons";
-import { formatEasternDate } from "../utils/timezone";
-import TimeDisplay from "../components/TimeDisplay";
-import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
-import { showAppAlert } from "../components/AppDialog";
-import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
-import OffboardedClientBanner from "../onesmarter_admin/components/OffboardedClientBanner";
-
-function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem("onesmarter_admin_token");
-  return token ? { ...extra, Authorization: `Token ${token}` } : extra;
-}
-
-function getApiUrl(path) {
-  return path;
-}
-
-async function readJsonResponse(response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(`Server returned a non-JSON response (${response.status}).`);
-  }
-  return response.json();
-}
+import React, { useState } from "react";
 
 export default function ConversionsView({
   trackedFiles,
@@ -31,22 +6,8 @@ export default function ConversionsView({
   onOpenFileModal,
   clients = [],
   isAdmin = false,
-  activeClientId = "",
-  onSelectClient,
-  selectedClient,
 }) {
-  const [selectedClientId, setSelectedClientId] = useState(
-    isAdmin ? activeClientId || "" : ""
-  );
-  const currentAdminClient = clients.find((item) => String(item.id) === String(selectedClientId)) || selectedClient;
-  const isOffboarded = isAdmin && String(currentAdminClient?.stage || '').toLowerCase() === 'offboarded';
-
-  useEffect(() => {
-    if (isAdmin) {
-      setSelectedClientId(activeClientId || "");
-      setCurrentPage(1);
-    }
-  }, [activeClientId, isAdmin]);
+  const [selectedClientId, setSelectedClientId] = useState("");
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
   const [ediText, setEdiText] = useState("");
@@ -59,10 +20,12 @@ export default function ConversionsView({
   const [processing, setProcessing] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
   const [startingBatch, setStartingBatch] = useState(false);
+  const [batchAlert, setBatchAlert] = useState(null);
 
   const [validationReport, setValidationReport] = useState(null);
   const [validationError, setValidationError] = useState(null);
   const [isValidated, setIsValidated] = useState(false);
+  const [selectedErrorFile, setSelectedErrorFile] = useState(null);
 
   const [mirOutputText, setMirOutputText] = useState("");
   const [copyStatus, setCopyStatus] = useState("Copy Text");
@@ -81,19 +44,8 @@ export default function ConversionsView({
 
   // 835 File Input change (Supports multiple file selection)
   const handle835FileChange = async (e) => {
-    if (isOffboarded) { e.target.value = ""; return; }
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
-    const extensionError = validateFileExtensions(files, "835");
-    if (extensionError) {
-      e.target.value = "";
-      setSelectedFilesList([]);
-      setEdiText("");
-      setFile835Subtext("No 835 files selected.");
-      setValidationError(extensionError);
-      await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
-      return;
-    }
 
     if (files.length === 1) {
       const file = files[0];
@@ -128,16 +80,8 @@ export default function ConversionsView({
   };
 
   // 837 File Input change
-  const handle837FileChange = async (e) => {
-    if (isOffboarded) { e.target.value = ""; return; }
+  const handle837FileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      const extensionError = validateFileExtensions(e.target.files, "837");
-      if (extensionError) {
-        e.target.value = "";
-        setFile837Subtext("No 837 reference selected.");
-        await showAppAlert(extensionError, { title: "Wrong File Format", tone: "error" });
-        return;
-      }
       setFile837Subtext(
         "Selected: " + e.target.files[0].name + " (optional reference)"
       );
@@ -157,7 +101,6 @@ export default function ConversionsView({
 
   // Validate 835 Action (Single or Multi-file)
   const handleValidate = async () => {
-    if (isOffboarded) return;
     setValidationError(null);
     setValidationReport(null);
     setMirOutputText("");
@@ -176,8 +119,7 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await portalFetch("/api/validate/", {
-        credentials: "include",
+      const res = await fetch("/api/validate/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -217,7 +159,6 @@ export default function ConversionsView({
 
   // Process MIR Action (Converts single or multiple 835 files into a SINGLE combined MIR file)
   const handleProcessMIR = async () => {
-    if (isOffboarded) return;
     if (selectedFilesList.length === 0 && !ediText.trim()) return;
 
     setProcessing(true);
@@ -235,8 +176,7 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await portalFetch("/api/convert/", {
-        credentials: "include",
+      const res = await fetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -266,24 +206,22 @@ export default function ConversionsView({
 
   // Convert file to MIR on clicking PROCESSING status in table
   const handleConvertStatusClick = async (fileId) => {
-    if (isOffboarded) return;
     if (!fileId || convertingId) return;
     setConvertingId(fileId);
     try {
-      const res = await portalFetch("/api/convert/", {
-        credentials: "include",
+      const res = await fetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId, client_id: selectedClientId || undefined }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        await showAppAlert(data.error || "Failed to convert file to MIR.", { title: "Conversion Failed", tone: "error" });
+        alert(data.error || "Failed to convert file to MIR");
       } else {
         if (data.text) setMirOutputText(data.text);
       }
     } catch (err) {
-      await showAppAlert("Error converting file: " + err.message, { title: "Conversion Failed", tone: "error" });
+      alert("Error converting file: " + err.message);
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
@@ -325,7 +263,7 @@ export default function ConversionsView({
       if (targetId) query.append("file_id", targetId);
       if (nameToSave) query.append("file_name", nameToSave);
 
-      const res = await portalFetch(`/api/download/?${query.toString()}`, {
+      const res = await fetch(`/api/download/?${query.toString()}`, {
         method: "GET",
         credentials: "include",
       });
@@ -344,81 +282,49 @@ export default function ConversionsView({
         a.remove();
       }, 1000);
     } catch (err) {
-      await showAppAlert("Download error: " + err.message, { title: "Download Failed", tone: "error" });
+      alert("Download error: " + err.message);
     }
   };
 
   // Start Automated SFTP Inbound Batch Pipeline
   const handleStartBatchConversion = async () => {
-    if (isOffboarded) return;
     setStartingBatch(true);
+    setBatchAlert(null);
     try {
-      const res = await portalFetch(getApiUrl("/edi835/api/start-batch-conversion/"), {
+      const res = await fetch("/api/start-batch-conversion/", {
         method: "POST",
-        credentials: "include",
-        headers: getAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          client_id: isAdmin ? selectedClientId || undefined : undefined,
-        }),
+        headers: { "Content-Type": "application/json" },
       });
-      const data = await readJsonResponse(res);
-      if (!res.ok || !data.success || !data.job_id) {
-        throw new Error(data.error || data.message || "Batch conversion could not be started.");
-      }
-
-      let completedData = null;
-      for (let attempt = 0; attempt < 240; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const statusRes = await portalFetch(
-          getApiUrl(`/edi835/api/start-batch-conversion/?job_id=${encodeURIComponent(data.job_id)}`),
-          {
-            method: "GET",
-            credentials: "include",
-            headers: getAuthHeaders({ Accept: "application/json" }),
-          }
-        );
-        const statusData = await readJsonResponse(statusRes);
-        if (!statusRes.ok || !statusData.success) {
-          throw new Error(statusData.error || "Unable to read batch status.");
-        }
-        if (statusData.job?.state === "COMPLETED" || statusData.job?.state === "FAILED") {
-          completedData = statusData.job.result || {};
-          break;
-        }
-      }
-
-      if (!completedData) {
-        throw new Error("The batch is still running. Refresh and try again after a few minutes.");
-      }
-
-      if (completedData.success) {
-        const sftp837Files = Array.isArray(completedData.sftp_837_files)
-          ? completedData.sftp_837_files
-          : [];
-        const sftpReconFiles = Array.isArray(completedData.sftp_recon_files)
-          ? completedData.sftp_recon_files
-          : [];
-        const importedReferenceFiles = [...sftp837Files, ...sftpReconFiles];
-        if (importedReferenceFiles.length) {
-          const importedCount = importedReferenceFiles.filter((item) => !item.already_exists).length;
-          const existingCount = importedReferenceFiles.length - importedCount;
-          setFile837Subtext(
-            `SFTP: ${importedCount} new 837/RECON file(s) imported` +
-            (existingCount ? `, ${existingCount} already imported` : ``)
-          );
-        } else {
-          setFile837Subtext("No new 837/RECON files found in the configured SFTP folder.");
-        }
+      const data = await res.json();
+      if (data.success) {
+        setBatchAlert({
+          type: "success",
+          message: data.message || `✓ Batch processing completed! Processed ${data.processed_count} files.`,
+        });
         if (onRefreshData) onRefreshData();
       } else {
-        setValidationError(completedData.error || completedData.message || "Batch conversion failed.");
+        setBatchAlert({
+          type: "error",
+          message: data.error || "Batch conversion failed.",
+        });
       }
     } catch (err) {
-      setValidationError(err.message);
+      setBatchAlert({
+        type: "error",
+        message: err.message,
+      });
     } finally {
       setStartingBatch(false);
     }
   };
+
+  const parseErrorDetails = (raw) => {
+    if (!raw) return { errors: [], findings: [] };
+    if (typeof raw === "object") return raw;
+    try { return JSON.parse(raw); } catch (_) { return { errors: [String(raw)], findings: [] }; }
+  };
+
+  const openErrorChecks = (file) => setSelectedErrorFile(file);
 
   // Table Sorting & Filtering
   const handleSortHeader = (key) => {
@@ -431,10 +337,6 @@ export default function ConversionsView({
   };
 
   let filtered = (trackedFiles || []).filter((item) => {
-    if (isAdmin) {
-      const rowClientId = item.client_id ? String(item.client_id) : "";
-      if (rowClientId !== String(selectedClientId || "")) return false;
-    }
     if (searchText) {
       const query = searchText.toLowerCase();
       const fullStr = (
@@ -494,23 +396,28 @@ export default function ConversionsView({
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
         {isAdmin && clients && clients.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC', boxSizing: 'border-box', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC' }}>
             <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
-            <div style={{ flex: '1 1 620px', maxWidth: '820px', minWidth: 0 }}>
-              <ClientSelectDropdown
-              clients={clients}
+            <select
               value={selectedClientId}
-              includeGlobal
-              fullWidth
-              onChange={(clientId) => {
-                setSelectedClientId(clientId);
-                if (onSelectClient) onSelectClient(clientId);
-                setCurrentPage(1);
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              style={{
+                padding: "6px 10px",
+                border: "1px solid var(--line, #e2e8f0)",
+                borderRadius: "4px",
+                fontSize: "12.5px",
+                background: "#fff",
+                color: "var(--ink, #000)",
+                minWidth: "220px"
               }}
-            /></div>
+            >
+              <option value="">-- None (Global System Default) --</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
         )}
-        <OffboardedClientBanner client={currentAdminClient} detail="Conversion history remains available for review. New uploads, validation, MIR processing, and SFTP batch runs are locked." />
         <div className="start-conversion-header">
           <h2>Start a conversion</h2>
           <div className="step-pills">
@@ -534,10 +441,9 @@ export default function ConversionsView({
             <div className="c-box-label">REQUIRED &bull; 835 INPUT</div>
             <input
               type="file"
-              accept={fileAccept("835")}
+              accept=".835,.853,.x12,.txt,.edi,*/*"
               multiple
               onChange={handle835FileChange}
-              disabled={isOffboarded}
             />
             <div className="subtext">{file835Subtext}</div>
           </div>
@@ -545,7 +451,7 @@ export default function ConversionsView({
           {/* OPTIONAL 837 REFERENCE BOX */}
           <div className="c-box">
             <div className="c-box-label">OPTIONAL &bull; 837 REFERENCE ONLY</div>
-            <input type="file" accept={fileAccept("837")} onChange={handle837FileChange} disabled={isOffboarded} />
+            <input type="file" accept=".837,.x12,.txt,*/*" onChange={handle837FileChange} />
             <div className="subtext">{file837Subtext}</div>
           </div>
 
@@ -555,7 +461,7 @@ export default function ConversionsView({
               type="button"
               className="btn-gray"
               onClick={handleValidate}
-              disabled={validating || isOffboarded}
+              disabled={validating}
             >
               <svg
                 width="15"
@@ -577,7 +483,7 @@ export default function ConversionsView({
               type="button"
               className={isValidated && !processing ? "btn-gray" : "btn-disabled"}
               onClick={handleProcessMIR}
-              disabled={!isValidated || processing || isOffboarded}
+              disabled={!isValidated || processing}
             >
               <svg
                 width="15"
@@ -598,8 +504,8 @@ export default function ConversionsView({
               type="button"
               className="btn-gray"
               onClick={handleStartBatchConversion}
-              disabled={startingBatch || isOffboarded}
-              title="Test SFTP Inbound Batch Conversion: Processes 835 and RECON files from their configured folders, updates MIR and reconciliation results, and removes successfully processed source files from SFTP."
+              disabled={startingBatch}
+              title="Test SFTP Inbound Batch Conversion: Reads all files from inbound SFTP folder, validates, archives, converts to MIR, uploads to outbound SFTP, and deletes original file from inbound SFTP."
             >
               <svg
                 width="15"
@@ -617,6 +523,23 @@ export default function ConversionsView({
             </button>
           </div>
         </div>
+
+        {/* BATCH CONVERSION ALERT BANNER */}
+        {batchAlert && (
+          <div
+            className={`status-banner ${batchAlert.type === "success" ? "valid" : "invalid"}`}
+            style={{ marginTop: "14px" }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "14px" }}>
+                {batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error"}
+              </div>
+              <div style={{ fontSize: "12px", marginTop: "2px" }}>
+                {batchAlert.message}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ERROR ALERT BOX */}
         {validationError && (
@@ -704,6 +627,43 @@ export default function ConversionsView({
         )}
       </div>
 
+      {/* CLIENT CHECKS - ERROR FILES ONLY */}
+      <div className="card" style={{ marginTop: "18px", marginBottom: "16px", padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
+          <div className="eyebrow">Checks</div>
+          <h2 style={{ margin: "3px 0 4px", fontSize: "17px" }}>Findings on this run</h2>
+          <div style={{ fontSize: "12px", color: "var(--ink-2)" }}>Only files with an ERROR status are shown. Click a file to see what failed, which segment caused it, and where the rule comes from.</div>
+        </div>
+        {(() => {
+          const errorFiles = filtered.filter((file) => file.status === "ERROR");
+          return errorFiles.length ? <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr><th>835 FILE</th><th>RUN</th><th>CLAIMS</th><th>STATUS</th><th>CHECKS</th></tr></thead>
+            <tbody>{errorFiles.map((file) => {
+              const d = parseErrorDetails(file.error_message);
+              const count = d.findings?.length || d.errors?.length || 1;
+              return <tr key={file.id}><td style={{ fontWeight: 600 }}>{file.original_filename}</td><td className="num">R-{String(file.id).substring(0,6).toUpperCase()}</td><td className="num">{file.claims_count || 0}</td><td><span className="tag bad">ERROR</span></td><td><button type="button" className="btn secondary" style={{ padding: "5px 10px", fontSize: "11px" }} onClick={() => openErrorChecks(file)}>View {count} finding{count === 1 ? "" : "s"}</button></td></tr>;
+            })}</tbody></table></div> : <div style={{ padding: "28px 20px", color: "var(--ink-3)", fontSize: "12.5px" }}>No files with errors for this run.</div>;
+        })()}
+      </div>
+
+      {selectedErrorFile && (() => {
+        const details = parseErrorDetails(selectedErrorFile.error_message);
+        const findings = details.findings?.length ? details.findings : (details.errors || []).map((message, i) => ({ rule_code: "835-STRUCT", rule: "Validation finding", segment: "Unknown", what_found: typeof message === "string" ? message : JSON.stringify(message), source: "OneSmarter 835 structural validation", severity: "Hold", _i: i }));
+        return <div className="card" style={{ marginBottom: "16px", padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+            <div><div className="eyebrow">Where the rules come from</div><h2 style={{ margin: "3px 0 0", fontSize: "16px" }}>{selectedErrorFile.original_filename}</h2></div>
+            <button type="button" className="btn secondary" onClick={() => setSelectedErrorFile(null)}>Close</button>
+          </div>
+          <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr><th>RULE</th><th>SEGMENT</th><th>WHAT WE FOUND</th><th>SOURCE</th><th>SEVERITY</th></tr></thead>
+            <tbody>{findings.length ? findings.map((finding, index) => <tr key={(finding.rule_code || "835") + index}>
+              <td><div style={{ fontFamily: "var(--display)" }}>{finding.rule_code || "835-STRUCT"}</div><div style={{ fontSize: "11px", color: "var(--ink-3)", marginTop: "4px" }}>{finding.rule || "Validation rule"}</div></td>
+              <td><span className="tag work">{finding.segment || "Unknown"}</span></td><td>{finding.what_found || "Validation failed."}</td><td>{finding.source || "OneSmarter 835 structural validation"}</td><td><span className="tag bad">{finding.severity || "Hold"}</span></td>
+            </tr>) : <tr><td colSpan="5" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No structured findings are available for this older error record.</td></tr>}</tbody>
+          </table></div>
+        </div>;
+      })()}
+
       {/* FILTERS CONTROL BAR */}
       <div
         className="filters-bar"
@@ -740,8 +700,8 @@ export default function ConversionsView({
 
       {/* CONVERSIONS TABLE */}
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "16px" }}>
-        <div style={{ width: "100%", overflow: "hidden" }}>
-          <table style={{ width: "100%", maxWidth: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
                 <th
@@ -766,7 +726,7 @@ export default function ConversionsView({
                   className={`sortable ${sortKey === "time" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("time")}
                 >
-                  TIMESTAMP (EST){" "}
+                  TIMESTAMP{" "}
                   <span className="sort-arrow">
                     {sortKey === "time" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
@@ -815,16 +775,12 @@ export default function ConversionsView({
                 </tr>
               ) : (
                 pageItems.map((f) => {
-                  const upDate = formatEasternDate(f.uploaded_at);
+                  const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
+                  const upTime = f.uploaded_at ? f.uploaded_at.substring(11, 19) : "—";
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
-                  const mirName =
-                    f.output_filename ||
-                    f.mir_filename ||
-                    f.combined_filename ||
-                    (f.output_path ? f.output_path.split("/").pop() : "") ||
-                    "MIR_" +
-                      (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") +
-                      ".mir";
+                  const mirName = f.output_path
+                    ? f.output_path.split("/").pop()
+                    : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
@@ -847,15 +803,15 @@ export default function ConversionsView({
                         {shortId}
                       </td>
                       <td className="num">{upDate}</td>
-                      <td className="num" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds easternOnly /></td>
-                      <td className="num" style={{ color: "var(--ink-2)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                      <td className="num">{upTime}</td>
+                      <td className="num" style={{ color: "var(--ink-2)" }}>
                         {f.original_filename}
                       </td>
                       <td className="num" style={{ color: "var(--ink-3)" }}>
                         —
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
-                      <td className="num" style={{ color: "var(--ink-2)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                      <td className="num" style={{ color: "var(--ink-2)" }}>
                         {f.status === "ARCHIVED" ? mirName : "—"}
                       </td>
                       <td>
@@ -880,13 +836,39 @@ export default function ConversionsView({
                           {convertingId === f.id ? "CONVERTING..." : f.status}
                         </span>
                       </td>
-                      <td className="num" style={{ fontSize: "11px", whiteSpace: "nowrap" }}>
-                        <FileActionButtons
-                          onView={() => onOpenFileModal(f.id)}
-                          onDownload={f.status === "ARCHIVED" ? () => handleDownloadMir(mirName, "", f.id) : null}
-                          viewTitle="View / Edit Code"
-                          downloadTitle="Download .mir File"
-                        />
+                      <td
+                        className="num"
+                        style={{
+                          fontSize: "11px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="btn-eye"
+                          title="View / Edit Code"
+                          onClick={() => onOpenFileModal(f.id)}
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                          </svg>
+                        </button>
+                        {f.status === "ARCHIVED" ? (
+                          <button
+                            type="button"
+                            className="btn-download"
+                            title="Download .mir File"
+                            onClick={() => handleDownloadMir(mirName, "", f.id)}
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                            </svg>
+                          </button>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     </tr>
                   );
