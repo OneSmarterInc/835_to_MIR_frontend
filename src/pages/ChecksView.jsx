@@ -4,11 +4,73 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedRuleGroup, setSelectedRuleGroup] = useState(null);
 
+  const professionalRuleCode = (finding = {}) => {
+    const raw = String(finding.rule_code ?? finding.code ?? "").trim().toUpperCase();
+    const alreadyProfessional = raw.match(/^(ENV|SEG|ELM|REF)-(\d{1,3})$/);
+    if (alreadyProfessional) {
+      return `${alreadyProfessional[1]}-${alreadyProfessional[2].padStart(3, "0")}`;
+    }
+
+    // Keep named business/MPL controls intact. Only normalize raw numeric and
+    // the earlier PYX12-<segment>-<number> presentation used by Checks.
+    const numericOnly = raw.match(/^(\d{1,3})$/);
+    const pyx12Numeric = raw.match(/^PYX12-[A-Z0-9-]+-(\d{1,3})$/);
+    const numeric = numericOnly?.[1] || pyx12Numeric?.[1];
+    if (!numeric) return raw || "835-STRUCT";
+
+    const segment = String(finding.segment || "").trim().toUpperCase();
+    const element = String(finding.element || "").trim().toUpperCase();
+    const context = [
+      finding.rule,
+      finding.what_found,
+      finding.source,
+      segment,
+      element,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    let family = "SEG";
+    if (
+      ["ISA", "IEA", "GS", "GE", "ST", "SE", "ISA/IEA", "GS/GE", "ST/SE", "ST02/SE02", "ISA13/IEA02", "SE01"].includes(segment) ||
+      context.includes("envelope") ||
+      context.includes("control number") ||
+      context.includes("segment count")
+    ) {
+      family = "ENV";
+    } else if (segment.startsWith("REF") || context.includes("reference") || context.includes("against the 837")) {
+      family = "REF";
+    } else if (
+      element ||
+      context.includes("element") ||
+      context.includes("mandatory") ||
+      context.includes("required value") ||
+      context.includes("minimum length") ||
+      context.includes("maximum length") ||
+      context.includes("invalid value") ||
+      context.includes("invalid code")
+    ) {
+      family = "ELM";
+    }
+
+    return `${family}-${String(numeric).padStart(3, "0")}`;
+  };
+
+  const normalizeFinding = (finding) => {
+    if (!finding || typeof finding !== "object") return finding;
+    return { ...finding, rule_code: professionalRuleCode(finding) };
+  };
+
   const parseErrorDetails = (raw) => {
     if (!raw) return { errors: [], findings: [] };
-    if (typeof raw === "object") return raw;
-    try { return JSON.parse(raw); }
-    catch (_) { return { errors: [String(raw)], findings: [] }; }
+    let parsed;
+    if (typeof raw === "object") parsed = raw;
+    else {
+      try { parsed = JSON.parse(raw); }
+      catch (_) { parsed = { errors: [String(raw)], findings: [] }; }
+    }
+    return {
+      ...parsed,
+      findings: Array.isArray(parsed.findings) ? parsed.findings.map(normalizeFinding) : [],
+    };
   };
 
   const allFiles = useMemo(() => [...(trackedFiles || [])].sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0)), [trackedFiles]);
@@ -283,9 +345,9 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
                 </thead>
                 <tbody>
                   {selectedGroupFindings.map((finding, index) => (
-                    <tr key={(finding.rule_code || "rule") + index}>
+                    <tr key={`${professionalRuleCode(finding)}-${index}`}>
                       <td>
-                        <div style={{ fontFamily: "var(--display)" }}>{finding.rule_code || "835-STRUCT"}</div>
+                        <div style={{ fontFamily: "var(--display)" }}>{professionalRuleCode(finding)}</div>
                         <div style={{ fontSize: "11px", color: "var(--ink-3)", marginTop: "4px" }}>{finding.rule || "Validation rule"}</div>
                       </td>
                       <td><span className="tag work">{finding.segment || "Unknown"}</span></td>
@@ -318,9 +380,9 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
               </thead>
               <tbody>
                 {findings.length ? findings.map((finding, index) => (
-                  <tr key={(finding.rule_code || "835") + index}>
+                  <tr key={`${professionalRuleCode(finding)}-${index}`}>
                     <td>
-                      <div style={{ fontFamily: "var(--display)" }}>{finding.rule_code || "835-STRUCT"}</div>
+                      <div style={{ fontFamily: "var(--display)" }}>{professionalRuleCode(finding)}</div>
                       <div style={{ fontSize: "11px", color: "var(--ink-3)", marginTop: "4px" }}>{finding.rule || "Validation rule"}</div>
                     </td>
                     <td><span className="tag work">{finding.segment || "Unknown"}</span></td>
