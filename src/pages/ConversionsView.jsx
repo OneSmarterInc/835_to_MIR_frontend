@@ -184,6 +184,16 @@ export default function ConversionsView({
 
       const data = await res.json();
       if (!res.ok || data.error) {
+        if (data.partial || (data.findings || []).length) {
+          setPartialDetails({
+            id: data.file_id || activeValidatedFileId,
+            status: "PARTIAL",
+            output_path: data.output_path || "",
+            delivered_claims_count: data.delivered_claims_count || 0,
+            held_claims_count: data.held_claims_count || (data.findings || []).length,
+            conversion_findings: data.findings || [],
+          });
+        }
         throw new Error(data.error || "Conversion failed");
       }
 
@@ -216,7 +226,18 @@ export default function ConversionsView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to convert file to MIR");
+        if (data.partial || (data.findings || []).length) {
+          setPartialDetails({
+            id: data.file_id || fileId,
+            status: "PARTIAL",
+            output_path: data.output_path || "",
+            delivered_claims_count: data.delivered_claims_count || 0,
+            held_claims_count: data.held_claims_count || (data.findings || []).length,
+            conversion_findings: data.findings || [],
+          });
+        } else {
+          alert(data.error || "Failed to convert file to MIR");
+        }
       } else {
         if (data.text) setMirOutputText(data.text);
       }
