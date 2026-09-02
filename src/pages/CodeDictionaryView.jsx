@@ -87,21 +87,69 @@ export default function CodeDictionaryView() {
         ].map(([value,label]) => <div key={label} className="card" style={{padding:"16px"}}><div className="num" style={{fontSize:"24px"}}>{value}</div><div style={{fontSize:"12px",color:"var(--ink-2)",marginTop:"5px"}}>{label}</div></div>)}
       </div>
 
-      <div className="card" style={{padding:"14px",marginBottom:"14px",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:"10px"}}>
-        <select className="control" value={family} onChange={(e)=>setFamily(e.target.value)}>
-          <option value="">All code families</option>
-          {families.map((f)=><option key={f} value={f}>{f}</option>)}
-        </select>
-        <select className="control" value={disposition} onChange={(e)=>setDisposition(e.target.value)}>
-          <option value="">Any disposition</option>
-          {Object.entries(LABELS).map(([key,label])=><option key={key} value={key}>{label}</option>)}
-        </select>
-        <select className="control" value={guidanceFilter} onChange={(e)=>setGuidanceFilter(e.target.value)}>
-          <option value="">All entries</option>
-          <option value="1">Has notice guidance</option>
-          <option value="2">Needs a human check</option>
-        </select>
-        <input className="control" value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search a code or its text" />
+      <div
+        className="card"
+        style={{
+          padding: "18px 20px",
+          marginBottom: "14px",
+          background: "var(--surface)",
+          border: "1px solid var(--line)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px", flexWrap: "wrap" }}>
+          <div>
+            <div className="eyebrow" style={{ marginBottom: "4px" }}>FILTER THE DICTIONARY</div>
+            <div style={{ fontSize: "13px", color: "var(--ink-2)" }}>Narrow the list by family, disposition, or guidance.</div>
+          </div>
+          {(family || disposition || guidanceFilter || search) && (
+            <button
+              className="btn"
+              onClick={() => { setFamily(""); setDisposition(""); setGuidanceFilter(""); setSearch(""); }}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(210px, 1fr) minmax(240px, 1fr) minmax(210px, 1fr) minmax(260px, 1.2fr)",
+            gap: "14px",
+            alignItems: "end"
+          }}
+        >
+          <label style={{ display: "grid", gap: "7px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-2)" }}>CODE FAMILY</span>
+            <select className="control" style={{ width: "100%", height: "42px" }} value={family} onChange={(e)=>setFamily(e.target.value)}>
+              <option value="">All code families</option>
+              {families.map((f)=><option key={f} value={f}>{f}</option>)}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: "7px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-2)" }}>DISPOSITION</span>
+            <select className="control" style={{ width: "100%", height: "42px" }} value={disposition} onChange={(e)=>setDisposition(e.target.value)}>
+              <option value="">Any disposition</option>
+              {Object.entries(LABELS).map(([key,label])=><option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: "7px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-2)" }}>GUIDANCE</span>
+            <select className="control" style={{ width: "100%", height: "42px" }} value={guidanceFilter} onChange={(e)=>setGuidanceFilter(e.target.value)}>
+              <option value="">All entries</option>
+              <option value="1">Has notice guidance</option>
+              <option value="2">Needs a human check</option>
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: "7px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--ink-2)" }}>SEARCH</span>
+            <input className="control" style={{ width: "100%", height: "42px", boxSizing: "border-box" }} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search a code or its text" />
+          </label>
+        </div>
       </div>
 
       <div style={{fontSize:"12px",color:"var(--ink-2)",margin:"8px 0 12px"}}>{filtered.length} of {CODES.length} entries shown</div>
