@@ -184,10 +184,10 @@ export default function ConversionsView({
 
       const data = await res.json();
       if (!res.ok || data.error) {
-        if (data.partial || (data.findings || []).length) {
+        if ((data.findings || []).length) {
           setPartialDetails({
             id: data.file_id || activeValidatedFileId,
-            status: "PARTIAL",
+            status: "ERROR",
             output_path: data.output_path || "",
             delivered_claims_count: data.delivered_claims_count || 0,
             held_claims_count: data.held_claims_count || (data.findings || []).length,
@@ -226,10 +226,10 @@ export default function ConversionsView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        if (data.partial || (data.findings || []).length) {
+        if ((data.findings || []).length) {
           setPartialDetails({
             id: data.file_id || fileId,
-            status: "PARTIAL",
+            status: "ERROR",
             output_path: data.output_path || "",
             delivered_claims_count: data.delivered_claims_count || 0,
             held_claims_count: data.held_claims_count || (data.findings || []).length,
@@ -753,9 +753,9 @@ export default function ConversionsView({
                   const mirName = f.output_path
                     ? f.output_path.split("/").pop()
                     : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
-                  const hasMirOutput = Boolean(f.output_path) && ["ARCHIVED", "PARTIAL"].includes(f.status);
-                  const isAllHeld = f.status === "PARTIAL" && !hasMirOutput;
-                  const displayStatus = isAllHeld ? "HELD" : f.status;
+                  const hasMirOutput = Boolean(f.output_path) && f.status === "ARCHIVED";
+                  const hasFindings = (f.conversion_findings || []).length > 0;
+                  const displayStatus = f.status === "PARTIAL" ? "ERROR" : f.status;
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
@@ -763,9 +763,7 @@ export default function ConversionsView({
                   } else if (f.status === "ARCHIVED") {
                     statusTitle = "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
                   } else if (f.status === "PARTIAL") {
-                    statusTitle = isAllHeld
-                      ? "HELD: No claims were converted. Click to view the claims and reasons."
-                      : "PARTIAL: Valid claims were converted. Click to view claims held from the output.";
+                    statusTitle = "ERROR: This legacy partial run did not produce an approved complete MIR. Click to view claim findings.";
                   } else if (f.status === "ERROR") {
                     statusTitle = f.error_message
                       ? `ERROR: ${f.error_message}`
@@ -796,20 +794,20 @@ export default function ConversionsView({
                       <td>
                         <span
                           className={`tag ${
-                            ["ARCHIVED", "PARTIAL"].includes(f.status) && !isAllHeld
+                            f.status === "ARCHIVED"
                               ? "ok"
                               : f.status === "ERROR"
                               ? "bad"
                               : "work"
                           }`}
                           style={{
-                            cursor: ["PROCESSING", "PARTIAL"].includes(f.status) ? "pointer" : "default",
+                            cursor: f.status === "PROCESSING" || hasFindings ? "pointer" : "default",
                           }}
                           title={statusTitle}
                           onClick={() => {
                             if (f.status === "PROCESSING") {
                               handleConvertStatusClick(f.id);
-                            } else if (f.status === "PARTIAL") {
+                            } else if (hasFindings) {
                               setPartialDetails(f);
                             }
                           }}
@@ -921,7 +919,7 @@ export default function ConversionsView({
               <div>
                 <h2 id="partial-title" style={{ margin: 0 }}>Unprocessed claims</h2>
                 <div style={{ color: "var(--ink-3)", fontSize: "12px", marginTop: "4px" }}>
-                  {partialDetails.delivered_claims_count || 0} converted · {partialDetails.held_claims_count || 0} held
+                  Conversion failed · {partialDetails.held_claims_count || 0} claim(s) require review
                 </div>
               </div>
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setPartialDetails(null)}>×</button>
@@ -941,7 +939,6 @@ export default function ConversionsView({
               ) : <p>No claim-level reason was recorded for this run.</p>}
             </div>
             <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-              {partialDetails.output_path ? <button type="button" className="btn" onClick={() => handleDownloadMir(partialDetails.output_path.split("/").pop(), "", partialDetails.id)}>Download partial MIR</button> : null}
               <button type="button" className="btn secondary" onClick={() => setPartialDetails(null)}>Close</button>
             </div>
           </div>
