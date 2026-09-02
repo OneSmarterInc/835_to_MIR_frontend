@@ -16,6 +16,9 @@ assert.doesNotMatch(source, /Operations Studio|step-pills|RECON INPUT|Select a s
 assert.ok(source.indexOf('className="result-compact-client"') < source.indexOf('id="recon-file-input"'), 'the client selector must appear before the RECON file input');
 assert.match(source, /className="btn-gray result-refresh-button"/, 'Refresh must be grouped with the results toolbar actions');
 
+const css = fs.readFileSync('src/pages/ResultView.css', 'utf8');
+assert.match(css, /\.result-export-button \{[^}]*background: var\(--ink/, 'Download XL must use the standard dark action style');
+
 for (const key of ['claim_id', 'patient_name', 'mir_filename', 'recon_filename', 'amount_to_pay', 'recon_paid_amount', 'difference_amount', 'status']) {
   assert.match(source, new RegExp(`sortKey="${key}"`), `missing sortable header: ${key}`);
 }
