@@ -9,6 +9,7 @@ assert.match(source, /direction: current\.key === key && current\.direction === 
 assert.match(source, /\}, \[search, loadResults\]\);/, 'the search debounce must not own sort requests');
 assert.match(source, /className="result-match-count"[\s\S]*data\.total_claims/, 'the result toolbar must show the full filtered result count');
 assert.ok(source.indexOf('className="result-match-count"') < source.indexOf('className="result-global-search"'), 'the matching result count must appear before search');
+assert.match(source, /hasMirAndRecon\(row\) \? money\(row\.difference_amount\) : "-"/, 'difference must be hidden when a claim exists in only MIR or RECON');
 
 for (const key of ['claim_id', 'patient_name', 'mir_filename', 'recon_filename', 'amount_to_pay', 'recon_paid_amount', 'difference_amount', 'status']) {
   assert.match(source, new RegExp(`sortKey="${key}"`), `missing sortable header: ${key}`);
