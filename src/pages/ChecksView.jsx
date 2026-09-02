@@ -246,7 +246,12 @@ export default function ChecksView({ trackedFiles = [] }) {
         )}
       </div>
 
-
+      <div className="card" style={{ marginTop: "16px", padding: "20px 22px" }}>
+        <h2 style={{ margin: "0 0 12px", fontSize: "17px" }}>Where the rules come from</h2>
+        <p className="sub" style={{ margin: 0, maxWidth: "920px", lineHeight: 1.6 }}>
+          Every rule cites its source, which matters because a client asking why a file was held deserves better than "our system flagged it." It also tells us which rules are ours to defend and which are simply the standard.
+        </p>
+      </div>
 
       {selectedRuleGroup && (
         <div
