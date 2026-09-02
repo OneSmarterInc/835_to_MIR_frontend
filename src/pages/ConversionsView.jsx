@@ -599,13 +599,13 @@ export default function ConversionsView({
                 <div className="v" style={{ color: "var(--brick)" }}>
                   {(validationReport.errors || []).length}
                 </div>
-                <div className="l">Errors</div>
+                <div className="l">Validation Errors</div>
               </div>
               <div className="metric">
                 <div className="v" style={{ color: "var(--ochre)" }}>
                   {(validationReport.warnings || []).length}
                 </div>
-                <div className="l">Warnings</div>
+                <div className="l">Validation Warnings</div>
               </div>
             </div>
 
