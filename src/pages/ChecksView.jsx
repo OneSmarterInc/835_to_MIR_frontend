@@ -142,6 +142,62 @@ export default function ChecksView({ trackedFiles = [] }) {
         </div>
       </div>
 
+      <div
+        className="card"
+        style={{
+          padding: 0,
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(180px, 1fr))",
+          marginBottom: "22px"
+        }}
+      >
+        {[
+          {
+            value: allFiles.length,
+            label: "Files checked",
+            detail: "For the current client"
+          },
+          {
+            value: heldCount,
+            label: "Held before delivery",
+            detail: "Files with validation errors"
+          },
+          {
+            value: allFiles.filter((file) => {
+              const message = JSON.stringify(parseErrorDetails(file.error_message)).toLowerCase();
+              return String(file.status || "").toUpperCase() === "ERROR" &&
+                (message.includes("refused") || message.includes("malformed beyond repair") || message.includes("beyond repair"));
+            }).length,
+            label: "Refused outright",
+            detail: "Malformed beyond repair"
+          },
+          {
+            value: allFiles.filter((file) => {
+              const message = JSON.stringify(parseErrorDetails(file.error_message)).toLowerCase();
+              return message.includes("silently corrected") || message.includes("auto-corrected") || message.includes("autocorrected");
+            }).length,
+            label: "Silently corrected",
+            detail: "By design, never"
+          }
+        ].map((metric, index) => (
+          <div
+            key={metric.label}
+            style={{
+              padding: "22px 26px 18px",
+              borderRight: index < 3 ? "1px solid var(--line)" : "none",
+              minWidth: 0
+            }}
+          >
+            <div className="num" style={{ fontSize: "30px", fontWeight: 700, lineHeight: 1.1, marginBottom: "8px" }}>
+              {Number(metric.value || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: "13px", color: "var(--ink-2)", marginBottom: "7px" }}>{metric.label}</div>
+            <div style={{ fontSize: "12px", color: "var(--ink-2)" }}>{metric.detail}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
           <div className="eyebrow">Checks</div>
