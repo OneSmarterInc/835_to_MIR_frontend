@@ -28,6 +28,8 @@ import OffboardedClientBanner from './components/OffboardedClientBanner';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
+const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'files', 'promote', 'trust', 'ops'];
+
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
@@ -60,6 +62,10 @@ export default function App({ user, onLogout }) {
   });
   const [roles, setRoles] = useState([]);
   const [adminTrackedFiles, setAdminTrackedFiles] = useState([]);
+  const assignedScreens = currentUser?.is_superuser
+    ? null
+    : new Set(currentUser?.admin_screens ?? DEFAULT_ADMIN_SCREENS);
+  const canView = (screen) => Boolean(currentUser?.is_superuser || assignedScreens?.has(screen));
 
   const [adminViewerFileId, setAdminViewerFileId] = useState(null);
 
@@ -111,6 +117,12 @@ export default function App({ user, onLogout }) {
       window.removeEventListener('focus', onFocus);
     };
   }, [isAuthenticated, activeClientId]);
+
+  useEffect(() => {
+    if (!canView(activeNav)) {
+      setActiveNav(DEFAULT_ADMIN_SCREENS.find(canView) || 'clients');
+    }
+  }, [activeNav, currentUser]);
 
   const loadAdminTrackedFiles = async () => {
     try {
@@ -368,61 +380,61 @@ export default function App({ user, onLogout }) {
           }}
         >
           <div className="grp eyebrow">Clients</div>
-          <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
+          {canView('clients') && <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
             <span>All Clients</span>
             <span className="count">{clients.length}</span>
-          </button>
-          <button className={`navitem ${activeNav === 'onboard' ? 'on' : ''}`} onClick={() => setActiveNav('onboard')}>
+          </button>}
+          {canView('onboard') && <button className={`navitem ${activeNav === 'onboard' ? 'on' : ''}`} onClick={() => setActiveNav('onboard')}>
             <span>Onboarding</span>
-          </button>
-          <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
+          </button>}
+          {canView('docs') && <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
             <span>Documents</span>
-          </button>
-          <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
+          </button>}
+          {canView('conversions') && <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
-          </button>
-          <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
+          </button>}
+          {canView('checks') && <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
             <span>Checks</span>
-          </button>
-          <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
+          </button>}
+          {canView('result') && <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
             <span>Result</span>
-          </button>
-          <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
+          </button>}
+          {canView('sftp-automation') && <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
             <span>SFTP Automation</span>
-          </button>
-          <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
+          </button>}
+          {canView('files') && <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
             <span>Archive</span>
-          </button>
-          <button className={`navitem ${activeNav === 'code-dictionary' ? 'on' : ''}`} onClick={() => setActiveNav('code-dictionary')}>
+          </button>}
+          {canView('code-dictionary') && <button className={`navitem ${activeNav === 'code-dictionary' ? 'on' : ''}`} onClick={() => setActiveNav('code-dictionary')}>
             <span>Code Dictionary</span>
-          </button>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>
-          <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
+          {canView('promote') && <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
             <span>Go Live</span>
-          </button>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Governance</div>
-          <button className={`navitem ${activeNav === 'trust' ? 'on' : ''}`} onClick={() => setActiveNav('trust')}>
+          {canView('trust') && <button className={`navitem ${activeNav === 'trust' ? 'on' : ''}`} onClick={() => setActiveNav('trust')}>
             <span>Trust Center</span>
-          </button>
-          <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
+          </button>}
+          {canView('access') && <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
             <span>Access</span>
-          </button>
-          <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
+          </button>}
+          {canView('defaults') && <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
             <span>Default Configs</span>
-          </button>
-          <button className={`navitem ${activeNav === 'audit' ? 'on' : ''}`} onClick={() => setActiveNav('audit')}>
+          </button>}
+          {canView('audit') && <button className={`navitem ${activeNav === 'audit' ? 'on' : ''}`} onClick={() => setActiveNav('audit')}>
             <span>Audit Log</span>
-          </button>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Operations</div>
-          <button className={`navitem ${activeNav === 'ops' ? 'on' : ''}`} onClick={() => setActiveNav('ops')}>
+          {canView('ops') && <button className={`navitem ${activeNav === 'ops' ? 'on' : ''}`} onClick={() => setActiveNav('ops')}>
             <span>Operations</span>
-          </button>
-          <button className={`navitem ${activeNav === 'offboard' ? 'on' : ''}`} onClick={() => setActiveNav('offboard')}>
+          </button>}
+          {canView('offboard') && <button className={`navitem ${activeNav === 'offboard' ? 'on' : ''}`} onClick={() => setActiveNav('offboard')}>
             <span>Offboarding</span>
-          </button>
+          </button>}
         </nav>
 
         <main className="main">

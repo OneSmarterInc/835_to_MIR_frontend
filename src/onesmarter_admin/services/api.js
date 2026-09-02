@@ -6,6 +6,8 @@ function getAuthHeaders(extraHeaders = {}) {
   if (token) {
     headers['Authorization'] = `Token ${token}`;
   }
+  const activeScreen = new URLSearchParams(window.location.search).get('nav');
+  if (activeScreen) headers['X-Admin-Screen'] = activeScreen;
   return headers;
 }
 
@@ -554,6 +556,25 @@ export async function fetchAccessInfo() {
   });
   if (!res.ok) throw new Error('Failed to fetch access matrix');
   return res.json();
+}
+
+export async function grantClientAccess(payload) {
+  const res = await fetch(`${BASE_URL}/access/grants/`, {
+    method: 'POST', headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include', body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to grant temporary client access.');
+  return data;
+}
+
+export async function revokeClientAccess(grantId) {
+  const res = await fetch(`${BASE_URL}/access/grants/${encodeURIComponent(grantId)}/revoke/`, {
+    method: 'POST', headers: getAuthHeaders(), credentials: 'include',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to revoke temporary client access.');
+  return data;
 }
 
 export async function createUser(userData) {
