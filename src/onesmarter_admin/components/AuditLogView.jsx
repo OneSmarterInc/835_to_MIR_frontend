@@ -73,9 +73,9 @@ export default function AuditLogView({ clients = [] }) {
     return Array.from({ length: Math.min(5, total) }, (_, index) => start + index);
   }, [page, pagination.total_pages]);
 
-  return <section className="view on audit-view" id="v-audit">
+  return <section className="view on audit-view table-screen" id="v-audit">
     <div className="hdr-row">
-      <div><div className="eyebrow">Append Only Audit</div><h1>Audit Log</h1><p className="sub">Search and review the complete immutable history of client and administrative activity.</p></div>
+      <div><h1>Audit Log</h1><p className="sub">Search and review the complete immutable history of client and administrative activity.</p></div>
     </div>
 
     <div className="card audit-filter-card">

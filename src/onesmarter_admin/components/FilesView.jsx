@@ -118,7 +118,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
   };
 
   return (
-    <section className="view on" id="v-files">
+    <section className="view on table-screen" id="v-files">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
         <div><div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}><h1 style={{ margin: 0 }}>Archive</h1><span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>ALL CONVERSION-SET HISTORY</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}><span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>Client:</span><ClientSelectDropdown clients={clients} value={selectedClientId} includeGlobal={true} onChange={(val) => { setSelectedClientId(val); setCurrentPage(1); if (val && onSelectClient) onSelectClient(val); }} /></div>

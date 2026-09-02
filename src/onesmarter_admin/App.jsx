@@ -506,10 +506,9 @@ export default function App({ user, onLogout }) {
           )}
 
           {activeNav === 'trust' && (
-            <section className="view on" id="v-trust">
+            <section className="view on table-screen" id="v-trust">
               <div className="hdr-row">
                 <div>
-                  <div className="eyebrow">Compliance Assurance</div>
                   <h1>Trust Center</h1>
                   <p className="sub">Security, encryption, HIPAA safeguards, and compliance attestations.</p>
                 </div>

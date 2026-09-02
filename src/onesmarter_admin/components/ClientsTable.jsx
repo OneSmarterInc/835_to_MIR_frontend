@@ -71,11 +71,10 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
   });
 
   return (
-    <section className="view on" id="v-clients">
+    <section className="view on table-screen" id="v-clients">
       {/* Header & Primary Action */}
       <div className="hdr-row">
         <div>
-          <div className="eyebrow">Tenants</div>
           <h1>All Clients</h1>
           <p className="sub">
             Dynamic relational database-driven client registry for administrative management and lifecycle tracking.

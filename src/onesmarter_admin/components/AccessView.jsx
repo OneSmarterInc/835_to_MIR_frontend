@@ -161,10 +161,9 @@ export default function AccessView({ currentUser }) {
   const sortedMembers = getSortedMembers();
 
   return (
-    <section className="view on" id="v-access">
+    <section className="view on table-screen" id="v-access">
       <div className="hdr-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div className="eyebrow">Security Controls</div>
           <h1 style={{ margin: 0 }}>Access Matrix</h1>
           <p className="sub">Administrative staff role-based access and break-glass logging.</p>
         </div>

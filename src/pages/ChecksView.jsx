@@ -31,8 +31,7 @@ export default function ChecksView({ trackedFiles = [] }) {
   }, [selectedFile]);
 
   return (
-    <section className="view on">
-      <div className="eyebrow">Operations</div>
+    <section className="view on table-screen">
       <h1>Checks</h1>
       <p className="sub">
         Review validation findings for files that require attention.

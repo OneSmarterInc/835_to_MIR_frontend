@@ -194,7 +194,7 @@ export default function ArchiveView({
   const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
   return (
-    <section className="view on" id="v-archive">
+    <section className="view on table-screen" id="v-archive">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
           <h1 style={{ margin: 0 }}>Archive</h1>

@@ -110,10 +110,9 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
   }
 
   return (
-    <section className="view on" id="v-docs">
+    <section className="view on table-screen" id="v-docs">
       <div className="hdr-row">
         <div>
-          <div className="eyebrow">Client Documents</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
             <ClientSelectDropdown
               clients={clients}

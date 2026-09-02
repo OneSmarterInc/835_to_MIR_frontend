@@ -377,8 +377,7 @@ export default function ConversionsView({
   const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
   return (
-    <section className="view on" id="v-batches">
-      <div className="eyebrow">Operations Studio</div>
+    <section className="view on table-screen" id="v-batches">
       <h1>Conversions</h1>
       <p className="sub">
         Start a conversion run, validate EDI 835 files, and view 30-day conversion history.

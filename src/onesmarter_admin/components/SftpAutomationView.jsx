@@ -148,8 +148,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     }
   };
 
-  return <section className="view on sftp-auto-view">
-    <div className="eyebrow">Scheduled Operations</div>
+  return <section className="view on sftp-auto-view table-screen">
     <h1>SFTP Automation</h1>
     <p className="sub">Schedule 835, 837, and RECON ingestion independently while preserving the combined client-side Test pipeline.</p>
 

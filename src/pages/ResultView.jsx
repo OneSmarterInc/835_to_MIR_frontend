@@ -229,7 +229,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   };
   const sortArrow = (key) => sort.key === key ? (sort.direction === "asc" ? "▲" : "▼") : "⇅";
 
-  return <section className="view on result-view">
+  return <section className="view on result-view table-screen">
     <h1>Result</h1>
     <p className="sub">Compare every MIR claim with all processed RECON payment files.</p>
     <OffboardedClientBanner client={currentAdminClient} detail="Existing reconciliation results remain available for review. New RECON uploads and processing are locked." />

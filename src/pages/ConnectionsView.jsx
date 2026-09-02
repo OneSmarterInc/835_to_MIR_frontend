@@ -299,7 +299,7 @@ export default function ConnectionsView({
     : "";
 
   return (
-    <section className="view on" id="v-conn">
+    <section className="view on table-screen" id="v-conn">
       <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px" }}>
         <h1 style={{ margin: 0 }}>Connections</h1>
         <span

@@ -26,7 +26,7 @@ export default function ContactsView() {
   }, []);
 
   return (
-    <section className="view on" id="v-contacts">
+    <section className="view on table-screen" id="v-contacts">
       <div className="hdr-row">
         <div>
           <h1 id="contacts-title">Your Assigned Contacts</h1>
@@ -49,7 +49,7 @@ export default function ContactsView() {
       )}
 
       {!loading && !error && (
-        <div className="table-wrapper">
+        <div className="table-wrapper table-screen-scroll">
           <table className="table" style={{ width: "100%" }}>
             <thead>
               <tr>

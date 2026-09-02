@@ -1492,6 +1492,38 @@ td.num {
 /* Shared admin UI consistency */
 .main .start-conversion-card { padding: 20px; }
 .main .start-conversion-header { min-height: 32px; padding-top: 3px; }
+.table-screen > h1,
+.table-screen > .hdr-row h1 { margin-top: 0; }
+.table-screen > .sub,
+.table-screen > .hdr-row .sub { margin-bottom: 14px; }
+.table-screen .hdr-row { margin-bottom: 12px; }
+.table-screen .filters,
+.table-screen .filters-bar,
+.table-screen .audit-filter-panel { margin-bottom: 10px; }
+.table-screen .filters,
+.table-screen .filters-bar { gap: 10px; padding: 10px 12px; }
+.table-screen .filters input,
+.table-screen .filters select,
+.table-screen .filters button,
+.table-screen .filters-bar input,
+.table-screen .filters-bar select,
+.table-screen .filters-bar button { min-height: 36px; box-sizing: border-box; }
+.table-screen-scroll,
+.table-screen .admin-table-scroll,
+.table-screen .audit-table-wrap,
+.table-screen .result-table-wrap,
+.table-screen .sftp-auto-table-wrap,
+.table-screen .card > div:has(> table) { max-width: 100%; overflow-x: auto; }
+.table-screen table { margin: 0; }
+.table-screen th { padding: 10px 12px; white-space: nowrap; }
+.table-screen td { padding: 10px 12px; vertical-align: middle; }
+.table-screen td:not(.num) { overflow-wrap: anywhere; word-break: normal; }
+.table-screen td.num { white-space: normal; }
+.table-screen tbody tr { transition: background-color .12s ease; }
+.table-screen tbody tr:hover { background: #fafbfd; }
+.table-screen .tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.table-screen .result-pagination,
+.table-screen .audit-table-footer { padding: 10px 12px; }
 .admin-table-scroll { width: 100%; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); }
 .admin-table-scroll > table { min-width: 760px; border: 0; }
 .admin-table-scroll > table th:first-child,
@@ -1518,6 +1550,8 @@ td.num {
   .topbar { gap: 10px; }
   .active-client-badge { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .filters, .filters-bar { align-items: stretch; }
+  .table-screen .filters,
+  .table-screen .filters-bar { flex-wrap: wrap; }
   .filters .n, .filters-bar .runs-counter { width: 100%; margin-left: 0; }
   .rung { flex-wrap: wrap; }
   .rung .side { width: 100%; max-width: none; flex-direction: row; justify-content: flex-end; align-items: center; }
@@ -1529,6 +1563,10 @@ td.num {
   .hdr-row > div > div { flex-wrap: wrap; }
   .metrics { grid-template-columns: 1fr 1fr; }
   .filters input, .filters select, .filters-bar input, .filters-bar select { width: 100%; min-width: 0; }
+  .table-screen .filters > *,
+  .table-screen .filters-bar > * { width: 100%; max-width: none; }
+  .table-screen .result-pagination,
+  .table-screen .audit-table-footer { align-items: stretch; flex-direction: column; }
   .rung { padding: 14px 12px; gap: 10px; }
   .rung .mark { width: 26px; height: 26px; }
   .rung .side { justify-content: flex-start; padding-left: 36px; }
