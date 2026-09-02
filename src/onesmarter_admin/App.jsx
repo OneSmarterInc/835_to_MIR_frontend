@@ -19,6 +19,7 @@ import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
 import AdminChecksView from './components/AdminChecksView';
+import CodeDictionaryView from '../pages/CodeDictionaryView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
@@ -383,6 +384,9 @@ export default function App({ user, onLogout }) {
           <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
             <span>Checks</span>
           </button>
+          <button className={`navitem ${activeNav === 'code-dictionary' ? 'on' : ''}`} onClick={() => setActiveNav('code-dictionary')}>
+            <span>Code Dictionary</span>
+          </button>
           <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
             <span>Result</span>
           </button>
@@ -487,6 +491,10 @@ export default function App({ user, onLogout }) {
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
             />
+          )}
+
+          {activeNav === 'code-dictionary' && (
+            <CodeDictionaryView />
           )}
 
           {activeNav === 'result' && (
