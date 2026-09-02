@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { portalFetch } from "../utils/api";
+import ReconciliationModal from "./ReconciliationModal";
 
 export default function FileViewerModal({ fileId, onClose }) {
   const noDataMessage = "No data available in DataTable for this record.";
@@ -11,6 +12,7 @@ export default function FileViewerModal({ fileId, onClose }) {
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [error, setError] = useState(null);
   const [loadedFileId, setLoadedFileId] = useState(null);
+  const [reconciliationOpen, setReconciliationOpen] = useState(false);
 
   useEffect(() => {
     if (!fileId) {
@@ -23,6 +25,7 @@ export default function FileViewerModal({ fileId, onClose }) {
     setLoadedFileId(null);
     setError(null);
     setActiveTab("835");
+    setReconciliationOpen(false);
 
     const adminToken = localStorage.getItem("onesmarter_admin_token");
     const headers = adminToken ? { Authorization: `Token ${adminToken}` } : {};
@@ -99,6 +102,13 @@ export default function FileViewerModal({ fileId, onClose }) {
               >
                 MIR Code
               </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => setReconciliationOpen(true)}
+              >
+                Reconciliation
+              </button>
             </div>
           </div>
           <button
@@ -140,6 +150,12 @@ export default function FileViewerModal({ fileId, onClose }) {
           </button>
         </div>
       </div>
+      {reconciliationOpen && (
+        <ReconciliationModal
+          fileId={fileId}
+          onClose={() => setReconciliationOpen(false)}
+        />
+      )}
     </div>
   );
 }
