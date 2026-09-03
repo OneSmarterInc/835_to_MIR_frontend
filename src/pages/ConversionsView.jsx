@@ -314,10 +314,30 @@ export default function ConversionsView({
     try {
       const res = await fetch("/api/start-batch-conversion/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ client_id: selectedClientId || undefined }),
       });
-      const data = await res.json();
+
+      // Read the response once as text. A proxy/server failure can return an
+      // HTML 500 page, and calling res.json() directly turns that real error
+      // into the misleading "Unexpected token '<'" message.
+      const raw = await res.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        const isHtml = /^\s*</.test(raw);
+        const fallback = isHtml
+          ? "The server returned an HTML error page instead of the batch API response."
+          : (raw || `Batch request failed with HTTP ${res.status}.`);
+        throw new Error(`Batch request failed (HTTP ${res.status}): ${fallback}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || `Batch request failed with HTTP ${res.status}.`);
+      }
+
       if (data.success) {
         setBatchAlert({
           type: "success",
