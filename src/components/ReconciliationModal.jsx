@@ -140,8 +140,8 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
           {data.message && <div className="recon-message">{data.message}</div>}
           <div className="recon-cash">
             <h3>Cash position for this cycle</h3>
-            <CashRow label="Total Amount in MIR" value={data.cash?.approved} />
-            <CashRow label="Total Amount in RECON" value={data.cash?.withdrawn} />
+            <CashRow label="Total Amount in MIR" value={data.cash?.total_amount_in_mir} />
+            <CashRow label="Total Amount in RECON" value={data.cash?.total_amount_in_recon} />
             <CashRow label="Overpaid" value={data.cash?.overpaid} />
             <CashRow label="Underpaid" value={data.cash?.underpaid} />
           </div>
