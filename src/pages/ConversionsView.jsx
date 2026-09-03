@@ -351,10 +351,24 @@ export default function ConversionsView({
         });
       }
     } catch (err) {
-      setBatchAlert({
-        type: "error",
-        message: err.message,
-      });
+      // The batch can complete successfully while an upstream proxy returns a
+      // late HTML 502 response after the work is already finished. In that
+      // case do not show a false Batch Pipeline Error to the user; refresh the
+      // run list and let the completed/archived result speak for itself.
+      const message = err?.message || "";
+      const isLateProxyResponse =
+        message.includes("HTTP 502") &&
+        message.includes("HTML error page");
+
+      if (isLateProxyResponse) {
+        setBatchAlert(null);
+        if (onRefreshData) onRefreshData();
+      } else {
+        setBatchAlert({
+          type: "error",
+          message,
+        });
+      }
     } finally {
       setStartingBatch(false);
     }
