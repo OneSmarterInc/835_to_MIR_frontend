@@ -94,18 +94,16 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
           {data.message && <div className="recon-message">{data.message}</div>}
           <div className="recon-cash">
             <h3>Cash position for this cycle</h3>
-            <CashRow label="Approved by you for BCBS payment" value={data.cash?.approved} />
-            <CashRow label="Withdrawn by BCBS per RECON" value={data.cash?.withdrawn} />
-            <CashRow label="Explained by BlueCard access fees (MIR904)" value={data.cash?.mir904} />
-            <CashRow label="Explained by administrative expense allowance (MIR905)" value={data.cash?.mir905} />
-            <CashRow label="Explained by PCA fee (MPL920)" value={data.cash?.mpl920} />
-            <CashRow label="Unexplained" value={data.cash?.unexplained} total />
+            <CashRow label="Total Amount in MIR" value={data.cash?.approved} />
+            <CashRow label="Total Amount in RECON" value={data.cash?.withdrawn} />
+            <CashRow label="Overpaid" value={data.cash?.overpaid} />
+            <CashRow label="Underpaid" value={data.cash?.underpaid} total />
           </div>
           <div className="recon-tallies">
-            <Tally value={data.tallies?.records} label="RECON records" />
-            <Tally value={data.tallies?.matched_cleanly} label="Matched cleanly" detail={`${data.tallies?.records ? ((Number(data.tallies.matched_cleanly || 0) / Number(data.tallies.records)) * 100).toFixed(1) : "0.0"}% of the cycle`} />
-            <Tally value={data.tallies?.matched_with_caveat} label="Matched with caveat" />
-            <Tally value={data.tallies?.discrepancies} label="Discrepancies" />
+            <Tally value={data.tallies?.recon_claims} label="Total claims in RECON" />
+            <Tally value={data.tallies?.mir_claims} label="Total claims in MIR" />
+            <Tally value={data.tallies?.matched_claims} label="Matched claims" />
+            <Tally value={data.tallies?.discrepancies} label="Discrepancy" />
           </div>
           <h3 className="recon-section-title">How each record matched</h3>
           <div className="recon-waterfall">{Object.entries(ruleLabels).map(([key, copy]) => {

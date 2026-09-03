@@ -404,7 +404,7 @@ export default function App({ user, onLogout }) {
             <span>Checks</span>
           </button>}
           {canView('result') && <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
-            <span>Result</span>
+            <span>Reconciliation</span>
           </button>}
           {canView('sftp-automation') && <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
             <span>SFTP Automation</span>
