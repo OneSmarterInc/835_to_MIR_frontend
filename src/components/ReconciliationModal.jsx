@@ -134,7 +134,7 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
         {error && <div className="recon-message error">{error}</div>}
         {data && <>
           <div className="recon-context">
-            <div><div className="recon-eyebrow">{data.cycle?.processed_at ? `Latest RECON processed ${new Date(data.cycle.processed_at).toLocaleString()}` : "Current persisted data"}</div><h1>{data.source?.client_name || "Reconciliation"}</h1><p>{data.cycle?.filename || "No processed RECON file"} · all persisted MIR records in the selected scope</p></div>
+            <div><div className="recon-eyebrow">{data.cycle?.processed_at ? `Latest RECON processed ${new Date(data.cycle.processed_at).toLocaleString()}` : "Current persisted data"}</div><h1>{data.source?.client_name || "Reconciliation"}</h1></div>
             <span className="recon-database-badge">Live database</span>
           </div>
           {data.message && <div className="recon-message">{data.message}</div>}
@@ -143,7 +143,7 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
             <CashRow label="Total Amount in MIR" value={data.cash?.approved} />
             <CashRow label="Total Amount in RECON" value={data.cash?.withdrawn} />
             <CashRow label="Overpaid" value={data.cash?.overpaid} />
-            <CashRow label="Underpaid" value={data.cash?.underpaid} total />
+            <CashRow label="Underpaid" value={data.cash?.underpaid} />
           </div>
           <div className="recon-tallies">
             <Tally value={data.tallies?.recon_claims} label="Total claims in RECON" />
