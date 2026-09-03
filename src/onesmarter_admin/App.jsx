@@ -25,6 +25,7 @@ import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
 import ClientSelectDropdown from './components/ClientSelectDropdown';
 import OffboardedClientBanner from './components/OffboardedClientBanner';
+import { clearSessionExpiry, scheduleSessionExpiry } from '../utils/sessionExpiry';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
@@ -327,7 +328,13 @@ export default function App({ user, onLogout }) {
       setCurrentUser(null);
       setIsAuthenticated(false);
     }
+    clearSessionExpiry();
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    return scheduleSessionExpiry(handleSignOut);
+  }, [isAuthenticated]);
 
   const currentClient = clients.find(c => c.id === activeClientId) || clients[0];
 

@@ -7,6 +7,7 @@ import SftpBrowserModal from "./components/SftpBrowserModal";
 import AccessDeniedScreen from "./components/AccessDeniedScreen";
 
 import { safeFetchJson } from "./utils/api";
+import { clearSessionExpiry, scheduleSessionExpiry } from "./utils/sessionExpiry";
 
 import LoginPage from "./pages/LoginPage";
 import TotpSetupPage from "./pages/TotpSetupPage";
@@ -394,9 +395,15 @@ export default function App() {
     });
 
     setAuthNext(null);
+    clearSessionExpiry();
 
 
   };
+
+  useEffect(() => {
+    if (!userState?.authenticated) return undefined;
+    return scheduleSessionExpiry(handleLogout);
+  }, [userState?.authenticated]);
 
 
   // Preserve the backend's authentication decision. This prevents a stale
