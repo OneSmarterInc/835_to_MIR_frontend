@@ -105,6 +105,41 @@ export default function ConnectionsView({
   const [testingOut, setTestingOut] = useState(false);
 
   const [testResult, setTestResult] = useState(null);
+  const [savedConfigIds, setSavedConfigIds] = useState({});
+
+  useEffect(() => {
+    const nextIds = {};
+    for (const config of sftpConfigs || []) {
+      const type = String(config.connection_type || (config.use_same_server !== false ? "UNIFIED" : "INBOUND")).toUpperCase();
+      if (config.id || config.config_id) nextIds[type] = String(config.id || config.config_id);
+    }
+    if (activeConfig?.id || activeConfig?.config_id) {
+      const type = String(activeConfig.connection_type || (activeConfig.use_same_server !== false ? "UNIFIED" : "INBOUND")).toUpperCase();
+      nextIds[type] = String(activeConfig.id || activeConfig.config_id);
+    }
+    setSavedConfigIds((current) => ({ ...current, ...nextIds }));
+  }, [sftpConfigs, activeConfig]);
+
+  const rememberSavedConfig = (type, data) => {
+    const id = data?.config_id || data?.id || data?.config?.id || data?.config?.config_id;
+    if (id) setSavedConfigIds((current) => ({ ...current, [type]: String(id) }));
+  };
+
+  const openClientFolderBrowser = async (type, options) => {
+    const configId = savedConfigIds[type];
+    if (!configId) {
+      await showAppAlert("Save and test this SFTP connection before browsing folders.", {
+        title: "SFTP Configuration Required",
+        tone: "warning",
+      });
+      return;
+    }
+    onOpenSftpBrowser({
+      configId,
+      initialPath: options.initialPath?.trim() || ".",
+      onSelectFolder: options.onSelectFolder,
+    });
+  };
 
   const loadedConfigIdRef = useRef(null);
 
@@ -210,6 +245,7 @@ export default function ConnectionsView({
         if (!saveRes.ok || !saveData.success) {
           throw new Error(saveData.error || "SFTP connected, but the configuration could not be saved.");
         }
+        rememberSavedConfig("UNIFIED", saveData);
         if (onRefreshSftp) onRefreshSftp();
       } else {
         await showAppAlert(data.error || "SFTP connection failed.", { title: "Connection Failed", tone: "error" });
@@ -259,6 +295,7 @@ export default function ConnectionsView({
       });
 
       const data = await res.json();
+      rememberSavedConfig(type === "inbound" ? "INBOUND" : "OUTBOUND", data);
       if (data.success && data.connected) {
         await showAppAlert(data.message || "SFTP connection successful.", { title: "Connection Successful", tone: "success" });
       } else {
@@ -689,7 +726,7 @@ export default function ConnectionsView({
                     }}
                     title="Browse Remote SFTP Folder"
                     onClick={() =>
-                      onOpenSftpBrowser({
+                      openClientFolderBrowser("UNIFIED", {
                         initialPath: uniDir837,
                         onSelectFolder: (p) => setUniDir837(p),
                         host: uniHost,
@@ -721,7 +758,7 @@ export default function ConnectionsView({
                 </label>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <input type="text" value={uniDirRecon} onChange={(e) => setUniDirRecon(e.target.value)} style={{ flex: 1, padding: "8px 10px", fontSize: "12px", border: "1px solid var(--line)", borderRadius: "4px" }} />
-                  <button type="button" className="btn secondary" style={{ padding: "7px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => onOpenSftpBrowser({ initialPath: uniDirRecon, onSelectFolder: setUniDirRecon, host: uniHost, port: uniPort, user: uniUser, pass: uniPass || lastUniPassRef.current, sshKey: uniSshKey || lastUniSshKeyRef.current, auth: uniAuth })}>
+                  <button type="button" className="btn secondary" style={{ padding: "7px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => openClientFolderBrowser("UNIFIED", { initialPath: uniDirRecon, onSelectFolder: setUniDirRecon })}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   </button>
                 </div>
@@ -762,7 +799,7 @@ export default function ConnectionsView({
                     }}
                     title="Browse Remote SFTP Folder"
                     onClick={() =>
-                      onOpenSftpBrowser({
+                      openClientFolderBrowser("UNIFIED", {
                         initialPath: uniDir835,
                         onSelectFolder: (p) => setUniDir835(p),
                         host: uniHost,
@@ -823,7 +860,7 @@ export default function ConnectionsView({
                     }}
                     title="Browse Remote SFTP Folder"
                     onClick={() =>
-                      onOpenSftpBrowser({
+                      openClientFolderBrowser("UNIFIED", {
                         initialPath: uniDirMir,
                         onSelectFolder: (p) => setUniDirMir(p),
                         host: uniHost,
@@ -1064,7 +1101,7 @@ export default function ConnectionsView({
                       }}
                       title="Browse Remote SFTP Folder"
                       onClick={() =>
-                        onOpenSftpBrowser({
+                        openClientFolderBrowser("INBOUND", {
                           initialPath: inDir837,
                           onSelectFolder: (p) => setInDir837(p),
                           host: inHost,
@@ -1094,7 +1131,7 @@ export default function ConnectionsView({
                   <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--ink-2)", marginBottom: "4px" }}>RECON inbound folder optional</label>
                   <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <input type="text" value={inDirRecon} onChange={(e) => setInDirRecon(e.target.value)} style={{ flex: 1, padding: "7px 9px", fontSize: "12px", border: "1px solid var(--line)", borderRadius: "4px" }} />
-                    <button type="button" className="btn secondary" style={{ padding: "6px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => onOpenSftpBrowser({ initialPath: inDirRecon, onSelectFolder: setInDirRecon, host: inHost, port: inPort, user: inUser, pass: inPass || lastInPassRef.current, sshKey: inSshKey || lastInSshKeyRef.current, auth: inAuth })}>
+                    <button type="button" className="btn secondary" style={{ padding: "6px 10px", color: "var(--teal)", borderColor: "var(--teal)" }} title="Browse Remote SFTP Folder" onClick={() => openClientFolderBrowser("INBOUND", { initialPath: inDirRecon, onSelectFolder: setInDirRecon })}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1 2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                     </button>
                   </div>
@@ -1135,7 +1172,7 @@ export default function ConnectionsView({
                       }}
                       title="Browse Remote SFTP Folder"
                       onClick={() =>
-                        onOpenSftpBrowser({
+                        openClientFolderBrowser("INBOUND", {
                           initialPath: inDir835,
                           onSelectFolder: (p) => setInDir835(p),
                           host: inHost,
@@ -1384,7 +1421,7 @@ export default function ConnectionsView({
                       }}
                       title="Browse Remote SFTP Folder"
                       onClick={() =>
-                        onOpenSftpBrowser({
+                        openClientFolderBrowser("OUTBOUND", {
                           initialPath: outDirMir,
                           onSelectFolder: (p) => setOutDirMir(p),
                           host: outHost,

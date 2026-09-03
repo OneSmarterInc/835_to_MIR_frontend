@@ -27,7 +27,8 @@ export default function DefaultConfigsView() {
   const [sftpInboundRecon, setSftpInboundRecon] = useState('');
   const [sftpOutboundMir, setSftpOutboundMir] = useState('');
   const [sftpStatus, setSftpStatus] = useState('');
-  const [sftpLoading, setSftpLoading] = useState(false);
+  const [sftpTesting, setSftpTesting] = useState(false);
+  const [sftpSaving, setSftpSaving] = useState(false);
   const [sftpConnected, setSftpConnected] = useState(false);
   const [showSftpPass, setShowSftpPass] = useState(false);
   const [sftpHasPassword, setSftpHasPassword] = useState(false);
@@ -158,9 +159,11 @@ export default function DefaultConfigsView() {
     </button>
   );
 
-  const handleSaveSftp = async () => {
-    setSftpLoading(true);
-    setSftpStatus('Testing and saving connection details...');
+  const persistSftp = async (action) => {
+    const isTest = action === 'test';
+    if (isTest) setSftpTesting(true);
+    else setSftpSaving(true);
+    setSftpStatus(isTest ? 'Testing and saving connection details...' : 'Saving default SFTP folders...');
     try {
       const payload = {
         host: sftpHost.trim(),
@@ -202,16 +205,24 @@ export default function DefaultConfigsView() {
         setSftpHasPassword(Boolean(data.has_password || sftpHasPassword || sftpPass.trim()));
         setSftpPass('');
         setShowSftpPass(false);
-        setSftpStatus(`✓ Default SFTP Saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`);
+        setSftpStatus(
+          isTest
+            ? `✓ Connection verified and saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`
+            : `✓ Default SFTP configuration saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`
+        );
       } else {
         setSftpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
     } catch (err) {
       setSftpStatus(`❌ Failed: ${err.message}`);
     } finally {
-      setSftpLoading(false);
+      if (isTest) setSftpTesting(false);
+      else setSftpSaving(false);
     }
   };
+
+  const handleTestSftp = () => persistSftp('test');
+  const handleSaveSftp = () => persistSftp('save');
 
   const handleSaveSmtp = async () => {
     setSmtpLoading(true);
@@ -298,8 +309,8 @@ export default function DefaultConfigsView() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 0 14px' }}>
-            <button className="btn primary" onClick={handleSaveSftp} disabled={sftpLoading} style={{ padding: '6px 16px', fontSize: '13px' }}>
-              {sftpLoading ? 'Testing...' : 'Save & Test Connection'}
+            <button type="button" className="btn primary" onClick={handleTestSftp} disabled={sftpTesting || sftpSaving} style={{ padding: '6px 16px', fontSize: '13px' }}>
+              {sftpTesting ? 'Testing...' : 'Save & Test Connection'}
             </button>
           </div>
 
@@ -317,8 +328,8 @@ export default function DefaultConfigsView() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button className="btn primary" onClick={handleSaveSftp} disabled={sftpLoading}>
-              {sftpLoading ? 'Saving...' : '💾 Save SFTP Default'}
+            <button type="button" className="btn primary" onClick={handleSaveSftp} disabled={sftpTesting || sftpSaving}>
+              {sftpSaving ? 'Saving...' : '💾 Save SFTP Default'}
             </button>
           </div>
         </div>

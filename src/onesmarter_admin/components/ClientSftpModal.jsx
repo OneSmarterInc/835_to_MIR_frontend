@@ -59,9 +59,14 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
   }, [clientId]);
 
   const openBrowser = (currentVal, setter) => {
+    const savedConfigId = String(configId || '').trim();
+    if (!savedConfigId) {
+      setErrorMsg('Please save and test the SFTP connection before browsing folders.');
+      return;
+    }
     setBrowserState({
-      initialPath: currentVal || '/',
-      host, port, user: username, pass: password, sshKey: '', auth: authMethod,
+      configId: savedConfigId,
+      initialPath: currentVal?.trim() || '.',
       onSelectFolder: (p) => { setter(p); setBrowserState(null); },
     });
   };
@@ -322,12 +327,7 @@ export default function ClientSftpModal({ clientId, onClose, onConfigured }) {
         <SftpBrowserModal
           isOpen={!!browserState}
           initialPath={browserState.initialPath}
-          sftpUniHost={browserState.host}
-          sftpUniPort={browserState.port}
-          sftpUniUser={browserState.user}
-          sftpUniPass={browserState.pass}
-          sftpUniSshKey={browserState.sshKey}
-          sftpUniAuth={browserState.auth}
+          configId={browserState.configId}
           onSelectFolder={browserState.onSelectFolder}
           onClose={() => setBrowserState(null)}
         />
