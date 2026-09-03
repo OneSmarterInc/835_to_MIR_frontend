@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ConversionsView({
   trackedFiles,
@@ -6,8 +6,10 @@ export default function ConversionsView({
   onOpenFileModal,
   clients = [],
   isAdmin = false,
+  activeClientId = "",
+  onSelectClient,
 }) {
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(activeClientId || "");
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
   const [ediText, setEdiText] = useState("");
@@ -41,6 +43,18 @@ export default function ConversionsView({
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  useEffect(() => {
+    setSelectedClientId(activeClientId || "");
+    setCurrentPage(1);
+  }, [activeClientId]);
+
+  const handleClientChange = (clientId) => {
+    setSelectedClientId(clientId);
+    setCurrentPage(1);
+    setSearchText("");
+    if (onSelectClient && clientId) onSelectClient(clientId);
+  };
 
   // 835 File Input change (Supports multiple file selection)
   const handle835FileChange = async (e) => {
@@ -385,6 +399,9 @@ export default function ConversionsView({
   };
 
   let filtered = (trackedFiles || []).filter((item) => {
+    if (isAdmin && String(item.client_id || "") !== String(selectedClientId || "")) {
+      return false;
+    }
     if (searchText) {
       const query = searchText.toLowerCase();
       const fullStr = (
@@ -444,7 +461,7 @@ export default function ConversionsView({
             <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
             <select
               value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
+              onChange={(e) => handleClientChange(e.target.value)}
               style={{
                 padding: "6px 10px",
                 border: "1px solid var(--line, #e2e8f0)",
