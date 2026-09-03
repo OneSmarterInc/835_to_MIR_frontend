@@ -108,7 +108,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const waitForProcessing = async (fileId) => {
     for (let attempt = 0; attempt < 300; attempt += 1) {
       const result = await apiJson(`/edi835/api/recon/files/${fileId}/`);
-      if (result.file.status === "PROCESSED") return result.file;
+      if (["PROCESSED", "PARTIAL"].includes(result.file.status)) return result.file;
       if (result.file.status === "FAILED") throw new Error(result.file.processing_error || "RECON processing failed.");
       await new Promise((resolve) => window.setTimeout(resolve, 1000));
     }
@@ -126,7 +126,13 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       setMessage({ kind: "success", text: "RECON uploaded. Processing safely in the background…" });
       const processed = await waitForProcessing(uploaded.file.id);
       setSelectedFile(null); const input = document.getElementById("recon-file-input"); if (input) input.value = "";
-      setMessage({ kind: "success", text: `Processed ${processed.claim_count} claims. MIR results have been updated.` });
+      const held = Number(processed.held_record_count || 0);
+      setMessage({
+        kind: held ? "warning" : "success",
+        text: held
+          ? `Processed ${processed.claim_count} claims; ${held} record(s) were held for review. MIR results have been updated.`
+          : `Processed ${processed.claim_count} claims. MIR results have been updated.`,
+      });
       setSearch(""); setActiveSearch(""); await loadResults(1, "", sort, statusFilter);
     } catch (error) { setMessage({ kind: "error", text: error.message }); } finally { setBusy(false); }
   };
