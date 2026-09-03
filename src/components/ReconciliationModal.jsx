@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { portalFetch } from "../utils/api";
 import "./ReconciliationModal.css";
 
@@ -32,12 +32,11 @@ async function apiJson(url, signal) {
 export default function ReconciliationModal({ clientId = "", isAdmin = false, onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [showAll, setShowAll] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    setData(null); setError(""); setShowAll(false);
+    setData(null); setError("");
     const params = new URLSearchParams();
     if (isAdmin && clientId) params.set("client_id", clientId);
     if (isAdmin && !clientId) params.set("scope", "global");
@@ -53,10 +52,7 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const reviewRecords = useMemo(() => (data?.records || []).filter(
-    (row) => row.status !== "CLEAR" || row.affected_by_interim_policy
-  ), [data]);
-  const visibleRecords = showAll ? (data?.records || []) : reviewRecords;
+  const reviewRecords = data?.records || [];
   const counts = data?.waterfall?.match_step_counts || {};
   const maximum = Math.max(1, ...Object.values(counts).map(Number));
 
@@ -97,17 +93,17 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
           </div>
           {data.message && <div className="recon-message">{data.message}</div>}
           <div className="recon-cash">
-            <h3>Cash position for this file</h3>
-            <CashRow label="Approved for BCBS payment" value={data.cash?.approved} />
+            <h3>Cash position for this cycle</h3>
+            <CashRow label="Approved by you for BCBS payment" value={data.cash?.approved} />
             <CashRow label="Withdrawn by BCBS per RECON" value={data.cash?.withdrawn} />
-            <CashRow label="BlueCard access fees (MIR904)" value={data.cash?.mir904} />
-            <CashRow label="Administrative expense allowance (MIR905)" value={data.cash?.mir905} />
-            <CashRow label="PCA fee (MPL920)" value={data.cash?.mpl920} />
+            <CashRow label="Explained by BlueCard access fees (MIR904)" value={data.cash?.mir904} />
+            <CashRow label="Explained by administrative expense allowance (MIR905)" value={data.cash?.mir905} />
+            <CashRow label="Explained by PCA fee (MPL920)" value={data.cash?.mpl920} />
             <CashRow label="Unexplained" value={data.cash?.unexplained} total />
           </div>
           <div className="recon-tallies">
-            <Tally value={data.tallies?.records} label="MIR records" />
-            <Tally value={data.tallies?.matched_cleanly} label="Matched cleanly" />
+            <Tally value={data.tallies?.records} label="RECON records" />
+            <Tally value={data.tallies?.matched_cleanly} label="Matched cleanly" detail={`${data.tallies?.records ? ((Number(data.tallies.matched_cleanly || 0) / Number(data.tallies.records)) * 100).toFixed(1) : "0.0"}% of the cycle`} />
             <Tally value={data.tallies?.matched_with_caveat} label="Matched with caveat" />
             <Tally value={data.tallies?.discrepancies} label="Discrepancies" />
           </div>
@@ -119,11 +115,11 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
               <span className="recon-bar"><i style={{ width: `${(count / maximum) * 100}%` }} /></span><strong>{count.toLocaleString()}</strong>
             </div>;
           })}</div>
-          <h3 className="recon-section-title">{showAll ? "All records" : "Needs a person"}</h3>
+          <h3 className="recon-section-title">Needs a person</h3>
           <div className="recon-table-wrap"><table><thead><tr><th>Claim</th><th>MIR901</th><th>MIR904</th><th>MIR905</th><th>MPL920</th><th>RECON MIR907</th><th>Outcome</th></tr></thead>
-            <tbody>{visibleRecords.length ? visibleRecords.map((row) => <tr key={row.claim_id}><td>{row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.mir904)}</td><td>{money(row.mir905)}</td><td>{money(row.mpl920)}</td><td>{money(row.recon_mir907)}</td><td><span className={`recon-tag ${row.status === "CLEAR" ? "ok" : "bad"}`}>{row.match_step ? `Matched at ${row.match_step}` : statusLabel(row.status)}</span>{row.status !== "CLEAR" && <small>Difference: {money(row.difference)}</small>}</td></tr>) : <tr><td colSpan="7" className="recon-empty">No records require manual review.</td></tr>}</tbody>
+            <tbody>{reviewRecords.length ? reviewRecords.map((row) => <tr key={row.claim_id}><td>{row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.mir904)}</td><td>{money(row.mir905)}</td><td>{money(row.mpl920)}</td><td>{money(row.recon_mir907)}</td><td><span className={`recon-tag ${row.status === "CLEAR" ? "ok" : "bad"}`}>{row.match_step ? `Matched at ${row.match_step}` : statusLabel(row.status)}</span>{row.status !== "CLEAR" && <small>Difference: {money(row.difference)}</small>}</td></tr>) : <tr><td colSpan="7" className="recon-empty">No records require manual review.</td></tr>}</tbody>
           </table></div>
-          <div className="recon-actions"><button type="button" className="btn primary" onClick={downloadExport} disabled={exporting}>{exporting ? "Exporting…" : "Export this file"}</button><button type="button" className="btn secondary" onClick={() => setShowAll((value) => !value)}>{showAll ? "Show exceptions only" : `Show all ${Number(data.tallies?.records || 0).toLocaleString()} records`}</button></div>
+          <div className="recon-actions"><button type="button" className="btn primary" onClick={downloadExport} disabled={exporting}>{exporting ? "Exporting…" : "Export this cycle"}</button></div>
           {data.policy?.interim && <div className="recon-policy"><b>Interim matching policy.</b> MIR907 and MIR908 are computed from the stored fee fields, and MPL920 is included as the final configured step. Records affected by this policy are called out above.</div>}
         </>}
       </div>
@@ -135,6 +131,6 @@ function CashRow({ label, value, total = false }) {
   return <div className={`recon-cash-row${total ? " total" : ""}`}><span>{label}</span><strong>{money(value)}</strong></div>;
 }
 
-function Tally({ value, label }) {
-  return <div><strong>{Number(value || 0).toLocaleString()}</strong><span>{label}</span></div>;
+function Tally({ value, label, detail = "" }) {
+  return <div><strong>{Number(value || 0).toLocaleString()}</strong><span>{label}</span>{detail && <small>{detail}</small>}</div>;
 }
