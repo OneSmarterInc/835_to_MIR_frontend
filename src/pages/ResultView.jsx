@@ -55,6 +55,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const [filesBusy, setFilesBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [matchHistory, setMatchHistory] = useState(null);
+  const [heldReview, setHeldReview] = useState(null);
   const [reconciliationOpen, setReconciliationOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -133,6 +134,10 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
           ? `Processed ${processed.claim_count} claims; ${held} record(s) were held for review. MIR results have been updated.`
           : `Processed ${processed.claim_count} claims. MIR results have been updated.`,
       });
+      if (held) {
+        const review = await apiJson(`/edi835/api/recon/files/${uploaded.file.id}/`);
+        setHeldReview({ file: review.file, errors: review.errors || [] });
+      }
       setSearch(""); setActiveSearch(""); await loadResults(1, "", sort, statusFilter);
     } catch (error) { setMessage({ kind: "error", text: error.message }); } finally { setBusy(false); }
   };
@@ -285,6 +290,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     {detail && <div className="result-detail-backdrop" onClick={() => setDetail(null)}><div className="result-detail" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim reconciliation</div><h2>{detail.summary?.claim_id}</h2></div><button className="btn" onClick={() => setDetail(null)}>Close</button></div><div className="claim-summary-grid"><div><b>Patient</b><span>{detail.summary?.patient_name || "—"}</span></div><div><b>MIR / RECON services</b><span>{detail.summary?.mir_service_count} / {detail.summary?.recon_service_count}</span></div><div><b>Amount to pay</b><span>{money(detail.summary?.amount_to_pay)}</span></div><div><b>Paid / remaining</b><span>{money(detail.summary?.recon_paid_amount)} / {money(detail.summary?.remaining_amount)}</span></div></div><FileSectionHeading label="MIR services" filename={detail.mir.file} date={detail.mir.date} /><ServiceTable services={detail.mir.services} /><FileSectionHeading label="RECON services" filename={detail.recon.file || "Not in RECON"} date={detail.recon.date} /><ServiceTable services={detail.recon.services} /></div></div>}
     {filesOpen && <div className="result-detail-backdrop" onClick={() => setFilesOpen(false)}><div className="result-detail result-files-modal" role="dialog" aria-modal="true" aria-labelledby="uploaded-recon-title" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">RECON archive</div><h2 id="uploaded-recon-title">Uploaded RECON files</h2></div><button className="btn" onClick={() => setFilesOpen(false)}>Close</button></div>{filesBusy ? <div className="result-empty">Loading uploaded files…</div> : uploadedFiles.length ? <div className="result-files-list">{uploadedFiles.map((file) => <div className="result-file-row" key={file.id}><div><b>{file.original_filename}</b><small>{showDate(file.uploaded_at)} · {file.status} · {Number(file.claim_count || 0).toLocaleString()} {Number(file.claim_count || 0) === 1 ? "claim" : "claims"} · {Number(file.file_size || 0).toLocaleString()} bytes</small><small>Import Mode: {String(file.import_mode || "MANUAL").toUpperCase() === "SFTP" ? "SFTP" : "MANUAL"}</small></div><button type="button" className="btn-gray" onClick={() => downloadRecon(file)}>Download</button></div>)}</div> : <div className="result-empty">No RECON files have been uploaded in this scope.</div>}</div></div>}
     {matchHistory && <div className="result-detail-backdrop" onClick={() => setMatchHistory(null)}><div className="result-detail result-files-modal" role="dialog" aria-modal="true" aria-labelledby="recon-history-title" onClick={(e) => e.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">Claim RECON history</div><h2 id="recon-history-title">{matchHistory.claim_id}</h2></div><button className="btn" onClick={() => setMatchHistory(null)}>Close</button></div><div className="result-files-list">{(matchHistory.recon_matches || []).map((match) => <div className="result-file-row" key={`${match.recon_claim_id}-${match.filename}`}><div><b>{match.filename}</b><small>{showDate(match.date)} · {match.service_count} {match.service_count === 1 ? "service" : "services"}</small></div><div className="result-match-amount"><small>Amount in this RECON</small><b>{money(match.paid_amount)}</b></div></div>)}</div><div className="result-match-total"><span>Total across all matching RECON files</span><b>{money(matchHistory.recon_paid_amount)}</b></div></div></div>}
+    {heldReview && <HeldReviewModal review={heldReview} onClose={() => setHeldReview(null)} />}
     {reconciliationOpen && <ReconciliationModal clientId={clientId} isAdmin={isAdmin} onClose={() => setReconciliationOpen(false)} />}
   </section>;
 }
@@ -297,7 +303,12 @@ function SortableHeader({ label: headerLabel, sortKey, sort, onSort, arrow }) {
 function ReconMatches({ row, onShowMore }) {
   const matches = row.recon_matches || [];
   if (!matches.length) return "—";
-  return <div className="result-recon-matches">{matches.slice(0, 3).map((match) => <div className="result-recon-match" key={`${match.recon_claim_id}-${match.filename}`}><span>{match.filename}</span><small>{money(match.paid_amount)}</small></div>)}{matches.length > 3 && <button type="button" className="result-show-more" onClick={onShowMore}>Show {matches.length - 3} more</button>}</div>;
+  return <div className="result-recon-matches">{matches.slice(0, 3).map((match) => <div className="result-recon-match" key={`${match.recon_claim_id}-${match.filename}`}><span>{match.filename}</span></div>)}{matches.length > 3 && <button type="button" className="result-show-more" onClick={onShowMore}>Show {matches.length - 3} more</button>}</div>;
+}
+
+function HeldReviewModal({ review, onClose }) {
+  const errors = review.errors || [];
+  return <div className="result-detail-backdrop" onClick={onClose}><div className="result-detail result-held-modal" role="dialog" aria-modal="true" aria-labelledby="held-review-title" onClick={(event) => event.stopPropagation()}><div className="result-detail-title"><div><div className="eyebrow">RECON processing review</div><h2 id="held-review-title">Held for Review</h2><p className="sub">{review.file?.original_filename} · {errors.length} {errors.length === 1 ? "record" : "records"} not imported</p></div><button className="btn" onClick={onClose}>Close</button></div><div className="result-table-wrap"><table className="result-held-table"><thead><tr><th>Row</th><th>Claim ID</th><th>Reason</th><th>Source record</th></tr></thead><tbody>{errors.length ? errors.map((error, index) => <tr key={`${error.row_number}-${error.error_code}-${index}`}><td>{error.row_number || "—"}</td><td><b>{error.claim_control_number || "Not identified"}</b></td><td><span className="tag bad">{String(error.error_code || "REVIEW").replaceAll("_", " ")}</span><small>{error.error_message || "Record requires review."}</small></td><td><code>{error.raw_record || "—"}</code></td></tr>) : <tr><td colSpan="4" className="result-empty">No held-record details are available.</td></tr>}</tbody></table></div></div></div>;
 }
 
 function FileSectionHeading({ label: sectionLabel, filename, date }) {
