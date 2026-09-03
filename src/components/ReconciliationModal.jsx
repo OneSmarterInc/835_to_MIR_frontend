@@ -13,11 +13,11 @@ const statusLabel = (value) => ({
 }[value] || value || "Needs review");
 
 const ruleLabels = {
-  MIR901: ["1", "MIR901 = RECON MIR907", "Direct amount match"],
-  MIR907: ["2", "MIR901 + MIR904 = RECON MIR907", "Includes the BlueCard access fee"],
-  MIR908: ["2.1", "MIR901 + MIR904 + MIR905 = RECON MIR907", "Includes BlueCard and AEA fees"],
-  MPL920: ["2.2a", "… + MPL920 = RECON MIR907", "Includes the PCA fee under the interim policy"],
-  NO_MATCH: ["2.3", "No combination reconciles", "Audit discrepancy; review required"],
+  MIR_EQ_RECON: ["1", "MIR = RECON", "The MIR and RECON amounts are equal"],
+  MIR_GT_RECON: ["2", "MIR > RECON", "The amount in MIR is greater than the amount in RECON"],
+  MIR_LT_RECON: ["3", "MIR < RECON", "The amount in MIR is less than the amount in RECON"],
+  NOT_IN_RECON: ["4", "Not in RECON", "The claim exists in MIR but has not appeared in RECON"],
+  AGED_NOT_IN_RECON: ["5", "In MIR for more than 8 days, not in RECON", "The MIR claim is at least eight days old and still has no RECON record"],
 };
 
 async function apiJson(url, signal) {
@@ -33,18 +33,23 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
 
   useEffect(() => {
     const controller = new AbortController();
-    setData(null); setError("");
+    setError("");
     const params = new URLSearchParams();
     if (isAdmin && clientId) params.set("client_id", clientId);
     if (isAdmin && !clientId) params.set("scope", "global");
+    params.set("review_page", String(reviewPage));
+    params.set("review_page_size", "25");
     apiJson(`/edi835/api/reconciliation/dashboard/?${params}`, controller.signal)
       .then(setData)
       .catch((err) => { if (err.name !== "AbortError") setError(err.message); });
     return () => controller.abort();
-  }, [clientId, isAdmin]);
+  }, [clientId, isAdmin, reviewPage]);
+
+  useEffect(() => { setReviewPage(1); }, [clientId, isAdmin]);
 
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") onClose(); };
@@ -53,7 +58,7 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
   }, [onClose]);
 
   const reviewRecords = data?.records || [];
-  const counts = data?.waterfall?.match_step_counts || {};
+  const counts = data?.comparison_counts || {};
   const maximum = Math.max(1, ...Object.values(counts).map(Number));
 
   const downloadExport = async () => {
@@ -108,15 +113,16 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
           <h3 className="recon-section-title">How each record matched</h3>
           <div className="recon-waterfall">{Object.entries(ruleLabels).map(([key, copy]) => {
             const count = Number(counts[key] || 0);
-            return <div className={`recon-rung ${key === "NO_MATCH" ? "bad" : key === "MPL920" ? "caveat" : ""}`} key={key}>
+            return <div className={`recon-rung ${key === "MIR_GT_RECON" || key === "NOT_IN_RECON" || key === "AGED_NOT_IN_RECON" ? "bad" : key === "MIR_LT_RECON" ? "caveat" : ""}`} key={key}>
               <span className="recon-step">{copy[0]}</span><div><b>{copy[1]}</b><small>{copy[2]}</small></div>
               <span className="recon-bar"><i style={{ width: `${(count / maximum) * 100}%` }} /></span><strong>{count.toLocaleString()}</strong>
             </div>;
           })}</div>
           <h3 className="recon-section-title">Needs a person</h3>
-          <div className="recon-table-wrap"><table><thead><tr><th>Claim</th><th>MIR901</th><th>MIR904</th><th>MIR905</th><th>MPL920</th><th>RECON MIR907</th><th>Outcome</th></tr></thead>
-            <tbody>{reviewRecords.length ? reviewRecords.map((row) => <tr key={row.claim_id}><td>{row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.mir904)}</td><td>{money(row.mir905)}</td><td>{money(row.mpl920)}</td><td>{money(row.recon_mir907)}</td><td><span className={`recon-tag ${row.status === "CLEAR" ? "ok" : "bad"}`}>{row.match_step ? `Matched at ${row.match_step}` : statusLabel(row.status)}</span>{row.status !== "CLEAR" && <small>Difference: {money(row.difference)}</small>}</td></tr>) : <tr><td colSpan="7" className="recon-empty">No records require manual review.</td></tr>}</tbody>
+          <div className="recon-table-wrap"><table className="recon-review-table"><thead><tr><th>Claim</th><th>MIR901</th><th>MIR904</th><th>MIR905</th><th>MPL920</th><th>RECON MIR907</th><th>Outcome</th><th>Difference</th></tr></thead>
+            <tbody>{reviewRecords.length ? reviewRecords.map((row) => <tr key={row.claim_id}><td>{row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.mir904)}</td><td>{money(row.mir905)}</td><td>{money(row.mpl920)}</td><td>{money(row.recon_mir907)}</td><td><span className="recon-tag bad">{statusLabel(row.status)}</span></td><td>{money(row.difference)}</td></tr>) : <tr><td colSpan="8" className="recon-empty">No non-clear records require review.</td></tr>}</tbody>
           </table></div>
+          {data.review_pagination && <div className="recon-pagination"><span>{Number(data.review_pagination.total || 0).toLocaleString()} non-clear entries · Page {data.review_pagination.page} of {data.review_pagination.total_pages}</span><div><button type="button" className="btn secondary" disabled={data.review_pagination.page <= 1} onClick={() => setReviewPage((page) => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn secondary" disabled={data.review_pagination.page >= data.review_pagination.total_pages} onClick={() => setReviewPage((page) => page + 1)}>Next</button></div></div>}
           <div className="recon-actions"><button type="button" className="btn primary" onClick={downloadExport} disabled={exporting}>{exporting ? "Exporting…" : "Export this cycle"}</button></div>
           {data.policy?.interim && <div className="recon-policy"><b>Interim matching policy.</b> MIR907 and MIR908 are computed from the stored fee fields, and MPL920 is included as the final configured step. Records affected by this policy are called out above.</div>}
         </>}
