@@ -333,56 +333,55 @@ export default function ConversionsView({
         body: JSON.stringify({ client_id: selectedClientId || undefined }),
       });
 
-      // Read the response once as text. A proxy/server failure can return an
-      // HTML 500 page, and calling res.json() directly turns that real error
-      // into the misleading "Unexpected token '<'" message.
-      const raw = await res.text();
-      let data = null;
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        const isHtml = /^\s*</.test(raw);
-        const fallback = isHtml
-          ? "The server returned an HTML error page instead of the batch API response."
-          : (raw || `Batch request failed with HTTP ${res.status}.`);
-        throw new Error(`Batch request failed (HTTP ${res.status}): ${fallback}`);
+      const data = await res.json().catch(() => ({}));
+      const jobId = data.job_id;
+      if ((!res.ok && res.status !== 409) || !jobId) {
+        throw new Error(data.error || data.message || "Batch conversion could not be queued.");
       }
 
-      if (!res.ok) {
-        throw new Error(data?.error || data?.message || `Batch request failed with HTTP ${res.status}.`);
+      setBatchAlert({
+        type: "success",
+        message: data.state === "RUNNING"
+          ? "Batch is running in the background…"
+          : "Batch queued. Reading inbound files and creating the MIR…",
+      });
+
+      let completedData = null;
+      for (let attempt = 0; attempt < 400; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const statusRes = await fetch(
+          `/api/start-batch-conversion/?job_id=${encodeURIComponent(jobId)}`,
+          { method: "GET", credentials: "include", headers: { Accept: "application/json" } }
+        );
+        const statusData = await statusRes.json().catch(() => ({}));
+        if (!statusRes.ok || !statusData.success) {
+          throw new Error(statusData.error || "Unable to read batch status.");
+        }
+        const state = statusData.job?.state;
+        if (state === "COMPLETED" || state === "FAILED") {
+          completedData = statusData.job.result || {};
+          break;
+        }
       }
 
-      if (data.success) {
+      if (!completedData) {
+        throw new Error("The batch is still running in the background. Refresh the history shortly.");
+      }
+
+      if (completedData.success) {
         setBatchAlert({
           type: "success",
-          message: data.message || `✓ Batch processing completed! Processed ${data.processed_count} files.`,
+          message: completedData.message || `✓ Batch processing completed! Processed ${completedData.processed_count} files.`,
         });
         if (onRefreshData) onRefreshData();
       } else {
         setBatchAlert({
           type: "error",
-          message: data.error || "Batch conversion failed.",
+          message: completedData.error || completedData.message || "Batch conversion failed.",
         });
       }
     } catch (err) {
-      // The batch can complete successfully while an upstream proxy returns a
-      // late HTML 502 response after the work is already finished. In that
-      // case do not show a false Batch Pipeline Error to the user; refresh the
-      // run list and let the completed/archived result speak for itself.
-      const message = err?.message || "";
-      const isLateProxyResponse =
-        message.includes("HTTP 502") &&
-        message.includes("HTML error page");
-
-      if (isLateProxyResponse) {
-        setBatchAlert(null);
-        if (onRefreshData) onRefreshData();
-      } else {
-        setBatchAlert({
-          type: "error",
-          message,
-        });
-      }
+      setBatchAlert({ type: "error", message: err?.message || "Batch conversion failed." });
     } finally {
       setStartingBatch(false);
     }
