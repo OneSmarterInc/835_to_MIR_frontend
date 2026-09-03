@@ -36,6 +36,19 @@ function FileList({ files, empty = '—' }) {
   return <div className="sftp-auto-files">{files.map((file, index) => <span key={`${file}-${index}`}>{file}</span>)}</div>;
 }
 
+const AUTOMATION_LABELS = {
+  '835': '835 to MIR',
+  '837': '837 Reference',
+  RECON: 'RECON Import',
+};
+
+function runCountLabel(run) {
+  if (run.automation_type === '835') {
+    return `${run.processed_count ?? run.processed_835_count ?? 0} of ${run.files_found_count ?? run.input_files?.length ?? 0} converted`;
+  }
+  return `${run.processed_count ?? run.recon_file_count ?? 0} of ${run.files_found_count ?? run.input_files?.length ?? 0} imported`;
+}
+
 export default function SftpAutomationView({ clients = [], activeClientId = '', onSelectClient }) {
   const automationTypes = useMemo(() => [
     { value: '835', label: '835 to MIR', description: 'Fetch 835 files, build MIR, and deliver MIR outbound.' },
@@ -176,8 +189,12 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     </div>
 
     <div className="sftp-auto-runs-heading"><h2 className="sec">Automation Run Summary</h2><button type="button" className="btn-gray" onClick={() => loadData()} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button></div>
-    <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Scheduled / Duration (EST)</th><th>Client / Type</th><th>835 Inputs</th><th>837 / RECON Inputs</th><th>MIR Outputs</th><th>Counts</th><th>Status / Error</th></tr></thead><tbody>
-      {runs.length ? runs.map((run) => <tr key={run.id}><td><TimeDisplay value={run.scheduled_for} includeSeconds easternOnly />{run.started_at && <small>Started: <TimeDisplay value={run.started_at} includeSeconds easternOnly /></small>}{run.finished_at && <small>Finished: <TimeDisplay value={run.finished_at} includeSeconds easternOnly /></small>}</td><td><b>{run.client_name}</b><small>{run.client_code || '—'} · {run.automation_type}</small></td><td><FileList files={run.input_835_files} empty="No new 835 files" /></td><td><FileList files={run.input_recon_files} empty="No new 837/RECON files" /></td><td><FileList files={run.mir_output_files} empty="No MIR generated" /></td><td><b>{run.processed_835_count}</b> 835 processed<small>{run.recon_file_count} reference/recon imported</small></td><td><span className={`tag ${run.status === 'SUCCESS' ? 'ok' : run.status === 'FAILED' ? 'bad' : 'work'}`}>{run.status}</span>{run.error_message && <small className="sftp-auto-error">{run.error_message}</small>}</td></tr>) : <tr><td colSpan="7" className="sftp-auto-none">No scheduled runs recorded for this client.</td></tr>}
+    <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Scheduled / Duration (EST)</th><th>Automation Run</th><th>Client</th><th>Files Found / Taken</th><th>Output</th><th>Result Count</th><th>Status / Error</th></tr></thead><tbody>
+      {runs.length ? runs.map((run) => {
+        const inputFiles = run.input_files || (run.automation_type === '835' ? run.input_835_files : run.input_recon_files) || [];
+        const inputLabel = run.automation_type === '835' ? 'No 835 files found' : run.automation_type === '837' ? 'No 837 files found' : 'No RECON files found';
+        return <tr key={run.id}><td><TimeDisplay value={run.scheduled_for} includeSeconds easternOnly />{run.started_at && <small>Started: <TimeDisplay value={run.started_at} includeSeconds easternOnly /></small>}{run.finished_at && <small>Finished: <TimeDisplay value={run.finished_at} includeSeconds easternOnly /></small>}</td><td><b>{run.automation_label || AUTOMATION_LABELS[run.automation_type] || run.automation_type}</b><small>Type: {run.automation_type}</small></td><td><b>{run.client_name}</b><small>{run.client_code || '—'}</small></td><td><FileList files={inputFiles} empty={inputLabel} /></td><td>{run.automation_type === '835' ? <FileList files={run.mir_output_files} empty="No MIR generated" /> : <span className="sftp-auto-empty">Database import</span>}</td><td><b>{runCountLabel(run)}</b><small>{run.files_found_count ?? inputFiles.length} file(s) found</small></td><td><span className={`tag ${run.status === 'SUCCESS' ? 'ok' : run.status === 'FAILED' ? 'bad' : 'work'}`}>{run.status}</span>{run.error_message && <small className="sftp-auto-error">{run.error_message}</small>}</td></tr>;
+      }) : <tr><td colSpan="7" className="sftp-auto-none">No scheduled runs recorded for this client.</td></tr>}
     </tbody></table></div>
   </section>;
 }
