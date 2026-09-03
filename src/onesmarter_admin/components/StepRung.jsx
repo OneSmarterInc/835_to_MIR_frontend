@@ -196,6 +196,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   // Load existing SMTP config for Step 6 on mount
   useEffect(() => {
     if (step.actionType !== 'smtp_config') return;
+    // Never carry a typed secret between clients or repopulate one from storage.
+    setS11Password('');
     fetchClientSmtpConfig(clientId)
       .then(cfg => {
         if (cfg) {
