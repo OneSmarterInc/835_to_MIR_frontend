@@ -315,6 +315,7 @@ export default function ConversionsView({
       const res = await fetch("/api/start-batch-conversion/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: selectedClientId || undefined }),
       });
       const data = await res.json();
       if (data.success) {
