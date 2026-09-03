@@ -19,6 +19,7 @@ const ruleLabels = {
   NOT_IN_RECON: ["4", "Not in RECON", "The claim exists in MIR but has not appeared in RECON"],
   AGED_NOT_IN_RECON: ["5", "In MIR for more than 8 days, not in RECON", "The MIR claim is at least eight days old and still has no RECON record"],
 };
+const outcomeOptions = ["NOT_IN_MIR", "NOT_IN_RECON", "SIGNATURE_MISMATCH", "PARTIALLY_PAID", "OVERPAID", "UNPAID", "AMOUNT_MISMATCH"];
 
 async function apiJson(url, signal) {
   const token = localStorage.getItem("onesmarter_admin_token");
@@ -29,11 +30,16 @@ async function apiJson(url, signal) {
   return data;
 }
 
-export default function ReconciliationModal({ clientId = "", isAdmin = false, onClose }) {
+export default function ReconciliationModal({ clientId = "", isAdmin = false, onClose, onOpenClaim }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [outcomeFilter, setOutcomeFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [sort, setSort] = useState({ key: "claim_id", direction: "asc" });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,13 +49,22 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
     if (isAdmin && !clientId) params.set("scope", "global");
     params.set("review_page", String(reviewPage));
     params.set("review_page_size", "25");
+    if (activeSearch) params.set("review_search", activeSearch);
+    if (outcomeFilter) params.set("review_status", outcomeFilter);
+    if (actionFilter) params.set("review_action", actionFilter);
+    params.set("review_sort", sort.key);
+    params.set("review_direction", sort.direction);
     apiJson(`/edi835/api/reconciliation/dashboard/?${params}`, controller.signal)
       .then(setData)
       .catch((err) => { if (err.name !== "AbortError") setError(err.message); });
     return () => controller.abort();
-  }, [clientId, isAdmin, reviewPage]);
+  }, [clientId, isAdmin, reviewPage, activeSearch, outcomeFilter, actionFilter, sort]);
 
-  useEffect(() => { setReviewPage(1); }, [clientId, isAdmin]);
+  useEffect(() => { setReviewPage(1); }, [clientId, isAdmin, activeSearch, outcomeFilter, actionFilter, sort]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setActiveSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") onClose(); };
@@ -60,6 +75,10 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
   const reviewRecords = data?.records || [];
   const counts = data?.comparison_counts || {};
   const maximum = Math.max(1, ...Object.values(counts).map(Number));
+  const changeSort = (key) => setSort((current) => ({
+    key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+  }));
+  const sortArrow = (key) => sort.key === key ? (sort.direction === "asc" ? "▲" : "▼") : "⇅";
 
   const downloadExport = async () => {
     setExporting(true); setError("");
@@ -80,6 +99,28 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
       link.href = url; link.download = `reconciliation-${data?.source?.client_name || "results"}.xlsx`;
       document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
     } catch (err) { setError(err.message); } finally { setExporting(false); }
+  };
+
+  const updateAction = async (claimId, actionStatus) => {
+    setError("");
+    const previousStatus = data.records.find((row) => row.claim_id === claimId)?.action_status || "YET_TO_START";
+    setData((current) => ({ ...current, records: current.records.map((row) => row.claim_id === claimId ? { ...row, action_status: actionStatus } : row) }));
+    try {
+      const token = localStorage.getItem("onesmarter_admin_token");
+      const body = { claim_id: claimId, action_status: actionStatus };
+      if (isAdmin && clientId) body.client_id = clientId;
+      if (isAdmin && !clientId) body.scope = "global";
+      const response = await portalFetch("/edi835/api/reconciliation/actions/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Token ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success === false) throw new Error(result.error || `Action update failed (${response.status}).`);
+    } catch (err) {
+      setError(err.message);
+      setData((current) => ({ ...current, records: current.records.map((row) => row.claim_id === claimId ? { ...row, action_status: previousStatus } : row) }));
+    }
   };
 
   return <div className="recon-popup-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -119,8 +160,9 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
             </div>;
           })}</div>
           <h3 className="recon-section-title">Needs a person</h3>
-          <div className="recon-table-wrap"><table className="recon-review-table"><thead><tr><th>Claim</th><th>MIR901</th><th>MIR904</th><th>MIR905</th><th>MPL920</th><th>RECON MIR907</th><th>Outcome</th><th>Difference</th></tr></thead>
-            <tbody>{reviewRecords.length ? reviewRecords.map((row) => <tr key={row.claim_id}><td>{row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.mir904)}</td><td>{money(row.mir905)}</td><td>{money(row.mpl920)}</td><td>{money(row.recon_mir907)}</td><td><span className="recon-tag bad">{statusLabel(row.status)}</span></td><td>{money(row.difference)}</td></tr>) : <tr><td colSpan="8" className="recon-empty">No non-clear records require review.</td></tr>}</tbody>
+          <div className="recon-review-controls"><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search claim, amount, outcome, or action" aria-label="Search reconciliation review entries" /><select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)} aria-label="Filter by outcome"><option value="">All outcomes</option>{outcomeOptions.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select><select value={actionFilter} onChange={(event) => setActionFilter(event.target.value)} aria-label="Filter by action"><option value="">All actions</option><option value="YET_TO_START">Yet to Start</option><option value="IN_PROCESS">In Process</option><option value="HOLD">Hold</option><option value="REJECTED">Rejected</option><option value="APPROVED">Approved</option></select></div>
+          <div className="recon-table-wrap"><table className="recon-review-table"><thead><tr><ReviewHeader label="Claim" field="claim_id" sort={sort} arrow={sortArrow} onSort={changeSort} /><ReviewHeader label="Total Amount in MIR" field="mir901" sort={sort} arrow={sortArrow} onSort={changeSort} /><ReviewHeader label="Total Amount in RECON" field="recon_mir907" sort={sort} arrow={sortArrow} onSort={changeSort} /><ReviewHeader label="Outcome" field="status" sort={sort} arrow={sortArrow} onSort={changeSort} /><ReviewHeader label="Difference" field="difference" sort={sort} arrow={sortArrow} onSort={changeSort} /><ReviewHeader label="Action" field="action_status" sort={sort} arrow={sortArrow} onSort={changeSort} /></tr></thead>
+            <tbody>{reviewRecords.length ? reviewRecords.map((row) => <tr key={row.claim_id}><td>{row.mir_claim_id && onOpenClaim ? <button type="button" className="recon-claim-link" onClick={() => onOpenClaim({ mir_claim_id: row.mir_claim_id })}>{row.claim_id}</button> : row.claim_id}</td><td>{money(row.mir901)}</td><td>{money(row.recon_mir907)}</td><td><span className="recon-tag bad">{statusLabel(row.status)}</span></td><td>{money(row.difference)}</td><td><select className="recon-action-select" value={row.action_status || "YET_TO_START"} onChange={(event) => updateAction(row.claim_id, event.target.value)} aria-label={`Action for claim ${row.claim_id}`}><option value="YET_TO_START">Yet to Start</option><option value="IN_PROCESS">In Process</option><option value="HOLD">Hold</option><option value="REJECTED">Rejected</option><option value="APPROVED">Approved</option></select></td></tr>) : <tr><td colSpan="6" className="recon-empty">No non-clear records require review.</td></tr>}</tbody>
           </table></div>
           {data.review_pagination && <div className="recon-pagination"><span>{Number(data.review_pagination.total || 0).toLocaleString()} non-clear entries · Page {data.review_pagination.page} of {data.review_pagination.total_pages}</span><div><button type="button" className="btn secondary" disabled={data.review_pagination.page <= 1} onClick={() => setReviewPage((page) => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn secondary" disabled={data.review_pagination.page >= data.review_pagination.total_pages} onClick={() => setReviewPage((page) => page + 1)}>Next</button></div></div>}
           <div className="recon-actions"><button type="button" className="btn primary" onClick={downloadExport} disabled={exporting}>{exporting ? "Exporting…" : "Export this cycle"}</button></div>
@@ -129,6 +171,11 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
       </div>
     </section>
   </div>;
+}
+
+function ReviewHeader({ label, field, sort, arrow, onSort }) {
+  const active = sort.key === field;
+  return <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}><button type="button" className={`recon-sort-button${active ? " active" : ""}`} onClick={() => onSort(field)}><span>{label}</span><span aria-hidden="true">{arrow(field)}</span></button></th>;
 }
 
 function CashRow({ label, value, total = false }) {
