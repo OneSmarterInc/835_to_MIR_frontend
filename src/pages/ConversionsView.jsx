@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { splitClaimNumber } from "../utils/claimNumber";
 
 export default function ConversionsView({
   trackedFiles,
@@ -978,10 +979,11 @@ export default function ConversionsView({
             <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
               {(partialDetails.conversion_findings || []).length ? (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr><th>Claim</th><th>Rule</th><th>Reason</th></tr></thead>
+                  <thead><tr><th>Highmark Claim Number</th><th>Internal Claim Number</th><th>Rule</th><th>Reason</th></tr></thead>
                   <tbody>{partialDetails.conversion_findings.map((finding, index) => (
                     <tr key={`${finding.claim_control_number || finding.claim_number || "claim"}-${finding.rule_code || index}-${index}`}>
-                      <td className="num">{finding.claim_control_number || finding.claim_number || "—"}</td>
+                      <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).highmarkClaimNumber || "—"}</td>
+                      <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).internalClaimNumber || "—"}</td>
                       <td><span className="tag work">{finding.rule_code || "HOLD"}</span></td>
                       <td>{finding.reason || finding.detail || "Claim requires review."}</td>
                     </tr>
