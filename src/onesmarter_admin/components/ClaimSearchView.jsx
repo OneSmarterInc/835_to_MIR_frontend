@@ -36,9 +36,12 @@ function Claim837Modal({ claimId, onClose }) {
           <div><span>Subscriber</span><b>{claim.subscriber_name || '—'}</b></div>
           <div><span>Billing provider</span><b>{claim.billing_provider || '—'}</b></div>
           <div><span>Rendering provider</span><b>{claim.rendering_provider || '—'}</b></div>
+          <div><span>Referring provider</span><b>{claim.referring_provider || '—'}</b></div>
           <div><span>Payer</span><b>{claim.payer || '—'}</b></div>
           <div><span>Diagnosis</span><b>{claim.diagnosis_codes?.join(', ') || '—'}</b></div>
           <div><span>Place of service</span><b>{claim.place_of_service || '—'}</b></div>
+          <div><span>Claim frequency</span><b>{claim.claim_frequency_code || '—'}</b></div>
+          <div><span>Original claim number</span><b>{claim.original_claim_number || '—'}</b></div>
           <div><span>Source file</span><b>{claim.file_name || '—'}</b></div>
         </div>
         <h3>837 service lines</h3>
