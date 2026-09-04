@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SftpBrowserModal from '../../components/SftpBrowserModal';
+import SftpConfigurationPanel from '../../components/SftpConfigurationPanel';
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
@@ -274,65 +275,7 @@ export default function DefaultConfigsView() {
 
       <div className="admin-responsive-grid" style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
 
-        {/* SFTP Default Card */}
-        <div className="card" style={{ padding: '20px' }}>
-          <h2 style={{ margin: '0 0 10px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            📁 Global Default SFTP Server Settings
-          </h2>
-          <p style={{ fontSize: '12.5px', color: 'var(--ink-2)', marginBottom: '16px' }}>Used when a client checks the "Use Default SFTP" onboarding step.</p>
-
-          <div className="field">
-            <label>SFTP Host</label>
-            <input type="text" value={sftpHost} onChange={e => setSftpHost(e.target.value)} placeholder="sftp.provider.com" />
-          </div>
-          <div className="field">
-            <label>SFTP Port</label>
-            <input type="text" value={sftpPort} onChange={e => setSftpPort(e.target.value)} placeholder="22" />
-          </div>
-          <div className="field">
-            <label>Username</label>
-            <input type="text" value={sftpUser} onChange={e => setSftpUser(e.target.value)} placeholder="sftp_user" autoComplete="off" />
-          </div>
-          <div className="field">
-            <label>Password / Private Key Passphrase</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type={showSftpPass ? 'text' : 'password'}
-                value={sftpPass}
-                onChange={e => { setSftpPass(e.target.value); if (sftpConnected && e.target.value) setSftpConnected(false); }}
-                placeholder={sftpHasPassword ? 'Saved — enter a new password to change' : 'Enter SFTP password'}
-                style={{ width: '100%', paddingRight: '34px', background: sftpHasPassword && !sftpPass ? '#f8fafc' : '#fff' }}
-                autoComplete="new-password"
-              />
-              <EyeButton show={showSftpPass} set={setShowSftpPass} />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 0 14px' }}>
-            <button type="button" className="btn primary" onClick={handleTestSftp} disabled={sftpTesting || sftpSaving} style={{ padding: '6px 16px', fontSize: '13px' }}>
-              {sftpTesting ? 'Testing...' : 'Save & Test Connection'}
-            </button>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <FolderBrowse label="Inbound 835 Folder" value={sftpInbound835} onChange={setSftpInbound835} setter={setSftpInbound835} />
-            <FolderBrowse label="Inbound 837 Folder" value={sftpInbound837} onChange={setSftpInbound837} setter={setSftpInbound837} />
-            <FolderBrowse label="Inbound RECON Folder" value={sftpInboundRecon} onChange={setSftpInboundRecon} setter={setSftpInboundRecon} />
-            <FolderBrowse label="Outbound MIR Folder" value={sftpOutboundMir} onChange={setSftpOutboundMir} setter={setSftpOutboundMir} />
-          </div>
-
-          {sftpStatus && (
-            <div style={{ padding: '8px 12px', background: 'var(--paper)', borderRadius: '4px', fontSize: '12px', margin: '12px 0', border: '1px solid var(--line-soft)' }}>
-              {sftpStatus}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button type="button" className="btn primary" onClick={handleSaveSftp} disabled={sftpTesting || sftpSaving}>
-              {sftpSaving ? 'Saving...' : '💾 Save SFTP Default'}
-            </button>
-          </div>
-        </div>
+        <SftpConfigurationPanel />
 
         {/* SMTP Default Card */}
         <div className="card" style={{ padding: '20px' }}>
