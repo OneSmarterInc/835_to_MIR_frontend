@@ -76,6 +76,48 @@ export async function pushEdiFileToSftp(fileId) {
   return data;
 }
 
+export async function process837Upload(clientId, files) {
+  const body = new FormData();
+  body.append('client_id', clientId);
+  Array.from(files || []).forEach(file => body.append('files', file));
+  const res = await fetch('/edi835/api/837/upload-process/', {
+    method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Failed to process the 837 file.');
+  return data;
+}
+
+export async function search837Claims(clientId, query, limit = 100) {
+  const params = new URLSearchParams({ client_id: clientId, q: query, limit: String(limit) });
+  const res = await fetch(`/edi835/api/837/search/?${params}`, { credentials: 'include', headers: getAuthHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to search 837 claims.');
+  return data;
+}
+
+export async function fetch837ClaimDetail(claimId) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/`, { credentials: 'include', headers: getAuthHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load the 837 claim.');
+  return data.claim;
+}
+
+export async function download837Claim(claimId, claimNumber) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/export/`, { credentials: 'include', headers: getAuthHeaders() });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Unable to export this 837 claim.');
+  }
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = res.headers.get('X-OneSmarter-Filename') || `837_${claimNumber}.837`;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1500);
+}
+
 export async function createClient(clientPayload) {
   const payload = typeof clientPayload === 'string' ? { name: clientPayload } : clientPayload;
   

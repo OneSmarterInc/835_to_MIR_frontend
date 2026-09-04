@@ -23,13 +23,14 @@ import CodeDictionaryView from '../pages/CodeDictionaryView';
 import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
+import ClaimSearchView from './components/ClaimSearchView';
 import ClientSelectDropdown from './components/ClientSelectDropdown';
 import OffboardedClientBanner from './components/OffboardedClientBanner';
 import { clearSessionExpiry, scheduleSessionExpiry } from '../utils/sessionExpiry';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
-const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'files', 'promote', 'trust', 'ops'];
+const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'files', 'promote', 'trust', 'ops'];
 
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
@@ -400,6 +401,9 @@ export default function App({ user, onLogout }) {
           {canView('conversions') && <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
           </button>}
+          {canView('search') && <button className={`navitem ${activeNav === 'search' ? 'on' : ''}`} onClick={() => setActiveNav('search')}>
+            <span>Search</span>
+          </button>}
           {canView('checks') && <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
             <span>Checks</span>
           </button>}
@@ -500,6 +504,14 @@ export default function App({ user, onLogout }) {
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
               selectedClient={selectedOperationalClient}
+            />
+          )}
+
+          {activeNav === 'search' && (
+            <ClaimSearchView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
             />
           )}
 
