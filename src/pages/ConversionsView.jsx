@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { splitClaimNumber } from "../utils/claimNumber";
+import { process837Upload } from "../onesmarter_admin/services/api";
 
 export default function ConversionsView({
   trackedFiles,
@@ -17,6 +18,9 @@ export default function ConversionsView({
   const [currentFileName, setCurrentFileName] = useState("uploaded_file.x12");
   const [file835Subtext, setFile835Subtext] = useState("No 835 files selected.");
   const [file837Subtext, setFile837Subtext] = useState("No 837 reference selected.");
+  const [selected837Files, setSelected837Files] = useState([]);
+  const [file837InputKey, setFile837InputKey] = useState(0);
+  const [processing837, setProcessing837] = useState(false);
   const [activeValidatedFileId, setActiveValidatedFileId] = useState(null);
 
   const [validating, setValidating] = useState(false);
@@ -61,6 +65,9 @@ export default function ConversionsView({
   const handle835FileChange = async (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
+    setSelected837Files([]);
+    setFile837Subtext("No 837 files selected.");
+    setFile837InputKey(key => key + 1);
 
     if (files.length === 1) {
       const file = files[0];
@@ -97,10 +104,27 @@ export default function ConversionsView({
   // 837 File Input change
   const handle837FileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile837Subtext(
-        "Selected: " + e.target.files[0].name + " (optional reference)"
-      );
+      const files = Array.from(e.target.files);
+      setSelected837Files(files);
+      setFile837Subtext(`${files.length} 837 file(s) selected: ${files.map(file => file.name).join(", ")}`);
+      resetConversionForm();
     }
+  };
+
+  const handleProcess837 = async () => {
+    if (!selectedClientId || !selected837Files.length) {
+      setBatchAlert({ type: "error", title: "837 Processing Error", message: "Select a client and one or more 837 files." });
+      return;
+    }
+    setProcessing837(true); setBatchAlert(null);
+    try {
+      const data = await process837Upload(selectedClientId, selected837Files);
+      const claims = (data.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0);
+      setBatchAlert({ type: "success", title: "837 Processing Complete", message: `${data.processed_count} file(s) processed, ${data.duplicate_count} already present, and ${claims} claims indexed.${data.failed_count ? ` ${data.failed_count} file(s) failed.` : ""}` });
+      setSelected837Files([]); setFile837Subtext("No 837 files selected."); setFile837InputKey(key => key + 1);
+    } catch (error) {
+      setBatchAlert({ type: "error", title: "837 Processing Error", message: error.message });
+    } finally { setProcessing837(false); }
   };
 
   const resetConversionForm = () => {
@@ -483,23 +507,16 @@ export default function ConversionsView({
           <h2>Start a conversion</h2>
           <div className="step-pills">
             <span className={`step-pill ${step1State}`} id="pillStep1">
-              1 &bull; UPLOAD 835
+              1 &bull; {selected837Files.length ? "UPLOAD 837" : "UPLOAD 835"}
             </span>
-            <span className="step-arrow">&rarr;</span>
-            <span className={`step-pill ${step2State}`} id="pillStep2">
-              2 &bull; VALIDATE
-            </span>
-            <span className="step-arrow">&rarr;</span>
-            <span className={`step-pill ${step3State}`} id="pillStep3">
-              3 &bull; PROCESS MIR
-            </span>
+            {selected837Files.length ? <><span className="step-arrow">&rarr;</span><span className="step-pill">2 &bull; PROCESS 837</span></> : <><span className="step-arrow">&rarr;</span><span className={`step-pill ${step2State}`} id="pillStep2">2 &bull; VALIDATE</span><span className="step-arrow">&rarr;</span><span className={`step-pill ${step3State}`} id="pillStep3">3 &bull; PROCESS MIR</span></>}
           </div>
         </div>
 
         <div className="conversion-boxes">
           {/* REQUIRED 835 INPUT BOX */}
           <div className="c-box">
-            <div className="c-box-label">REQUIRED &bull; 835 INPUT</div>
+            <div className="c-box-label">{selected837Files.length ? "835 INPUT • NOT USED IN 837 MODE" : "REQUIRED • 835 INPUT"}</div>
             <input
               type="file"
               accept=".835,.853,.x12,.txt,.edi,*/*"
@@ -511,14 +528,17 @@ export default function ConversionsView({
 
           {/* OPTIONAL 837 REFERENCE BOX */}
           <div className="c-box">
-            <div className="c-box-label">OPTIONAL &bull; 837 REFERENCE ONLY</div>
-            <input type="file" accept=".837,.x12,.txt,*/*" onChange={handle837FileChange} />
+            <div className="c-box-label">837 INPUT &bull; SINGLE OR BATCH</div>
+            <input key={file837InputKey} type="file" multiple accept=".837,.x12,.edi,.txt,.dat,*/*" onChange={handle837FileChange} />
             <div className="subtext">{file837Subtext}</div>
           </div>
 
           {/* ACTION BUTTONS WITH ICONS */}
           <div className="c-actions">
-            <button
+            {selected837Files.length ? <button type="button" className="btn-gray" onClick={handleProcess837} disabled={processing837}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+              <span>{processing837 ? "Processing 837…" : "Process 837"}</span>
+            </button> : <><button
               type="button"
               className="btn-gray"
               onClick={handleValidate}
@@ -559,7 +579,7 @@ export default function ConversionsView({
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
               <span>{processing ? "Processing MIR..." : "Process MIR"}</span>
-            </button>
+            </button></>}
 
             <button
               type="button"
