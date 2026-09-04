@@ -6,13 +6,13 @@ import "./SftpConfigurationPanel.css";
 const NAV = ["DEFAULT", "837", "835", "MIR", "RECON"];
 const ROUTES = {
   "837": [{ key: "837_IN", label: "Inbound" }, { key: "837_OUT", label: "Outbound" }],
-  "835": [{ key: "835_IN", label: "Inbound" }, { key: "835_OUT", label: "Outbound" }],
+  "835": [{ key: "835_IN", label: "Inbound" }],
   MIR: [{ key: "MIR_OUT", label: "Outbound" }],
   RECON: [{ key: "RECON_IN", label: "Inbound" }],
 };
 const PATHS = [
   ["837_IN", "837 Inbound"], ["837_OUT", "837 Outbound"],
-  ["835_IN", "835 Inbound"], ["835_OUT", "835 Outbound"],
+  ["835_IN", "835 Inbound"],
   ["MIR_OUT", "MIR Outbound"], ["RECON_IN", "RECON Inbound"],
 ];
 const FolderIcon = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1 2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>;
