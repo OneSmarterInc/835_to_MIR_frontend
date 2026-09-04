@@ -10,3 +10,4 @@
 .sftp-pro.compact{min-height:560px}.sftp-pro.compact .sftp-pro-main{padding:22px}.sftp-pro.compact .sftp-pro-grid{grid-template-columns:2fr .7fr 1.5fr 1.4fr}
 @media(max-width:850px){.sftp-pro{grid-template-columns:1fr}.sftp-pro-nav{flex-direction:row;overflow:auto;border-right:0}.sftp-pro-nav button{white-space:nowrap}.sftp-pro-main{padding:20px}.sftp-pro-grid,.sftp-pro-paths{grid-template-columns:1fr 1fr}}
 @media(max-width:580px){.sftp-pro-grid,.sftp-pro-paths{grid-template-columns:1fr}}
+.sftp-pro-paths button,.sftp-pro-path button{display:inline-flex;align-items:center;justify-content:center;font-size:initial;transition:background .15s ease,color .15s ease,box-shadow .15s ease}.sftp-pro-paths button:hover,.sftp-pro-path button:hover{background:#e5f6f2;color:#086a5d;box-shadow:0 0 0 3px rgba(15,138,120,.09)}
