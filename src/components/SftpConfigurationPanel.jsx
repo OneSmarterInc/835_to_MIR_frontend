@@ -45,6 +45,9 @@ export default function SftpConfigurationPanel({ clientId = null, onConfigured, 
   const purpose = section === "DEFAULT" ? "DEFAULT" : direction;
   const form = useMemo(() => ({ ...blank(purpose), ...(configs[purpose] || {}) }), [configs, purpose]);
   const defaultConfig = useMemo(() => ({ ...blank("DEFAULT"), ...(configs.DEFAULT || {}) }), [configs]);
+  const inheritsConnectedDefault = section !== "DEFAULT" && form.use_default !== false && defaultConfig.status === "CONNECTED";
+  const connectionIsConfigured = form.status === "CONNECTED" || inheritsConnectedDefault;
+  const connectionStatusLabel = inheritsConnectedDefault ? "Configured" : form.status === "CONNECTED" ? "Connected" : "Not configured";
   const change = (field, value) => setConfigs((old) => ({ ...old, [purpose]: { ...blank(purpose), ...(old[purpose] || {}), [field]: value } }));
   const changePath = (key, value) => setConfigs((old) => {
     const current = { ...blank("DEFAULT"), ...(old.DEFAULT || {}) };
@@ -90,7 +93,7 @@ export default function SftpConfigurationPanel({ clientId = null, onConfigured, 
     <aside className="sftp-pro-nav" aria-label="SFTP configuration sections">{NAV.map((item) => <button type="button" key={item} className={section === item ? "active" : ""} onClick={() => selectSection(item)}><span className="dot" />{item === "DEFAULT" ? "Default" : item}</button>)}</aside>
     <main className="sftp-pro-main">
       {loading ? <div className="sftp-pro-loading">Loading SFTP configuration…</div> : <>
-        <header><div><div className="eyebrow">SECURE FILE TRANSFER</div><h2>{section === "DEFAULT" ? "Default SFTP connection" : `${section} transfer`}</h2><p>{section === "DEFAULT" ? "Use one verified server for all selected transfer paths." : "Use the default server or configure a dedicated server for this direction."}</p></div><span className={`sftp-pro-status ${form.status === "CONNECTED" ? "ok" : ""}`}>{form.status === "CONNECTED" ? "Connected" : "Not configured"}</span></header>
+        <header><div><div className="eyebrow">SECURE FILE TRANSFER</div><h2>{section === "DEFAULT" ? "Default SFTP connection" : `${section} transfer`}</h2><p>{section === "DEFAULT" ? "Use one verified server for all selected transfer paths." : "Use the default server or configure a dedicated server for this direction."}</p></div><span className={`sftp-pro-status ${connectionIsConfigured ? "ok" : ""}`}>{connectionStatusLabel}</span></header>
         {section !== "DEFAULT" && <div className="sftp-pro-tabs">{ROUTES[section].map((route) => <button type="button" key={route.key} className={direction === route.key ? "active" : ""} onClick={() => setDirection(route.key)}>{route.label}</button>)}</div>}
         {section !== "DEFAULT" && <label className="sftp-pro-default"><input type="checkbox" checked={form.use_default !== false} onChange={(e) => change("use_default", e.target.checked)} /><span><b>Use Default SFTP connection</b><small>Credentials and this route’s path are inherited from Default.</small></span></label>}
         {section !== "DEFAULT" && form.use_default !== false && <label className="sftp-pro-path inherited"><span>Inherited {ROUTES[section].find((r) => r.key === direction)?.label} folder</span><div><input value={(defaultConfig.route_paths || {})[direction] || ""} readOnly placeholder="Configure this path under Default" /><button type="button" title="Browse inherited folder" aria-label="Browse inherited folder" disabled={!defaultConfig.id} onClick={() => setBrowser({ configId: defaultConfig.id, initialPath: (defaultConfig.route_paths || {})[direction] || ".", onSelectFolder: () => setBrowser(null) })}><FolderIcon /></button></div><small>This value is managed in the Default section.</small></label>}
