@@ -45,6 +45,13 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           Records
         </div>
         <button
+          className={`navitem ${activeTab === "search" ? "on" : ""}`}
+          data-v="search"
+          onClick={() => onSelectTab("search")}
+        >
+          Search
+        </button>
+        <button
           className={`navitem ${activeTab === "archive" ? "on" : ""}`}
           data-v="archive"
           onClick={() => onSelectTab("archive")}
