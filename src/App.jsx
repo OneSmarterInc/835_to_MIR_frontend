@@ -24,6 +24,7 @@ import ConnectionsView from "./pages/ConnectionsView";
 import ContactsView from "./pages/ContactsView";
 import AdminView from "./pages/AdminView";
 import ResultView from "./pages/ResultView";
+import ClientClaimSearchView from "./pages/ClientClaimSearchView";
 
 
 export default function App() {
@@ -757,6 +758,11 @@ export default function App() {
             <ChecksView
               trackedFiles={trackedFiles}
             />
+          }
+
+          {
+            activeTab==="search" &&
+            <ClientClaimSearchView />
           }
 
           {
