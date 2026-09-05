@@ -201,17 +201,18 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
 
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
-      <div><div className="eyebrow">837 CLAIM INDEX</div><h1>Search</h1><p className="sub">Find persisted 837 claims by the complete claim number, Highmark claim number, or internal claim number.</p></div>
+      <div><h1>837 Claim Search</h1></div>
       <div className="claim-search-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} fullWidth /></div>
     </div>
-    <div className="claim-search-upload"><div><label>Upload and process 837 files</label><input id="search-837-upload" type="file" multiple onChange={event => setUploads(Array.from(event.target.files || []))} /><small>{uploads.length ? `${uploads.length} file(s) selected` : 'Select one or more 837 files, including files without extensions.'}</small></div><button type="button" className="btn primary" disabled={!activeClientId || !uploads.length || processing} onClick={processUpload}>{processing ? 'Processing 837…' : 'Upload & Process 837'}</button></div>
+    <div className="claim-search-upload"><div><label>837 files</label><input id="search-837-upload" type="file" multiple onChange={event => setUploads(Array.from(event.target.files || []))} />{uploads.length > 0 && <small>{uploads.length} file(s) selected</small>}</div><button type="button" className="btn primary" disabled={!activeClientId || !uploads.length || processing} onClick={processUpload}>{processing ? 'Processing 837…' : 'Upload & Process'}</button></div>
     {notice && <div className="claim837-message success">{notice}</div>}{error && <div className="claim837-message error">{error}</div>}
     <div className="claim-search-actions">
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search claim, Highmark, or internal claim number" autoComplete="off" />{loading && <span>Searching…</span>}</div>
       <div className="claim-search-current-name" title="Filename used for claim exports"><span>Export name</span><b>{active837Filename}</b></div>
+      <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
     </div>
-    <div className="claim-search-results"><div className="claim-search-count">{query.trim() ? `${rows.length} matching claim${rows.length === 1 ? '' : 's'}` : 'Enter a claim number to search'}</div><div className="claim837-table-wrap"><table><thead><tr><th>Claim number</th><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>Member ID</th><th>837 file</th><th>Services</th><th>Total charge</th></tr></thead><tbody>
+    <div className="claim-search-results"><div className="claim837-table-wrap"><table><thead><tr><th>Claim number</th><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>Member ID</th><th>837 file</th><th>Services</th><th>Total charge</th></tr></thead><tbody>
       {!rows.length ? <tr><td colSpan="8" className="empty">{query.trim() && !loading ? 'No matching 837 claims found.' : 'Search results will appear here.'}</td></tr> : rows.map(row => <tr key={row.id}><td><button className="claim837-link" type="button" onClick={() => setClaimId(row.id)}>{row.claim_number}</button></td><td>{row.highmark_claim_number || '—'}</td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}</td><td>{row.member_id || '—'}</td><td>{row.file_name}</td><td>{row.service_count}</td><td>{money(row.total_charge_amount)}</td></tr>)}
     </tbody></table></div></div>
     <section className="claim-files-section">
