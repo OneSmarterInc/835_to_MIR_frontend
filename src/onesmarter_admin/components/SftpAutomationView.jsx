@@ -57,8 +57,6 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState('');
   const [message, setMessage] = useState(null);
-  const [preview, setPreview] = useState([]);
-  const [previewError, setPreviewError] = useState('');
   const initializedClient = useRef('');
   const client = clients.find(item => String(item.id) === String(clientId));
   const offboarded = String(client?.stage || '').toLowerCase() === 'offboarded';
@@ -103,16 +101,6 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const update = (field, value) => setForms(current => ({ ...current, [operationKey]: { ...form, [field]: value } }));
   const toggleNumber = (field, value) => update(field, form[field]?.includes(value) ? form[field].filter(item => item !== value) : [...(form[field] || []), value].sort((a, b) => a - b));
 
-  useEffect(() => {
-    if (!clientId || !forms[operationKey]) { setPreview([]); return undefined; }
-    const timer = window.setTimeout(async () => {
-      try {
-        const data = await apiJson('/edi835/api/admin/sftp-automation/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: clientId, automation_type: type, direction: operation.direction, ...form, timezone: canonicalTimeZone(form.timezone), preview_only: true }) });
-        setPreview(data.next_runs || []); setPreviewError('');
-      } catch (error) { setPreview([]); setPreviewError(error.message); }
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [clientId, form, forms, operation.direction, operationKey, type]);
   const save = async () => {
     if (!clientId || saving) return;
     setSaving(operationKey); setMessage(null);
@@ -154,7 +142,6 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
           <label><span>Timezone</span><select value={form.timezone} disabled={offboarded} onChange={event => update('timezone', event.target.value)}>{zones.map(zone => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></label>
           <details className="sftp-auto-advanced"><summary>Execution options</summary><div><label><span>If a run is missed</span><select value={form.misfire_policy} onChange={event => update('misfire_policy', event.target.value)}><option value="RUN_ASAP">Run as soon as possible</option><option value="SKIP">Skip missed run</option></select></label><label><span>If previous run is active</span><select value={form.overlap_policy} onChange={event => update('overlap_policy', event.target.value)}><option value="SKIP">Skip new run</option><option value="QUEUE">Queue one run</option></select></label><label><span>Retry attempts</span><input type="number" min="0" max="5" value={form.retry_count} onChange={event => update('retry_count', Number(event.target.value))} /></label><label><span>Retry delay (minutes)</span><input type="number" min="1" max="1440" value={form.retry_delay_minutes} onChange={event => update('retry_delay_minutes', Number(event.target.value))} /></label></div></details>
           <label className="sftp-auto-toggle"><input type="checkbox" checked={form.enabled !== false} disabled={offboarded} onChange={event => update('enabled', event.target.checked)} /><span><b>Enable this schedule</b><small>The worker will execute it according to the trigger above.</small></span></label>
-          <div className="sftp-auto-preview"><span>Next five scheduled runs</span>{previewError ? <small className="sftp-auto-preview-error">{previewError}</small> : preview.length ? <ol>{preview.map(value => <li key={value}><TimeDisplay value={value} /></li>)}</ol> : <small>No future runs</small>}</div>
           <button type="button" className="btn-gray sftp-auto-save" disabled={!clientId || offboarded || saving === operationKey} onClick={save}>{saving === operationKey ? 'Saving…' : `Save ${operation.label} Schedule`}</button>
         </div>
         {message && <div className={`sftp-auto-message ${message.kind}`}>{message.text}</div>}
