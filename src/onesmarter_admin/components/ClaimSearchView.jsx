@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetch837ClaimDetail, fetch837Files, process837Upload, push837ClaimToSftp, search837Claims } from '../services/api';
+import { EASTERN_TIME_ZONE, formatInZone } from '../../utils/timezone';
 import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
-const dateTime = value => value ? new Date(value).toLocaleString() : '—';
+const dateTime = value => value ? formatInZone(new Date(value), EASTERN_TIME_ZONE, true) : '—';
 const DEFAULT_837_FILENAME_FORMAT = 'YYYYMMDDhhmmss.837';
 const namingStorageKey = clientId => `onesmarter_837_filename_format_${clientId || 'default'}`;
 const resolve837FilenameFormat = (value, now = new Date()) => {
