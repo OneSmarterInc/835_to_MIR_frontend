@@ -40,16 +40,16 @@
 .result-detail { width: min(1100px, 96vw); max-height: 88vh; overflow: auto; border-radius: 14px; padding: 20px; background: var(--paper, #fff); box-shadow: 0 24px 70px rgba(0,0,0,.24); }
 .result-detail-title { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
 .result-detail-title h2 { margin: 3px 0 0; }
-.reconciliation-table { width: 100%; min-width: 1180px !important; table-layout: fixed; }
-.reconciliation-table .result-col-claim { width: 17%; }
-.reconciliation-table .result-col-patient { width: 18%; }
-.reconciliation-table .result-col-file { width: 14.5%; }
-.reconciliation-table .result-col-money { width: 8.5%; }
-.reconciliation-table .result-col-difference { width: 9%; }
-.reconciliation-table .result-col-status { width: 10%; }
+.reconciliation-table { width: 100%; min-width: 1500px !important; table-layout: fixed; }
+.reconciliation-table .result-col-claim { width: 14%; }
+.reconciliation-table .result-col-patient { width: 15%; }
+.reconciliation-table .result-col-file { width: 11%; }
+.reconciliation-table .result-col-money { width: 9%; }
+.reconciliation-table .result-col-difference { width: 8%; }
+.reconciliation-table .result-col-status { width: 9%; }
 .reconciliation-table th, .reconciliation-table td { overflow-wrap: anywhere; }
 .reconciliation-table .tag { display: inline-block; max-width: 100%; white-space: normal; }
-.result-sort-button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 7px; width: auto; max-width: 100%; border: 0; padding: 2px 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; letter-spacing: inherit; line-height: 1.35; text-align: left; text-transform: inherit; cursor: pointer; }
+.result-sort-button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px; width: 100%; max-width: 100%; border: 0; padding: 2px 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; letter-spacing: inherit; line-height: 1.35; text-align: left; text-transform: inherit; cursor: pointer; }
 .result-sort-button > span:first-child { min-width: 0; }
 .result-sort-arrow { flex: 0 0 auto; color: #94a3b8; font-family: Arial, sans-serif; font-size: 11px; line-height: 1; }
 .result-sort-button.active .result-sort-arrow { color: var(--teal, #087f8c); }
