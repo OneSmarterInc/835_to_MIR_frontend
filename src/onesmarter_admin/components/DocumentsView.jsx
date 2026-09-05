@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentPreview } from '../services/api';
+import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
 import OffboardedClientBanner from './OffboardedClientBanner';
 
@@ -71,7 +71,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     setViewingId(doc.id);
     setErrorMessage('');
     try {
-      const data = await fetchDocumentPreview(doc.id, doc.original_filename);
+      const data = await fetchDocumentFile(doc.id, doc.original_filename);
       setViewerFile(data);
       setViewerDocTitle(doc.document_name);
       setIsViewerOpen(true);
