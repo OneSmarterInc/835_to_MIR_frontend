@@ -454,6 +454,24 @@ export async function fetchDocumentFile(docId, defaultFilename = 'document.pdf')
   return { fileUrl, contentType, filename, blob };
 }
 
+export async function fetchDocumentPreview(docId, defaultFilename = 'document.pdf') {
+  const res = await fetch(`${BASE_URL}/documents/${encodeURIComponent(docId)}/preview-url/`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Document preview failed');
+  }
+  const data = await res.json();
+  const filename = data.filename || defaultFilename;
+  const contentType = data.content_type || '';
+  const browserStreamable = contentType.includes('pdf') || contentType.startsWith('image/') || /\.(pdf|png|jpg|jpeg|gif|webp|bmp|svg|tiff|tif|ico|avif|heic)$/i.test(filename);
+  if (browserStreamable) {
+    return { fileUrl: data.preview_url, contentType, filename, blob: null };
+  }
+  return fetchDocumentFile(docId, defaultFilename);
+}
+
 export async function downloadDocumentFile(docId, defaultFilename = 'document.pdf') {
   const res = await fetch(`${BASE_URL}/documents/${encodeURIComponent(docId)}/download/`, {
     headers: getAuthHeaders()
