@@ -115,6 +115,17 @@ export async function fetch837ClaimDetail(claimId) {
   return data.claim;
 }
 
+export async function push837ClaimToSftp(claimId, filename) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/push-sftp/`, {
+    method: 'POST', credentials: 'include',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ filename }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to push this 837 claim to SFTP.');
+  return data;
+}
+
 export async function download837Claim(claimId, claimNumber) {
   const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/export/`, { credentials: 'include', headers: getAuthHeaders() });
   if (!res.ok) {

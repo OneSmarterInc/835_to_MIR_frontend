@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetch837ClaimDetail, fetch837Files, process837Upload, search837Claims } from '../services/api';
+import { fetch837ClaimDetail, fetch837Files, process837Upload, push837ClaimToSftp, search837Claims } from '../services/api';
 import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
@@ -47,6 +47,8 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [notice, setNotice] = useState('');
   useEffect(() => {
     let current = true;
     fetch837ClaimDetail(claimId).then(data => current && setClaim(data)).catch(err => current && setError(err.message));
@@ -58,16 +60,26 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
     catch (err) { setError(err.message); }
     finally { setExporting(false); }
   };
+  const pushClaim = async () => {
+    setPushing(true); setError(''); setNotice('');
+    try { const data = await push837ClaimToSftp(claimId, exportFilename); setNotice(data.message); }
+    catch (err) { setError(err.message); }
+    finally { setPushing(false); }
+  };
   return <div className="claim837-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <div className="claim837-modal" role="dialog" aria-modal="true" aria-label="837 claim summary">
       <header><div><div className="eyebrow">837 CLAIM SUMMARY</div><h2>{claim?.claim_number || 'Loading claim…'}</h2></div><button type="button" className="claim837-close" onClick={onClose} aria-label="Close">&times;</button></header>
       {error && <div className="claim837-message error">{error}</div>}
+      {notice && <div className="claim837-message success">{notice}</div>}
       {!claim && !error ? <div className="claim837-loading">Loading claim details…</div> : claim && <>
         <div className="claim837-summary">
           <div><span>Highmark claim number</span><b>{claim.highmark_claim_number || '—'}</b></div>
           <div><span>Internal claim number</span><b>{claim.internal_claim_number || '—'}</b></div>
           <div><span>Patient</span><b>{claim.patient_name || '—'}</b><small>{claim.member_id || 'No member ID'}</small></div>
           <div><span>Total charge</span><b>{money(claim.total_charge_amount)}</b><small>{claim.service_count} service line(s)</small></div>
+        </div>
+        <div className="claim837-lifecycle">
+          {['mir', 'recon'].map(type => { const item = claim.lifecycle?.[type] || {}; return <div key={type} className={item.exists ? 'present' : 'absent'}><span className="claim837-presence-icon" aria-hidden="true">{item.exists ? '✓' : '—'}</span><div><span>{type.toUpperCase()}</span><b>{item.exists ? `Found in ${type.toUpperCase()}` : `Not found in ${type.toUpperCase()}`}</b><small>{item.exists ? `${item.file_name || 'File recorded'} · arrived ${dateTime(item.arrived_at)}` : 'No matching claim record'}</small></div></div>; })}
         </div>
         <div className="claim837-facts">
           <div><span>Patient control number</span><b>{claim.patient_control_number || '—'}</b></div>
@@ -87,7 +99,7 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
         <div className="claim837-table-wrap"><table><thead><tr><th>#</th><th>Procedure</th><th>Modifiers</th><th>Service date</th><th>Units</th><th>Charge</th><th>Diagnosis pointers</th></tr></thead><tbody>
           {claim.services.length ? claim.services.map(line => <tr key={line.sequence}><td>{line.sequence}</td><td>{line.procedure_code || line.revenue_code || '—'}</td><td>{line.modifiers?.join(', ') || '—'}</td><td>{line.service_from_date || '—'}{line.service_to_date && line.service_to_date !== line.service_from_date ? ` – ${line.service_to_date}` : ''}</td><td>{line.units}</td><td>{money(line.charge_amount)}</td><td>{line.diagnosis_pointers?.join(', ') || '—'}</td></tr>) : <tr><td colSpan="7" className="empty">No service lines were found.</td></tr>}
         </tbody></table></div>
-        <footer><button type="button" className="btn" onClick={onClose}>Close</button><button type="button" className="btn primary" disabled={exporting} onClick={exportClaim}>{exporting ? 'Exporting…' : `Export as ${exportFilename}`}</button></footer>
+        <footer><button type="button" className="btn" onClick={onClose}>Close</button><div className="claim837-footer-actions"><button type="button" className="btn" disabled={exporting || pushing} onClick={exportClaim}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 17v3h14v-3"/></svg>{exporting ? 'Downloading…' : 'Download'}</button><button type="button" className="btn primary" disabled={pushing || exporting} onClick={pushClaim}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M5 17v3h14v-3"/></svg>{pushing ? 'Pushing…' : 'Push to SFTP'}</button></div></footer>
       </>}
     </div>
   </div>;
