@@ -62,7 +62,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     setSelectedGroup({ title, gate, count: value, unit: "", description, source: "Current run", rules: [], findings: [] });
   };
 
-  const row = (label, value, onClick, tone = "good") => (
+  const row = (label, value, onClick) => (
     <button
       type="button"
       onClick={onClick}
@@ -73,8 +73,17 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       }}
     >
       <span style={{ fontSize: "14px" }}>{label}</span>
-      <span className="num" style={{ display: "inline-flex", alignItems: "center", gap: "7px", whiteSpace: "nowrap", fontWeight: 600 }}>
-        {tone !== "plain" && <span aria-hidden="true" style={{ width: "8px", height: "8px", borderRadius: "50%", background: tone === "warn" ? "#b98117" : "#0f7f6d", display: "inline-block" }} />}
+      <span
+        className="num"
+        style={{
+          whiteSpace: "nowrap",
+          fontWeight: 600,
+          color: "inherit",
+          textDecoration: "underline",
+          textUnderlineOffset: "3px",
+          textDecorationThickness: "1px"
+        }}
+      >
         {value}
       </span>
     </button>
@@ -86,13 +95,12 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       return <div style={{ padding: "10px 0", color: "var(--ink-3)", fontSize: "13px" }}>Loading active checks…</div>;
     }
     if (catalogError) {
-      return <div style={{ padding: "10px 0", color: "var(--danger, #b42318)", fontSize: "13px" }}>Validation catalog unavailable — no rule totals are being guessed.</div>;
+      return <div style={{ padding: "10px 0", color: "var(--ink-2)", fontSize: "13px" }}>Validation catalog unavailable — no rule totals are being guessed.</div>;
     }
     return groups.map((group) => row(
       group.title,
       `${Number(group.count || 0).toLocaleString()} ${group.unit || "rules"}`,
-      () => setSelectedGroup({ ...group, gate: catalog?.[gateKey]?.title || gateKey, findings: [] }),
-      group.key === "835-pyx12" ? "warn" : "good"
+      () => setSelectedGroup({ ...group, gate: catalog?.[gateKey]?.title || gateKey, findings: [] })
     ));
   };
 
@@ -124,8 +132,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           eyebrow: "Gate 1 · Inbound",
           accent: "#0f7f6d",
           metrics: <>
-            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."), "plain")}
-            {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."), allFindings.length ? "warn" : "plain")}
+            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
+            {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
           </>,
           footer: "The rule totals above come from the backend validation catalog, not from frontend constants.",
         })}
@@ -135,8 +143,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           eyebrow: "Gate 2 · Inbound",
           accent: "#b98117",
           metrics: <>
-            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."), "plain")}
-            {row("Findings", heldCount ? `${heldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", heldCount, "Files currently held because validation findings require attention."), heldCount ? "warn" : "plain")}
+            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
+            {row("Findings", heldCount ? `${heldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", heldCount, "Files currently held because validation findings require attention."))}
           </>,
           footer: heldCount ? `${heldCount} file${heldCount === 1 ? " is" : "s are"} held before MIR generation.` : "No 835 files are currently held at this gate.",
         })}
@@ -146,8 +154,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           eyebrow: "Gate 3 · Outbound",
           accent: "#0f7f6d",
           metrics: <>
-            {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."), "plain")}
-            {row("Findings", allFindings.filter((f) => /mir|mp003|mp011|mp013|duplicate/i.test([f.rule_code, f.rule, f.source, f.what_found, f.reason].filter(Boolean).join(" "))).length.toLocaleString(), () => openMetric("Findings", "MIR before it goes", allFindings.length, "MIR-stage findings recorded before outbound delivery."), "plain")}
+            {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
+            {row("Findings", allFindings.filter((f) => /mir|mp003|mp011|mp013|duplicate/i.test([f.rule_code, f.rule, f.source, f.what_found, f.reason].filter(Boolean).join(" "))).length.toLocaleString(), () => openMetric("Findings", "MIR before it goes", allFindings.length, "MIR-stage findings recorded before outbound delivery."))}
           </>,
           footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
         })}
