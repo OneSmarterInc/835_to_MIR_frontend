@@ -5,12 +5,21 @@ import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
 const dateTime = value => value ? new Date(value).toLocaleString() : '—';
-const date837Filename = () => {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  return `${yyyy}_${mm}_${dd}.837`;
+const DEFAULT_837_FILENAME_FORMAT = 'YYYYMMDDhhmmss.837';
+const namingStorageKey = clientId => `onesmarter_837_filename_format_${clientId || 'default'}`;
+const resolve837FilenameFormat = (value, now = new Date()) => {
+  const pad = number => String(number).padStart(2, '0');
+  const replacements = [
+    ['YYYY', String(now.getFullYear())],
+    ['MM', pad(now.getMonth() + 1)],
+    ['DD', pad(now.getDate())],
+    ['hh', pad(now.getHours())],
+    ['mm', pad(now.getMinutes())],
+    ['ss', pad(now.getSeconds())],
+  ];
+  let resolved = String(value || DEFAULT_837_FILENAME_FORMAT);
+  replacements.forEach(([token, replacement]) => { resolved = resolved.split(token).join(replacement); });
+  return resolved;
 };
 const sanitize837Filename = value => {
   const trimmed = String(value || '').trim();
@@ -43,12 +52,13 @@ async function downloadClaimWithFilename(claimId, filename) {
   setTimeout(() => URL.revokeObjectURL(href), 1500);
 }
 
-function Claim837Modal({ claimId, exportFilename, onClose }) {
+function Claim837Modal({ claimId, namingFormat, onClose }) {
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [notice, setNotice] = useState('');
+  const resolvedPreview = useMemo(() => resolve837FilenameFormat(namingFormat), [namingFormat]);
   useEffect(() => {
     let current = true;
     fetch837ClaimDetail(claimId).then(data => current && setClaim(data)).catch(err => current && setError(err.message));
@@ -56,13 +66,13 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
   }, [claimId]);
   const exportClaim = async () => {
     setExporting(true); setError('');
-    try { await downloadClaimWithFilename(claimId, exportFilename); }
+    try { await downloadClaimWithFilename(claimId, resolvedPreview); }
     catch (err) { setError(err.message); }
     finally { setExporting(false); }
   };
   const pushClaim = async () => {
     setPushing(true); setError(''); setNotice('');
-    try { const data = await push837ClaimToSftp(claimId, exportFilename); setNotice(data.message); }
+    try { const data = await push837ClaimToSftp(claimId, namingFormat); setNotice(data.message); }
     catch (err) { setError(err.message); }
     finally { setPushing(false); }
   };
@@ -93,7 +103,7 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
           <div><span>Claim frequency</span><b>{claim.claim_frequency_code || '—'}</b></div>
           <div><span>Original claim number</span><b>{claim.original_claim_number || '—'}</b></div>
           <div><span>Source file</span><b>{claim.file_name || '—'}</b></div>
-          <div><span>Export filename</span><b>{exportFilename}</b></div>
+          <div><span>Naming format</span><b>{namingFormat}</b><small>Slice push adds _{claim.claim_number} before .837</small></div>
         </div>
         <h3>837 service lines</h3>
         <div className="claim837-table-wrap"><table><thead><tr><th>#</th><th>Procedure</th><th>Modifiers</th><th>Service date</th><th>Units</th><th>Charge</th><th>Diagnosis pointers</th></tr></thead><tbody>
@@ -108,15 +118,16 @@ function Claim837Modal({ claimId, exportFilename, onClose }) {
 function Rename837Modal({ initialFilename, renaming, onClose, onConfirm }) {
   const [filename, setFilename] = useState(initialFilename);
   const safeFilename = useMemo(() => sanitize837Filename(filename), [filename]);
+  const preview = useMemo(() => resolve837FilenameFormat(safeFilename || DEFAULT_837_FILENAME_FORMAT), [safeFilename]);
   return <div className="claim837-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !renaming && onClose()}>
     <div className="claim837-rename-modal" role="dialog" aria-modal="true" aria-label="Rename SFTP 837 files">
       <header><div><div className="eyebrow">837 FILE NAMING</div><h2>Rename SFTP 837 Files</h2></div><button type="button" className="claim837-close" disabled={renaming} onClick={onClose} aria-label="Close">&times;</button></header>
       <div className="claim837-rename-body">
-        <p className="claim837-rename-description">This sets the 837 filename used for the selected client. The date is filled in automatically. You can add your own text before or after the date and it will be kept. If multiple SFTP files are found, they will receive numbered suffixes such as <b>_001</b>, <b>_002</b>. The same base filename is also used when exporting an individual claim from Search.</p>
-        <label htmlFor="claim837-filename">837 filename</label>
+        <p className="claim837-rename-description">Use <b>YYYYMMDDhhmmss</b> as the timestamp format. You can add static text before or after it, for example <b>Highmark_YYYYMMDDhhmmss_ACK.837</b>. The timestamp is filled when the file is pushed to SFTP. If multiple inbound 837 files are found, numbered suffixes such as <b>_001</b> and <b>_002</b> are added. Sliced claim pushes use the same format and automatically add <b>_claim-number</b>.</p>
+        <label htmlFor="claim837-filename">837 filename format</label>
         <input id="claim837-filename" type="text" value={filename} disabled={renaming} onChange={event => setFilename(event.target.value)} autoFocus />
-        <small>Example: {date837Filename()} or {date837Filename().replace('.837', '_Highmark.837')}</small>
-        {filename && safeFilename !== filename.trim() && <div className="claim837-filename-preview">Saved as: <b>{safeFilename}</b></div>}
+        <small>Default: {DEFAULT_837_FILENAME_FORMAT} · Current preview: {preview}</small>
+        {filename && safeFilename !== filename.trim() && <div className="claim837-filename-preview">Saved format: <b>{safeFilename}</b></div>}
       </div>
       <footer><button type="button" className="btn" disabled={renaming} onClick={onClose}>Cancel</button><button type="button" className="btn primary" disabled={renaming || !safeFilename} onClick={() => onConfirm(safeFilename)}>{renaming ? 'Renaming 837…' : 'Apply Filename'}</button></footer>
     </div>
@@ -132,7 +143,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [processing, setProcessing] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const [active837Filename, setActive837Filename] = useState(date837Filename());
+  const [active837Filename, setActive837Filename] = useState(DEFAULT_837_FILENAME_FORMAT);
   const [notice, setNotice] = useState('');
   const [claimId, setClaimId] = useState(null);
   const [fileQuery, setFileQuery] = useState('');
@@ -142,7 +153,11 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [fileError, setFileError] = useState('');
   const [fileRefresh, setFileRefresh] = useState(0);
 
-  useEffect(() => { setQuery(''); setRows([]); setError(''); setNotice(''); setActive837Filename(date837Filename()); setFileQuery(''); setFilePage(1); }, [activeClientId]);
+  useEffect(() => {
+    setQuery(''); setRows([]); setError(''); setNotice(''); setFileQuery(''); setFilePage(1);
+    const savedFormat = activeClientId ? localStorage.getItem(namingStorageKey(activeClientId)) : '';
+    setActive837Filename(savedFormat || DEFAULT_837_FILENAME_FORMAT);
+  }, [activeClientId]);
   useEffect(() => {
     if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
     const timer = setTimeout(async () => {
@@ -188,13 +203,14 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       headers['X-Admin-Screen'] = 'search';
       const res = await fetch('/edi835/api/837/sftp-rename/', {
         method: 'POST', credentials: 'include', headers,
-        body: JSON.stringify({ client_id: activeClientId, filename }),
+        body: JSON.stringify({ client_id: activeClientId, filename_format: filename }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Unable to rename the 837 files on SFTP.');
       setActive837Filename(filename);
+      localStorage.setItem(namingStorageKey(activeClientId), filename);
       setRenameOpen(false);
-      setNotice(data.message || `${data.renamed_count || 0} 837 file(s) renamed on SFTP.`);
+      setNotice(data.message || `${data.renamed_count || data.transferred_count || 0} 837 file(s) renamed on SFTP.`);
     } catch (err) { setError(err.message); }
     finally { setRenaming(false); }
   };
@@ -209,7 +225,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     <div className="claim-search-actions">
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search claim, Highmark, or internal claim number" autoComplete="off" />{loading && <span>Searching…</span>}</div>
-      <div className="claim-search-current-name" title="Filename used for claim exports"><span>Export name</span><b>{active837Filename}</b></div>
+      <div className="claim-search-current-name" title="Filename format used for 837 SFTP pushes"><span>Naming format</span><b>{active837Filename}</b></div>
       <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
     </div>
     <div className="claim-search-results"><div className="claim837-table-wrap"><table><thead><tr><th>Claim number</th><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>Member ID</th><th>837 file</th><th>Services</th><th>Total charge</th></tr></thead><tbody>
@@ -224,7 +240,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       </tbody></table></div></div>
       <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
     </section>
-    {claimId && <Claim837Modal claimId={claimId} exportFilename={active837Filename} onClose={() => setClaimId(null)} />}
+    {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} onClose={() => setClaimId(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
   </section>;
 }
