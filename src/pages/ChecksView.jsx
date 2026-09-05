@@ -67,18 +67,19 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       type="button"
       onClick={onClick}
       style={{
-        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px",
-        padding: "9px 0", border: 0, borderBottom: "1px solid var(--line)", background: "transparent",
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px",
+        padding: "6px 0", border: 0, borderBottom: "1px solid var(--line)", background: "transparent",
         color: "inherit", font: "inherit", cursor: "pointer", textAlign: "left"
       }}
     >
-      <span style={{ fontSize: "14px" }}>{label}</span>
+      <span style={{ fontSize: "13px" }}>{label}</span>
       <span
         className="num"
         style={{
           whiteSpace: "nowrap",
           fontWeight: 600,
           color: "inherit",
+          fontSize: "13px",
           textDecoration: "underline",
           textUnderlineOffset: "3px",
           textDecorationThickness: "1px"
@@ -92,10 +93,10 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const groupRows = (gateKey) => {
     const groups = catalog?.[gateKey]?.groups || [];
     if (!catalog && !catalogError) {
-      return <div style={{ padding: "10px 0", color: "var(--ink-3)", fontSize: "13px" }}>Loading active checks…</div>;
+      return <div style={{ padding: "7px 0", color: "var(--ink-3)", fontSize: "12px" }}>Loading active checks…</div>;
     }
     if (catalogError) {
-      return <div style={{ padding: "10px 0", color: "var(--ink-2)", fontSize: "13px" }}>Validation catalog unavailable — no rule totals are being guessed.</div>;
+      return <div style={{ padding: "7px 0", color: "var(--ink-2)", fontSize: "12px" }}>Validation catalog unavailable — no rule totals are being guessed.</div>;
     }
     return groups.map((group) => row(
       group.title,
@@ -104,20 +105,20 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     ));
   };
 
-  const gateCard = ({ gateKey, eyebrow, accent, footer, metrics }) => {
+  const gateCard = ({ gateKey, eyebrow, footer, metrics }) => {
     const gate = catalog?.[gateKey] || {};
     return (
-      <div className="card checks-gate-card" style={{ padding: 0, overflow: "hidden", borderTop: `3px solid ${accent}` }}>
-        <div style={{ padding: "20px 20px 16px" }}>
-          <div className="eyebrow">{eyebrow}</div>
-          <h2 style={{ margin: "7px 0 4px", fontSize: "18px" }}>{gate.title || (gateKey === "gate1" ? "837 as received" : gateKey === "gate2" ? "835 from the claims system" : "MIR before it goes")}</h2>
-          <div style={{ color: "var(--ink-2)", fontSize: "13px" }}>{gate.subtitle || "Active validation checks"}</div>
+      <div className="card checks-gate-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "13px 16px 10px" }}>
+          <div className="eyebrow" style={{ fontSize: "10px" }}>{eyebrow}</div>
+          <h2 style={{ margin: "4px 0 2px", fontSize: "16px" }}>{gate.title || (gateKey === "gate1" ? "837 as received" : gateKey === "gate2" ? "835 from the claims system" : "MIR before it goes")}</h2>
+          <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>{gate.subtitle || "Active validation checks"}</div>
         </div>
-        <div style={{ padding: "12px 20px 14px", borderTop: "1px solid var(--line)" }}>
+        <div style={{ padding: "7px 16px 8px", borderTop: "1px solid var(--line)" }}>
           {groupRows(gateKey)}
           {metrics}
         </div>
-        <div style={{ padding: "16px 20px", borderTop: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)", fontSize: "13px", lineHeight: 1.5 }}>{footer}</div>
+        <div style={{ padding: "9px 16px", borderTop: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)", fontSize: "12px", lineHeight: 1.35 }}>{footer}</div>
       </div>
     );
   };
@@ -126,11 +127,10 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     <section className="view on table-screen">
       {showHeading && <h1 className="checks-page-title">Checks</h1>}
 
-      <div className="checks-gate-grid">
+      <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "start" }}>
         {gateCard({
           gateKey: "gate1",
           eyebrow: "Gate 1 · Inbound",
-          accent: "#0f7f6d",
           metrics: <>
             {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
             {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
@@ -141,7 +141,6 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         {gateCard({
           gateKey: "gate2",
           eyebrow: "Gate 2 · Inbound",
-          accent: "#b98117",
           metrics: <>
             {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
             {row("Findings", heldCount ? `${heldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", heldCount, "Files currently held because validation findings require attention."))}
@@ -152,7 +151,6 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         {gateCard({
           gateKey: "gate3",
           eyebrow: "Gate 3 · Outbound",
-          accent: "#0f7f6d",
           metrics: <>
             {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
             {row("Findings", allFindings.filter((f) => /mir|mp003|mp011|mp013|duplicate/i.test([f.rule_code, f.rule, f.source, f.what_found, f.reason].filter(Boolean).join(" "))).length.toLocaleString(), () => openMetric("Findings", "MIR before it goes", allFindings.length, "MIR-stage findings recorded before outbound delivery."))}
