@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
+import ConversionErrorFindings from "../components/ConversionErrorFindings";
 
 function parseDetails(raw) {
   if (!raw) return { findings: [], errors: [] };
@@ -158,6 +159,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
         })}
       </div>
+
+      <ConversionErrorFindings trackedFiles={allFiles} />
 
       {selectedGroup && (
         <div role="dialog" aria-modal="true" aria-label={`${selectedGroup.title} details`} onClick={() => setSelectedGroup(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,35,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
