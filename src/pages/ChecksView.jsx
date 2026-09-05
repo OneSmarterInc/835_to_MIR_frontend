@@ -108,17 +108,17 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const gateCard = ({ gateKey, eyebrow, footer, metrics }) => {
     const gate = catalog?.[gateKey] || {};
     return (
-      <div className="card checks-gate-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card checks-gate-card" style={{ padding: 0, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "13px 16px 10px" }}>
           <div className="eyebrow" style={{ fontSize: "10px" }}>{eyebrow}</div>
           <h2 style={{ margin: "4px 0 2px", fontSize: "16px" }}>{gate.title || (gateKey === "gate1" ? "837 as received" : gateKey === "gate2" ? "835 from the claims system" : "MIR before it goes")}</h2>
           <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>{gate.subtitle || "Active validation checks"}</div>
         </div>
-        <div style={{ padding: "7px 16px 8px", borderTop: "1px solid var(--line)" }}>
+        <div style={{ padding: "7px 16px 8px", borderTop: "1px solid var(--line)", flex: "1 1 auto" }}>
           {groupRows(gateKey)}
           {metrics}
         </div>
-        <div style={{ padding: "9px 16px", borderTop: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)", fontSize: "12px", lineHeight: 1.35 }}>{footer}</div>
+        <div style={{ padding: "9px 16px", borderTop: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)", fontSize: "12px", lineHeight: 1.35, minHeight: "44px", display: "flex", alignItems: "center" }}>{footer}</div>
       </div>
     );
   };
@@ -127,7 +127,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     <section className="view on table-screen">
       {showHeading && <h1 className="checks-page-title">Checks</h1>}
 
-      <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "start" }}>
+      <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({
           gateKey: "gate1",
           eyebrow: "Gate 1 · Inbound",
