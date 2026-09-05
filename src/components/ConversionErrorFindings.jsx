@@ -39,6 +39,89 @@ function findingsForFile(file) {
   return [...direct, ...parsedFindings, ...parsedErrors].map(normalizeFinding);
 }
 
+function severityBadgeStyle(value) {
+  const severity = String(value || "").toUpperCase();
+  const base = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "72px",
+    padding: "4px 9px",
+    borderRadius: "4px",
+    fontSize: "10.5px",
+    fontWeight: 700,
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+    border: "1px solid transparent",
+  };
+
+  if (severity === "ERROR" || severity === "REFUSE" || severity === "FAILED" || severity === "FAIL") {
+    return {
+      ...base,
+      background: "#FDE8E6",
+      color: "#B42318",
+      borderColor: "#F7C9C4",
+    };
+  }
+
+  if (severity === "HOLD") {
+    return {
+      ...base,
+      background: "#FFF3D6",
+      color: "#A15C00",
+      borderColor: "#F3D9A5",
+    };
+  }
+
+  if (severity === "WARN" || severity === "WARNING") {
+    return {
+      ...base,
+      background: "#FFF8CC",
+      color: "#7A6100",
+      borderColor: "#E8DB8E",
+    };
+  }
+
+  if (severity === "INFO" || severity === "ACTIVE") {
+    return {
+      ...base,
+      background: "#E8F1FF",
+      color: "#245EA8",
+      borderColor: "#C9DCF7",
+    };
+  }
+
+  if (severity === "PASS" || severity === "OK" || severity === "SUCCESS") {
+    return {
+      ...base,
+      background: "#E4F5EE",
+      color: "#087A5A",
+      borderColor: "#BFE5D8",
+    };
+  }
+
+  return {
+    ...base,
+    background: "#EEF1F5",
+    color: "#526174",
+    borderColor: "#D7DEE7",
+  };
+}
+
+function statusBadgeStyle(value) {
+  const status = String(value || "").toUpperCase();
+  if (status === "ERROR" || status === "PARTIAL") {
+    return severityBadgeStyle("ERROR");
+  }
+  if (status === "PROCESSING" || status === "HOLD") {
+    return severityBadgeStyle("HOLD");
+  }
+  if (status === "ARCHIVED" || status === "COMPLETED") {
+    return severityBadgeStyle("SUCCESS");
+  }
+  return severityBadgeStyle("INFO");
+}
+
 export default function ConversionErrorFindings({ trackedFiles = [] }) {
   const [selectedFileId, setSelectedFileId] = useState("");
 
@@ -82,7 +165,9 @@ export default function ConversionErrorFindings({ trackedFiles = [] }) {
             ) : errorFiles.map((file) => (
               <tr key={file.id}>
                 <td style={{ fontWeight: 600 }}>{file.original_filename || file.stored_filename || "—"}</td>
-                <td>{String(file.status || "ERROR").toUpperCase()}</td>
+                <td>
+                  <span style={statusBadgeStyle(file.status)}>{String(file.status || "ERROR").toUpperCase()}</span>
+                </td>
                 <td className="num">{Number(file.claims_count || 0).toLocaleString()}</td>
                 <td className="num">{file._findings.length.toLocaleString()}</td>
                 <td><TimeDisplay value={file.processing_completed_at || file.uploaded_at} includeSeconds easternOnly /></td>
@@ -132,7 +217,9 @@ export default function ConversionErrorFindings({ trackedFiles = [] }) {
                     <td>{finding.gate}</td>
                     <td>{finding.checks}</td>
                     <td>{finding.source}</td>
-                    <td>{finding.severity}</td>
+                    <td>
+                      <span style={severityBadgeStyle(finding.severity)}>{finding.severity}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
