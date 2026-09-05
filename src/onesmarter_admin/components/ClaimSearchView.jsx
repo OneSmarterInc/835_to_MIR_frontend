@@ -61,6 +61,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [error, setError] = useState('');
   const [uploads, setUploads] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [notice, setNotice] = useState('');
   const [claimId, setClaimId] = useState(null);
 
@@ -89,12 +90,42 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     finally { setProcessing(false); }
   };
 
+  const renameSftp837Files = async () => {
+    if (!activeClientId || renaming) return;
+    const prefixInput = window.prompt('Enter the new filename prefix for all 837 files in this client\'s configured 837 SFTP folder.', '837');
+    if (prefixInput === null) return;
+    const prefix = prefixInput.trim();
+    if (!prefix) { setError('Enter a filename prefix before renaming 837 files.'); return; }
+    if (!window.confirm(`Rename all valid 837 files in the selected client\'s SFTP folder using the prefix "${prefix}"?`)) return;
+
+    setRenaming(true); setError(''); setNotice('');
+    try {
+      const token = localStorage.getItem('onesmarter_admin_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Token ${token}`;
+      headers['X-Admin-Screen'] = 'search';
+      const res = await fetch('/edi835/api/837/sftp-rename/', {
+        method: 'POST', credentials: 'include', headers,
+        body: JSON.stringify({ client_id: activeClientId, prefix }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Unable to rename the 837 files on SFTP.');
+      setNotice(data.message || `${data.renamed_count || 0} 837 file(s) renamed on SFTP.`);
+    } catch (err) { setError(err.message); }
+    finally { setRenaming(false); }
+  };
+
   return <section className="view on claim-search-view">
-    <div className="eyebrow">837 CLAIM INDEX</div><h1>Search</h1><p className="sub">Find persisted 837 claims by the complete claim number, Highmark claim number, or internal claim number.</p>
-    <div className="claim-search-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} fullWidth /></div>
+    <div className="claim-search-heading-row">
+      <div><div className="eyebrow">837 CLAIM INDEX</div><h1>Search</h1><p className="sub">Find persisted 837 claims by the complete claim number, Highmark claim number, or internal claim number.</p></div>
+      <div className="claim-search-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} fullWidth /></div>
+    </div>
     <div className="claim-search-upload"><div><label>Upload and process 837 files</label><input id="search-837-upload" type="file" multiple onChange={event => setUploads(Array.from(event.target.files || []))} /><small>{uploads.length ? `${uploads.length} file(s) selected` : 'Select one or more 837 files, including files without extensions.'}</small></div><button type="button" className="btn primary" disabled={!activeClientId || !uploads.length || processing} onClick={processUpload}>{processing ? 'Processing 837…' : 'Upload & Process 837'}</button></div>
     {notice && <div className="claim837-message success">{notice}</div>}{error && <div className="claim837-message error">{error}</div>}
-    <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search claim, Highmark, or internal claim number" autoComplete="off" />{loading && <span>Searching…</span>}</div>
+    <div className="claim-search-actions">
+      <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={renameSftp837Files}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
+      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search claim, Highmark, or internal claim number" autoComplete="off" />{loading && <span>Searching…</span>}</div>
+    </div>
     <div className="claim-search-results"><div className="claim-search-count">{query.trim() ? `${rows.length} matching claim${rows.length === 1 ? '' : 's'}` : 'Enter a claim number to search'}</div><div className="claim837-table-wrap"><table><thead><tr><th>Claim number</th><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>Member ID</th><th>837 file</th><th>Services</th><th>Total charge</th></tr></thead><tbody>
       {!rows.length ? <tr><td colSpan="8" className="empty">{query.trim() && !loading ? 'No matching 837 claims found.' : 'Search results will appear here.'}</td></tr> : rows.map(row => <tr key={row.id}><td><button className="claim837-link" type="button" onClick={() => setClaimId(row.id)}>{row.claim_number}</button></td><td>{row.highmark_claim_number || '—'}</td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}</td><td>{row.member_id || '—'}</td><td>{row.file_name}</td><td>{row.service_count}</td><td>{money(row.total_charge_amount)}</td></tr>)}
     </tbody></table></div></div>
