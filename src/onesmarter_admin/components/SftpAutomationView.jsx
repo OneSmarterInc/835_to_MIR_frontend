@@ -58,6 +58,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   const [saving, setSaving] = useState('');
   const [message, setMessage] = useState(null);
   const initializedClient = useRef('');
+  const refreshInFlight = useRef(false);
   const client = clients.find(item => String(item.id) === String(clientId));
   const offboarded = String(client?.stage || '').toLowerCase() === 'offboarded';
   const operation = OPERATIONS[type].find(item => item.direction === direction) || OPERATIONS[type][0];
@@ -75,7 +76,8 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   }, [activeClientId, clientId, clients]);
 
   const load = useCallback(async (quiet = false) => {
-    if (!clientId) return;
+    if (!clientId || refreshInFlight.current) return;
+    refreshInFlight.current = true;
     if (!quiet) setLoading(true);
     try {
       const data = await apiJson(`/edi835/api/admin/sftp-automation/?${new URLSearchParams({ client_id: clientId, page: String(runPage), page_size: '25' })}`);
@@ -90,9 +92,20 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
         initializedClient.current = String(clientId); setForms(next);
       }
     } catch (error) { if (!quiet) setMessage({ kind: 'bad', text: error.message }); }
-    finally { if (!quiet) setLoading(false); }
+    finally { refreshInFlight.current = false; if (!quiet) setLoading(false); }
   }, [clientId, client?.timezone, runPage]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const interval = window.setInterval(() => load(true), 3000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') load(true);
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [load]);
 
   const chooseClient = value => { initializedClient.current = ''; setRunPage(1); setClientId(value); onSelectClient?.(value); setMessage(null); };
   const chooseType = value => { setType(value); setDirection(OPERATIONS[value][0].direction); setMessage(null); };
@@ -151,7 +164,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
     <div className="sftp-auto-section-head"><div><h2>Scheduled Automation</h2></div></div>
     <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-matrix"><thead><tr><th>File type</th><th>Incoming</th><th>Outgoing / Processing</th></tr></thead><tbody>{TYPES.map(fileType => <tr key={fileType}><th>{fileType}</th><td>{matrixCell(fileType, 'INCOMING')}</td><td>{matrixCell(fileType, 'OUTGOING')}</td></tr>)}</tbody></table></div>
 
-    <div className="sftp-auto-section-head"><div><h2>Automation History</h2><p>Files taken, files delivered, timing and final status for past runs.</p></div><button type="button" className="btn-gray" onClick={() => load()} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button></div>
+    <div className="sftp-auto-section-head"><div><h2>Automation History</h2><p>Files taken, files delivered, timing and final status for past runs.</p></div></div>
     <div className="card sftp-auto-table-wrap"><table className="datatable sftp-auto-runs"><thead><tr><th>Automation</th><th>Direction</th><th>Files taken</th><th>Files sent</th><th>Scheduled / completed (Eastern)</th><th>Status</th></tr></thead><tbody>{runs.length ? runs.map(run => <tr key={run.id}><td><b>{run.automation_type}</b><small>{run.client_name}</small></td><td><span className="sftp-auto-direction">{run.direction || 'INCOMING'}</span></td><td><FileList files={run.input_files} empty="No files taken" /></td><td><FileList files={run.sent_files?.length ? run.sent_files : run.mir_output_files} empty="No files sent" /></td><td><TimeDisplay value={run.scheduled_for} includeSeconds easternOnly /><small>{run.finished_at ? <>Completed: <TimeDisplay value={run.finished_at} includeSeconds easternOnly /></> : run.started_at ? 'In progress' : 'Waiting'}</small></td><td><span className={`tag ${statusClass(run.status)}`}>{run.status}</span>{run.error_message && <small className="sftp-auto-error">{run.error_message}</small>}</td></tr>) : <tr><td colSpan="6" className="sftp-auto-none">No automation runs recorded for this client.</td></tr>}</tbody></table></div>
     <div className="sftp-auto-pagination"><span>{runPagination.total ? `Showing ${(runPagination.page - 1) * 25 + 1}–${Math.min(runPagination.page * 25, runPagination.total)} of ${runPagination.total} runs` : 'No runs'}</span><div><button type="button" disabled={!runPagination.has_previous || loading} onClick={() => setRunPage(page => Math.max(1, page - 1))}>Previous</button><b>Page {runPagination.page} of {runPagination.total_pages || 1}</b><button type="button" disabled={!runPagination.has_next || loading} onClick={() => setRunPage(page => page + 1)}>Next</button></div></div>
   </section>;
