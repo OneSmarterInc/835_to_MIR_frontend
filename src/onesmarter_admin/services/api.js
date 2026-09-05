@@ -96,6 +96,18 @@ export async function search837Claims(clientId, query, limit = 100) {
   return data;
 }
 
+export async function fetch837Files(clientId, query = '', page = 1, pageSize = 20) {
+  const params = new URLSearchParams({
+    client_id: clientId, q: query, page: String(page), page_size: String(pageSize),
+  });
+  const res = await fetch(`/edi835/api/837/files/?${params}`, {
+    credentials: 'include', headers: getAuthHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load 837 files.');
+  return data;
+}
+
 export async function fetch837ClaimDetail(claimId) {
   const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/`, { credentials: 'include', headers: getAuthHeaders() });
   const data = await res.json().catch(() => ({}));

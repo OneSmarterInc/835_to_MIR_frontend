@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetch837ClaimDetail, process837Upload, search837Claims } from '../services/api';
+import { fetch837ClaimDetail, fetch837Files, process837Upload, search837Claims } from '../services/api';
 import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+const dateTime = value => value ? new Date(value).toLocaleString() : '—';
 const date837Filename = () => {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -122,8 +123,14 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [active837Filename, setActive837Filename] = useState(date837Filename());
   const [notice, setNotice] = useState('');
   const [claimId, setClaimId] = useState(null);
+  const [fileQuery, setFileQuery] = useState('');
+  const [filePage, setFilePage] = useState(1);
+  const [fileData, setFileData] = useState({ results: [], count: 0, pages: 0, has_previous: false, has_next: false });
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const [fileRefresh, setFileRefresh] = useState(0);
 
-  useEffect(() => { setQuery(''); setRows([]); setError(''); setNotice(''); setActive837Filename(date837Filename()); }, [activeClientId]);
+  useEffect(() => { setQuery(''); setRows([]); setError(''); setNotice(''); setActive837Filename(date837Filename()); setFileQuery(''); setFilePage(1); }, [activeClientId]);
   useEffect(() => {
     if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
     const timer = setTimeout(async () => {
@@ -134,6 +141,16 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     }, 300);
     return () => clearTimeout(timer);
   }, [activeClientId, query]);
+  useEffect(() => {
+    if (!activeClientId) { setFileData({ results: [], count: 0, pages: 0, has_previous: false, has_next: false }); return undefined; }
+    const timer = setTimeout(async () => {
+      setFileLoading(true); setFileError('');
+      try { setFileData(await fetch837Files(activeClientId, fileQuery.trim(), filePage, 20)); }
+      catch (err) { setFileError(err.message); }
+      finally { setFileLoading(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [activeClientId, fileQuery, filePage, fileRefresh]);
 
   const processUpload = async () => {
     if (!activeClientId || !uploads.length) return;
@@ -143,6 +160,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       const claims = (data.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0);
       const failure = data.failed_count ? ` ${data.failed_count} file(s) failed.` : '';
       setNotice(`${data.processed_count} file(s) processed, ${data.duplicate_count} already present, ${claims} claims indexed.${failure}`);
+      setFilePage(1); setFileRefresh(value => value + 1);
       setUploads([]); document.getElementById('search-837-upload').value = '';
     } catch (err) { setError(err.message); }
     finally { setProcessing(false); }
@@ -184,6 +202,15 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     <div className="claim-search-results"><div className="claim-search-count">{query.trim() ? `${rows.length} matching claim${rows.length === 1 ? '' : 's'}` : 'Enter a claim number to search'}</div><div className="claim837-table-wrap"><table><thead><tr><th>Claim number</th><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>Member ID</th><th>837 file</th><th>Services</th><th>Total charge</th></tr></thead><tbody>
       {!rows.length ? <tr><td colSpan="8" className="empty">{query.trim() && !loading ? 'No matching 837 claims found.' : 'Search results will appear here.'}</td></tr> : rows.map(row => <tr key={row.id}><td><button className="claim837-link" type="button" onClick={() => setClaimId(row.id)}>{row.claim_number}</button></td><td>{row.highmark_claim_number || '—'}</td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}</td><td>{row.member_id || '—'}</td><td>{row.file_name}</td><td>{row.service_count}</td><td>{money(row.total_charge_amount)}</td></tr>)}
     </tbody></table></div></div>
+    <section className="claim-files-section">
+      <div className="claim-files-heading"><div><div className="eyebrow">837 FILE HISTORY</div><h2>837 Files</h2><p>{fileData.count} file{fileData.count === 1 ? '' : 's'} for the selected client</p></div><button type="button" className="btn" disabled={!activeClientId || fileLoading} onClick={() => setFileRefresh(value => value + 1)}>Refresh</button></div>
+      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={fileQuery} onChange={event => { setFileQuery(event.target.value); setFilePage(1); }} disabled={!activeClientId} placeholder="Search 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />{fileLoading && <span>Loading…</span>}</div>
+      {fileError && <div className="claim837-message error">{fileError}</div>}
+      <div className="claim-search-results"><div className="claim837-table-wrap"><table className="claim-files-table"><thead><tr><th>837 file</th><th>Processing status</th><th>Inbound</th><th>Inbound status</th><th>Outbound status</th><th>Claims</th><th>Services</th><th>Total charge</th><th>Processed</th></tr></thead><tbody>
+        {!fileData.results.length ? <tr><td colSpan="9" className="empty">{fileLoading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : fileData.results.map(file => <tr key={file.id}><td className="file-name-cell">{file.file_name}</td><td><span className={`file-status status-${file.status.toLowerCase()}`}>{file.status}</span></td><td>{file.inbound_source}</td><td><span className="file-status status-received">{file.inbound_status}</span></td><td><span className={`file-status ${file.outbound_ready ? 'status-pushed' : 'status-not-pushed'}`}>{file.outbound_status}</span></td><td>{file.claim_count}</td><td>{file.service_count}</td><td>{money(file.total_charge_amount)}</td><td>{dateTime(file.processed_at || file.uploaded_at)}</td></tr>)}
+      </tbody></table></div></div>
+      <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
+    </section>
     {claimId && <Claim837Modal claimId={claimId} exportFilename={active837Filename} onClose={() => setClaimId(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
   </section>;
