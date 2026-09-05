@@ -1,9 +1,9 @@
 export function splitClaimNumber(value) {
   const claim = String(value || "").trim();
-  const match = claim.match(/^(\d+)([A-Za-z].*)$/);
-  return match
-    ? { highmarkClaimNumber: match[1], internalClaimNumber: match[2] }
-    : { highmarkClaimNumber: "", internalClaimNumber: claim };
+  const match = claim.match(/^(\d+)[^A-Za-z0-9]*([A-Za-z].*)$/);
+  if (match) return { highmarkClaimNumber: match[1], internalClaimNumber: match[2] };
+  if (/^\d+$/.test(claim)) return { highmarkClaimNumber: claim, internalClaimNumber: "" };
+  return { highmarkClaimNumber: "", internalClaimNumber: claim };
 }
 
 export function claimParts(row) {
