@@ -172,7 +172,15 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     if (!activeClientId) { setFileData({ results: [], count: 0, pages: 0, has_previous: false, has_next: false }); return undefined; }
     const timer = setTimeout(async () => {
       setFileLoading(true); setFileError('');
-      try { setFileData(await fetch837Files(activeClientId, fileQuery.trim(), filePage, 20)); }
+      try {
+        const data = await fetch837Files(activeClientId, fileQuery.trim(), filePage, 20);
+        setFileData(data);
+        const serverFormat = String(data.filename_format || '').trim();
+        if (serverFormat) {
+          setActive837Filename(serverFormat);
+          localStorage.setItem(namingStorageKey(activeClientId), serverFormat);
+        }
+      }
       catch (err) { setFileError(err.message); }
       finally { setFileLoading(false); }
     }, 250);
@@ -207,8 +215,9 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Unable to rename the 837 files on SFTP.');
-      setActive837Filename(filename);
-      localStorage.setItem(namingStorageKey(activeClientId), filename);
+      const savedFormat = String(data.filename_format || filename || DEFAULT_837_FILENAME_FORMAT).trim();
+      setActive837Filename(savedFormat);
+      localStorage.setItem(namingStorageKey(activeClientId), savedFormat);
       setRenameOpen(false);
       setNotice(data.message || `${data.renamed_count || data.transferred_count || 0} 837 file(s) renamed on SFTP.`);
     } catch (err) { setError(err.message); }
