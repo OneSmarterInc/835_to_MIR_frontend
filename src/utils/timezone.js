@@ -84,6 +84,18 @@ export function formatEasternDate(value) {
   }).format(date);
 }
 
+export function formatEasternTime(value, includeSeconds = true) {
+  const date = validDate(value);
+  if (!date) return value || '—';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: EASTERN_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(includeSeconds ? { second: '2-digit' } : {}),
+    hour12: true,
+  }).format(date);
+}
+
 export function timeZoneDisplayName(zone) {
   const canonicalZone = canonicalTimeZone(zone);
   try {
