@@ -227,7 +227,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
 
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
-      <div><h1>837 Claim Search</h1></div>
+      <div className="claim-search-heading-copy"><div className="claim-search-eyebrow">Claims workspace</div><h1>837 Claim Search</h1><p>Upload, locate, and review 837 claim files for the selected client.</p></div>
       <div className="claim-search-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} fullWidth /></div>
     </div>
     <div className="claim-search-upload"><div><label>837 files</label><input id="search-837-upload" type="file" multiple onChange={event => setUploads(Array.from(event.target.files || []))} />{uploads.length > 0 && <small>{uploads.length} file(s) selected</small>}</div><button type="button" className="btn primary" disabled={!activeClientId || !uploads.length || processing} onClick={processUpload}>{processing ? 'Processing 837…' : 'Upload & Process'}</button></div>
