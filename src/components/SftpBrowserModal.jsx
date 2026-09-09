@@ -4,10 +4,7 @@ import { showAppAlert } from "./AppDialog";
 import { validateFileExtensions } from "../utils/fileTypes";
 
 function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem("onesmarter_admin_token");
-  const headers = { ...extra };
-  if (token) headers.Authorization = `Token ${token}`;
-  return headers;
+  return { ...extra };
 }
 
 export default function SftpBrowserModal({
@@ -346,7 +343,7 @@ export default function SftpBrowserModal({
                   !error &&
                   files.map((file, idx) => (
                     <tr key={idx}>
-                      <td style={{ color: "var(--ink-2)" }}>📄 {file.name} {/(^|[^0-9])837([^0-9]|$)|\\.(837|x12|edi)$/i.test(file.name) && <span className="tag ok" style={{ marginLeft: "8px", fontSize: "9px" }}>837 REFERENCE</span>}</td>
+                      <td style={{ color: "var(--ink-2)" }}>📄 {file.name} {/(^|[^0-9])837([^0-9]|$)|\.(837|x12|edi)$/i.test(file.name) && <span className="tag ok" style={{ marginLeft: "8px", fontSize: "9px" }}>837 REFERENCE</span>}</td>
                       <td>
                         <span className="tag idle" style={{ fontSize: "9.5px" }}>
                           FILE
