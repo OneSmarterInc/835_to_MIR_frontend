@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 
 import CODES from "../data/codeDictionary.json";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 const LABELS = {
   fixable: "Fixable by the Fund",
@@ -36,8 +37,8 @@ export default function CodeDictionaryView() {
 
   return (
     <section className="view on table-screen code-dictionary-view">
+      <WorkspaceHeader eyebrow="Reference workspace" title="Exception Code Dictionary" description="Find validation exception codes, dispositions, and resolution guidance." />
       <div className="code-dictionary-header">
-        <h1>Exception Code Dictionary</h1>
         <div className="code-dictionary-stats">
         {[
           [tallies.total,"Codes loaded"],
