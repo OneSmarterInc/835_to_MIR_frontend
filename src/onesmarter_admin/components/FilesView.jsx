@@ -6,6 +6,7 @@ import { showAppAlert } from '../../components/AppDialog';
 import EyeIcon from '../../components/EyeIcon';
 import OffboardedClientBanner from './OffboardedClientBanner';
 import ArchiveZipMenu from '../../components/ArchiveZipMenu';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 function canonicalMirFilename(file) {
   return file?.mir_filename || file?.output_filename || file?.combined_filename || '';
@@ -93,9 +94,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
     try {
       // Use the same canonical name displayed in MIR OUTPUT as the browser
       // download name. This is intentionally explicit for the Admin Files page.
-      const res = await fetch(`${'/admin-panel/api'}/clients/${encodeURIComponent(selectedClientId)}/edi-files/${encodeURIComponent(file.id)}/mir/?download=1`, {
-        credentials: 'include',
-      });
+      const res = await fetch(`${'/admin-panel/api'}/clients/${encodeURIComponent(selectedClientId)}/edi-files/${encodeURIComponent(file.id)}/mir/?download=1`, { headers: { Authorization: `Token ${localStorage.getItem('onesmarter_admin_token')}` } });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to download file');
@@ -121,12 +120,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
 
   return (
     <section className="view on table-screen" id="v-files">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-        <div><div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}><h1 style={{ margin: 0 }}>Archive</h1><span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>ALL CONVERSION-SET HISTORY</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}><span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>Client:</span><ClientSelectDropdown clients={clients} value={selectedClientId} includeGlobal={true} onChange={(val) => { setSelectedClientId(val); setCurrentPage(1); if (val && onSelectClient) onSelectClient(val); }} /></div>
-        </div>
-        <ArchiveZipMenu onDownload={handleDownloadZip} />
-      </div>
+      <WorkspaceHeader eyebrow="File history workspace" title="Archive" description="Review and export all retained 835, MIR, and reconciliation conversion sets."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} includeGlobal onChange={(val) => { setSelectedClientId(val); setCurrentPage(1); if (val && onSelectClient) onSelectClient(val); }} fullWidth /></div><ArchiveZipMenu onDownload={handleDownloadZip} /></WorkspaceHeader>
       <OffboardedClientBanner client={currentClient || selectedClient} detail="Files and archive history remain read-only. New processing and SFTP delivery are locked." />
       {errorMessage && <div className="note" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)', marginBottom: '16px' }}><b>Error:</b> {errorMessage}</div>}
       <div className="metrics files-metrics-grid" style={{ gap: '12px', marginBottom: '20px' }}><div className="metric"><div className="v">{conversionSets}</div><div className="l">Conversion sets</div><div className="d"><span>{archivedCount}</span> physical file seals stored</div></div><div className="metric"><div className="v">{files835}</div><div className="l">835 files received</div><div className="d">Across all conversion sets</div></div><div className="metric"><div className="v">0</div><div className="l">837 references</div><div className="d">Optional - reference only</div></div><div className="metric"><div className="v">{validatedSets}</div><div className="l">Validated sets</div><div className="d">835 validation passed</div></div><div className="metric"><div className="v">{processedSets}</div><div className="l">Processed sets</div><div className="d"><span>{waitingFailed}</span> waiting/failed – <span>{valFailed}</span> validation failed</div></div></div>
