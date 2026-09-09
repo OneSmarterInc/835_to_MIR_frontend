@@ -24,4 +24,9 @@ for (const [country, national] of [['US', '1723979234'], ['IN', '1234567890'], [
 }
 
 assert.deepEqual(splitE164('+919876543210'), { countryIso: 'IN', nationalNumber: '9876543210' });
+assert.equal(validateNationalNumber('US', '14155552671'), '');
+assert.equal(toE164('US', '14155552671'), '+14155552671');
+assert.equal(validateNationalNumber('IN', '919876543210'), '');
+assert.equal(toE164('IN', '919876543210'), '+919876543210');
+assert.match(validateNationalNumber('US', '4343'), /10 digits after \+1.*4 entered/);
 console.log('Phone validation checks passed.');
