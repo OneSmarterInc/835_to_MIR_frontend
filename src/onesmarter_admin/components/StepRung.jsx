@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, deleteClientContact, deleteClientUser, fetchClientSmtpConfig, saveClientSmtpConfig } from '../services/api';
+import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, deleteClientContact, deleteClientUser, fetchClientSmtpConfig, saveClientSmtpConfig, pushEdiFileToSftp } from '../services/api';
 import FeedbackModal from './modals/FeedbackModal';
 import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
@@ -61,6 +61,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [validating835, setValidating835] = useState(false);
+  const [pushingMir, setPushingMir] = useState(false);
   const [showSftpModal, setShowSftpModal] = useState(false);
 
   const [s4Name, setS4Name] = useState('');
@@ -313,6 +314,25 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       await onRefresh();
     } finally {
       setValidating835(false);
+    }
+  };
+
+  const handlePushGeneratedMir = async (force = false) => {
+    const delivery = step.extra?.mir_delivery;
+    if (!delivery?.file_id) {
+      await showAppAlert('The generated MIR file record is unavailable. Run Step 11 again.', { title: 'MIR Not Available', tone: 'error' });
+      return;
+    }
+    setPushingMir(true);
+    try {
+      const result = await pushEdiFileToSftp(delivery.file_id, { force });
+      await showAppAlert(result.message || 'MIR pushed to the configured SFTP output path.', { title: force ? 'MIR Pushed Again' : 'MIR Pushed', tone: 'success' });
+      await onRefresh();
+    } catch (err) {
+      await showAppAlert(err.message || 'The MIR could not be pushed to SFTP.', { title: 'SFTP Push Failed', tone: 'error' });
+      await onRefresh();
+    } finally {
+      setPushingMir(false);
     }
   };
 
@@ -1106,28 +1126,20 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Side-by-Side 835 Conversion Review Notes</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s10Notes} onChange={(e) => setS10Notes(e.target.value)} placeholder="e.g. Verified side-by-side 835 conversion claim totals CLP, BPR, and TRN against MIR format." />
-                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    className="btn tiny"
-                    type="button"
-                    onClick={async () => {
-                      if (await showAppConfirm("Do you want to transmit the verified test MIR payload to the client SFTP/FTP server now?", {
-                        title: 'Transmit Test MIR?', confirmLabel: 'Transmit', tone: 'info',
-                      })) {
-                        try {
-                          await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: "Test File Transmitted via SFTP/FTP successfully. " + s10Notes });
-                          await showAppAlert("Test payload transmitted successfully via SFTP/FTP.", { title: 'Transmission Complete', tone: 'success' });
-                          await onRefresh();
-                        } catch (err) {
-                          await showAppAlert("Transmission failed: " + err.message, { title: 'Transmission Failed', tone: 'error' });
-                        }
-                      }
-                    }}
-                    style={{ background: '#f59e0b', color: '#fff', border: 'none', fontWeight: 600 }}
-                  >
-                    ⚡ Transmit Test File to FTP
-                  </button>
-                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit</button>
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                  {step.extra?.mir_delivery?.mir_created && step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" type="button" disabled={pushingMir} onClick={() => handlePushGeneratedMir(true)}>
+                      {pushingMir ? 'Pushing…' : 'Push to SFTP Again'}
+                    </button>
+                  )}
+                  {step.extra?.mir_delivery?.mir_created && !step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" type="button" disabled={pushingMir} onClick={() => handlePushGeneratedMir(false)}>
+                      {pushingMir ? 'Pushing…' : 'Push MIR to SFTP'}
+                    </button>
+                  )}
+                  {step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" onClick={handleStep10Save}>Continue</button>
+                  )}
                 </div>
               </div>
             )}
