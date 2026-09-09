@@ -432,7 +432,7 @@ export async function fetchClientEdiFiles(clientId) {
   return data.files || [];
 }
 
-export async function uploadClientDocument(clientId, file, docName = '', docType = 'General Document') {
+export async function uploadClientDocument(clientId, file, docName = '', docType = 'General Document', expirationDate = '') {
   const safeFilename = encodeURIComponent(file.name);
   const safeDocName = encodeURIComponent(docName || file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/documents/upload/`, {
@@ -441,7 +441,8 @@ export async function uploadClientDocument(clientId, file, docName = '', docType
     headers: getAuthHeaders({
       'X-Filename': safeFilename,
       'X-Doc-Name': safeDocName,
-      'X-Doc-Type': docType
+      'X-Doc-Type': encodeURIComponent(docType),
+      'X-Expiration-Date': expirationDate
     }),
     body: file
   });
