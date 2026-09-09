@@ -1,0 +1,41 @@
+name: N2 validation text safety check
+
+on:
+  push:
+    branches: [n2-safe-validation-text]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify FeedbackModal renders detail as React text
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='src/onesmarter_admin/components/modals/FeedbackModal.jsx'
+          if grep -q 'dangerouslySetInnerHTML' "$file"; then
+            echo 'FeedbackModal still uses dangerouslySetInnerHTML'
+            exit 1
+          fi
+          grep -F '<div className="vd">{c.detail}</div>' "$file"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Existing auth regression check
+        run: npm run test:file-viewer-auth
