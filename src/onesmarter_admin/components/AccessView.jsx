@@ -119,8 +119,13 @@ export default function AccessView({ currentUser }) {
     await loadAccess();
   };
 
-  const handleRevokeClientAccess = async (grantId) => {
-    await revokeClientAccess(grantId);
+  const handleRevokeClientAccess = async (grant, member) => {
+    const confirmed = await showAppConfirm(
+      `Revoke ${member?.person || member?.name || member?.email || 'this administrator'}'s access to ${grant.client_name} now?`,
+      { title: 'Revoke Client Data Access?', confirmLabel: 'Revoke Access', danger: true, tone: 'error' },
+    );
+    if (!confirmed) return;
+    await revokeClientAccess(grant.id);
     await loadAccess();
   };
 
