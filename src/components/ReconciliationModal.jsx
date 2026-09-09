@@ -23,9 +23,7 @@ const ruleLabels = {
 const outcomeOptions = ["NOT_IN_MIR", "NOT_IN_RECON", "SIGNATURE_MISMATCH", "PARTIALLY_PAID", "OVERPAID", "UNPAID", "AMOUNT_MISMATCH"];
 
 async function apiJson(url, signal) {
-  const token = localStorage.getItem("onesmarter_admin_token");
-  const headers = token ? { Authorization: `Token ${token}` } : {};
-  const response = await portalFetch(url, { signal, headers });
+  const response = await portalFetch(url, { signal });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.success === false) throw new Error(data.error || `Request failed (${response.status}).`);
   return data;
@@ -84,13 +82,10 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
   const downloadExport = async () => {
     setExporting(true); setError("");
     try {
-      const token = localStorage.getItem("onesmarter_admin_token");
       const params = new URLSearchParams();
       if (isAdmin && clientId) params.set("client_id", clientId);
       if (isAdmin && !clientId) params.set("scope", "global");
-      const response = await portalFetch(`/edi835/api/reconciliation/export/?${params}`, {
-        headers: token ? { Authorization: `Token ${token}` } : {},
-      });
+      const response = await portalFetch(`/edi835/api/reconciliation/export/?${params}`);
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || `Export failed (${response.status}).`);
@@ -107,13 +102,12 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
     const previousStatus = data.records.find((row) => row.claim_id === claimId)?.action_status || "YET_TO_START";
     setData((current) => ({ ...current, records: current.records.map((row) => row.claim_id === claimId ? { ...row, action_status: actionStatus } : row) }));
     try {
-      const token = localStorage.getItem("onesmarter_admin_token");
       const body = { claim_id: claimId, action_status: actionStatus };
       if (isAdmin && clientId) body.client_id = clientId;
       if (isAdmin && !clientId) body.scope = "global";
       const response = await portalFetch("/edi835/api/reconciliation/actions/", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Token ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const result = await response.json().catch(() => ({}));
