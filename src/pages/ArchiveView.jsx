@@ -4,6 +4,7 @@ import FileActionButtons from "../components/FileActionButtons";
 import TimeDisplay from "../components/TimeDisplay";
 import { showAppAlert } from "../components/AppDialog";
 import ArchiveZipMenu from "../components/ArchiveZipMenu";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function ArchiveView({
   metrics,
@@ -195,24 +196,7 @@ export default function ArchiveView({
 
   return (
     <section className="view on table-screen" id="v-archive">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-          <h1 style={{ margin: 0 }}>Archive</h1>
-          <span
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              color: "var(--ink-3)",
-              textTransform: "uppercase",
-            }}
-          >
-            ALL CONVERSION-SET HISTORY
-          </span>
-        </div>
-
-        <ArchiveZipMenu onDownload={handleDownloadZip} />
-      </div>
+      <WorkspaceHeader eyebrow="File history workspace" title="Archive" description="Review and export all retained 835, MIR, and reconciliation conversion sets."><ArchiveZipMenu onDownload={handleDownloadZip} /></WorkspaceHeader>
       {/* 5 METRIC CARDS METRICS BAR */}
       <div
         className="metrics"
