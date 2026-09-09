@@ -3,10 +3,7 @@ import SftpBrowserModal from '../../components/SftpBrowserModal';
 import SftpConfigurationPanel from '../../components/SftpConfigurationPanel';
 
 function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = { ...extra };
-  if (token) headers['Authorization'] = `Token ${token}`;
-  return headers;
+  return { ...extra };
 }
 
 async function readJsonResponse(response) {
@@ -50,7 +47,7 @@ export default function DefaultConfigsView() {
   const [smtpHasPassword, setSmtpHasPassword] = useState(false);
 
   useEffect(() => {
-    fetch('/edi835/api/sftp/get/', { headers: getAuthHeaders() })
+    fetch('/edi835/api/sftp/get/', { credentials: 'include', headers: getAuthHeaders() })
       .then(async res => {
         const data = await readJsonResponse(res);
         if (!res.ok) throw new Error(data.error || data.detail || `Request failed (${res.status}).`);
@@ -78,7 +75,7 @@ export default function DefaultConfigsView() {
       })
       .catch(err => console.error('Failed to load default SFTP', err));
 
-    fetch('/admin-panel/api/default-smtp/', { headers: getAuthHeaders() })
+    fetch('/admin-panel/api/default-smtp/', { credentials: 'include', headers: getAuthHeaders() })
       .then(async res => {
         const data = await readJsonResponse(res);
         if (!res.ok) throw new Error(data.error || data.detail || `Request failed (${res.status}).`);
@@ -183,6 +180,7 @@ export default function DefaultConfigsView() {
       }
       const res = await fetch('/edi835/api/sftp/save/', {
         method: 'POST',
+        credentials: 'include',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
@@ -244,6 +242,7 @@ export default function DefaultConfigsView() {
       }
       const res = await fetch('/admin-panel/api/default-smtp/', {
         method: 'POST',
+        credentials: 'include',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
