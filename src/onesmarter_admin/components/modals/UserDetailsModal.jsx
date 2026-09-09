@@ -120,7 +120,7 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
               <option value="">Select client</option>
               {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
             </select>
-            <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} placeholder="Business reason for protected-data access" />
+            <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} placeholder="Business reason (minimum 10 characters)" />
             <input type="number" min="1" step="1" value={durationValue} aria-label="Access duration" onChange={(event) => setDurationValue(event.target.value)} />
             <select value={durationUnit} aria-label="Access duration unit" onChange={(event) => setDurationUnit(event.target.value)}>
               <option value="minutes">Minutes</option>
@@ -130,6 +130,7 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
             </select>
             <button type="button" className="btn" disabled={!grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => { await onGrantClientAccess(user, { client_id: grantClientId, reason: grantReason.trim(), duration_value: Number(durationValue), duration_unit: durationUnit }); setGrantReason(''); }}>Grant Access</button>
           </div>
+          {grantReason.length > 0 && grantReason.trim().length < 10 && <div className="admin-client-grant-hint">Enter at least 10 characters to enable Grant Access.</div>}
           {activeGrants.filter((grant) => new Date(grant.expires_at).getTime() > now).map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b> · <strong>{formatRemaining(grant.expires_at)} remaining</strong> · expires {new Date(grant.expires_at).toLocaleString()}</span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant, user)}>Revoke</button></div>)}
         </div>
       )}
