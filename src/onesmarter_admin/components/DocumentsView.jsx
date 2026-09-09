@@ -140,7 +140,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         <table className="documents-register-table">
           <thead>
             <tr>
-              <th>Document</th><th>Direction</th><th>Category</th><th>Format</th>
+              <th>Document</th><th>Filename</th><th>Direction</th><th>Category</th><th>Format</th>
               <th>Size</th><th>Uploaded By</th><th>Signed or Sent</th><th>Expires</th>
               <th>Version</th><th>State</th><th>Action</th>
             </tr>
@@ -152,6 +152,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
               return (
                 <tr key={doc.document_type}>
                   <td><b>{doc.document_name || '—'}</b></td>
+                  <td>{doc.original_filename || '—'}</td>
                   <td>{doc.direction || '—'}</td><td>{doc.category || '—'}</td>
                   <td><span className="mono">{ext}</span></td>
                   <td className="num">{formatBytes(doc.file_size)}</td>
