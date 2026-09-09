@@ -6,6 +6,7 @@ import UserDetailsModal from './modals/UserDetailsModal';
 import TimeDisplay from '../../components/TimeDisplay';
 import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
 import { isAdministrativeAccount, isSuperAdminAccount } from '../utils/adminRoles';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -184,15 +185,7 @@ export default function AccessView({ currentUser }) {
 
   return (
     <section className="view on table-screen" id="v-access">
-      <div className="hdr-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Access Matrix</h1>
-          <p className="sub">Administrative staff role-based access and break-glass logging.</p>
-        </div>
-        <button className="btn primary" onClick={() => setShowCreateModal(true)}>
-          + Create User
-        </button>
-      </div>
+      <WorkspaceHeader eyebrow="Governance workspace" title="Access Matrix" description="Administrative staff role-based access and break-glass logging."><button className="btn primary" onClick={() => setShowCreateModal(true)}>+ Create User</button></WorkspaceHeader>
 
       <div className="metrics">
         <div className="metric">
