@@ -1,7 +1,11 @@
 const BASE_URL = '/admin-panel/api';
 
 function getAuthHeaders(extraHeaders = {}) {
+  const token = localStorage.getItem('onesmarter_admin_token');
   const headers = { ...extraHeaders };
+  if (token) {
+    headers['Authorization'] = `Token ${token}`;
+  }
   const activeScreen = new URLSearchParams(window.location.search).get('nav');
   if (activeScreen) headers['X-Admin-Screen'] = activeScreen;
   return headers;
@@ -10,7 +14,6 @@ function getAuthHeaders(extraHeaders = {}) {
 export async function loginAdmin(email, password, code) {
   const res = await fetch(`${BASE_URL}/auth/login/`, {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, code })
   });
@@ -22,7 +25,6 @@ export async function loginAdmin(email, password, code) {
 export async function registerAdmin(email, password, name) {
   const res = await fetch(`${BASE_URL}/auth/register/`, {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, name })
   });
@@ -35,7 +37,6 @@ export async function logoutAdmin() {
   try {
     await fetch(`${BASE_URL}/auth/logout/`, {
       method: 'POST',
-      credentials: 'include',
       headers: getAuthHeaders()
     });
   } catch (e) {
@@ -45,7 +46,6 @@ export async function logoutAdmin() {
 
 export async function fetchClients() {
   const res = await fetch(`${BASE_URL}/clients/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   // Bypass 401 logout reload
@@ -55,7 +55,6 @@ export async function fetchClients() {
 
 export async function fetchClientState(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/state/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch client state');
@@ -149,7 +148,6 @@ export async function createClient(clientPayload) {
   try {
     res = await fetch('/admin-panel/api/clients/create/', {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload)
     });
@@ -161,7 +159,6 @@ export async function createClient(clientPayload) {
     try {
       res = await fetch('/admin-panel/api/clients/', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(payload)
       });
@@ -200,7 +197,6 @@ export async function createClient(clientPayload) {
 export async function deleteClient(clientId, confirmationName, password) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/delete/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ confirmation_name: confirmationName, password })
   });
@@ -211,7 +207,6 @@ export async function deleteClient(clientId, confirmationName, password) {
 
 export async function downloadTemplateFile(clientId, stepKey, title, ext) {
   const res = await fetch(`${BASE_URL}/download/${encodeURIComponent(clientId)}/${encodeURIComponent(stepKey)}/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) {
@@ -233,7 +228,6 @@ export async function downloadTemplateFile(clientId, stepKey, title, ext) {
 
 export async function fetchStepUploadFile(clientId, stepKey) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/file/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) {
@@ -255,13 +249,14 @@ export async function fetchStepUploadFile(clientId, stepKey) {
   return { fileUrl, contentType, filename, blob };
 }
 
-export async function uploadStepFile(clientId, stepKey, file) {
+export async function uploadStepFile(clientId, stepKey, file, expirationDate) {
   const safeFilename = encodeURIComponent(file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/upload/`, {
     method: 'POST',
     credentials: 'include',
     headers: getAuthHeaders({
-      'X-Filename': safeFilename
+      'X-Filename': safeFilename,
+      'X-Expiration-Date': expirationDate
     }),
     body: file
   });
@@ -274,6 +269,7 @@ export async function uploadStepFile(clientId, stepKey, file) {
   if (!res.ok || data.success === false) {
     const err = new Error(data.error || 'Validation failed');
     err.checks = data.checks || [];
+    err.version = data.version || null;
     throw err;
   }
   return data;
@@ -307,7 +303,6 @@ export async function validateStaged835(clientId, file) {
 export async function redoStep(clientId, stepKey) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/redo/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -318,7 +313,6 @@ export async function redoStep(clientId, stepKey) {
 export async function postStepData(endpoint, body) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body)
   });
@@ -335,7 +329,6 @@ export async function postStepData(endpoint, body) {
 
 export async function fetchNotes(clientId, stepKey) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/notes/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch notes');
@@ -345,7 +338,6 @@ export async function fetchNotes(clientId, stepKey) {
 export async function addNote(clientId, stepKey, noteText) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/notes/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ note_text: noteText })
   });
@@ -368,7 +360,6 @@ export async function deleteClientUser(clientId, userId) {
 
 export async function fetchEmployeeRoles() {
   const res = await fetch(`${BASE_URL}/employee-roles/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch roles');
@@ -378,7 +369,6 @@ export async function fetchEmployeeRoles() {
 export async function addEmployeeRole(roleName, description = '') {
   const res = await fetch(`${BASE_URL}/employee-roles/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ role_name: roleName, description: description })
   });
@@ -394,7 +384,6 @@ export async function fetchAuditLogs(filters = {}) {
   });
   const qs = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`${BASE_URL}/audit-logs/${qs}`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -405,7 +394,6 @@ export async function fetchAuditLogs(filters = {}) {
 // --- 1. Client Documents Service ---
 export async function fetchClientDocuments(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/documents/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch client documents');
@@ -424,7 +412,6 @@ export async function fetchClientEdiFiles(clientId) {
     return data.files || [];
   }
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch client EDI 835 archive files');
@@ -453,7 +440,6 @@ export async function uploadClientDocument(clientId, file, docName = '', docType
 
 export async function fetchDocumentFile(docId, defaultFilename = 'document.pdf') {
   const res = await fetch(`${BASE_URL}/documents/${encodeURIComponent(docId)}/download/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Document download failed');
@@ -474,7 +460,6 @@ export async function fetchDocumentFile(docId, defaultFilename = 'document.pdf')
 
 export async function downloadDocumentFile(docId, defaultFilename = 'document.pdf') {
   const res = await fetch(`${BASE_URL}/documents/${encodeURIComponent(docId)}/download/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Document download failed');
@@ -492,7 +477,6 @@ export async function downloadDocumentFile(docId, defaultFilename = 'document.pd
 export async function deleteDocumentFile(docId) {
   const res = await fetch(`${BASE_URL}/documents/${encodeURIComponent(docId)}/`, {
     method: 'DELETE',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Document deletion failed');
@@ -502,7 +486,6 @@ export async function deleteDocumentFile(docId) {
 // --- 2. Test Environment Service ---
 export async function fetchClientTestEnvironment(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/test-environment/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch test environment');
@@ -513,7 +496,6 @@ export async function fetchClientTestEnvironment(clientId) {
 export async function updateClientTestEnvironment(clientId, payload) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/test-environment/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
@@ -525,7 +507,6 @@ export async function updateClientTestEnvironment(clientId, payload) {
 export async function runClientSandboxTest(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/test-environment/run-test/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -536,7 +517,6 @@ export async function runClientSandboxTest(clientId) {
 // --- 3. Go Live 6-Step Service ---
 export async function fetchGoLiveState(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/state/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch Go Live state');
@@ -565,7 +545,6 @@ export async function uploadGoLiveDoc(clientId, stepNum, file) {
 
 export async function downloadGoLiveTemplate(clientId, stepNum, filename) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/${stepNum}/download/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Template download failed');
@@ -582,7 +561,6 @@ export async function downloadGoLiveTemplate(clientId, stepNum, filename) {
 export async function saveGoLiveSFTP(clientId, payload) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/3/sftp/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
@@ -594,7 +572,6 @@ export async function saveGoLiveSFTP(clientId, payload) {
 export async function saveGoLiveSchedule(clientId, productionDate, productionTime, notes, timezone = 'America/New_York') {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/4/schedule/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       production_date: productionDate,
@@ -611,7 +588,6 @@ export async function saveGoLiveSchedule(clientId, productionDate, productionTim
 export async function saveGoLiveComment(clientId, commentText) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/5/comment/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       comment_text: commentText
@@ -625,7 +601,6 @@ export async function saveGoLiveComment(clientId, commentText) {
 export async function completeGoLiveStep6(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/6/complete/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -636,7 +611,6 @@ export async function completeGoLiveStep6(clientId) {
 export async function redoGoLiveStep(clientId, stepNum) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/${stepNum}/redo/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -647,7 +621,6 @@ export async function redoGoLiveStep(clientId, stepNum) {
 // --- 4. Access Matrix & Dynamic Last Login Service ---
 export async function fetchAccessInfo() {
   const res = await fetch(`${BASE_URL}/access/info/`, {
-    credentials: 'include',
     headers: getAuthHeaders(),
     cache: 'no-store'
   });
@@ -679,7 +652,6 @@ export async function createUser(userData) {
   try {
     res = await fetch('/admin-panel/api/users/create/', {
       method: 'POST',
-      credentials: 'include',
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
     });
@@ -691,7 +663,6 @@ export async function createUser(userData) {
     try {
       res = await fetch('/admin-panel/api/users/', {
         method: 'POST',
-        credentials: 'include',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
@@ -723,7 +694,6 @@ export async function createUser(userData) {
 export async function fetchMappings(clientId) {
   const url = clientId ? `${BASE_URL}/mappings/?client_id=${encodeURIComponent(clientId)}` : `${BASE_URL}/mappings/`;
   const res = await fetch(url, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch mappings');
@@ -734,7 +704,6 @@ export async function saveMappings(fields, clientId) {
   const url = clientId ? `${BASE_URL}/mappings/?client_id=${encodeURIComponent(clientId)}` : `${BASE_URL}/mappings/`;
   const res = await fetch(url, {
     method: 'PUT',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ fields })
   });
@@ -747,7 +716,6 @@ export async function checkMappings(fields, clientId) {
   const url = clientId ? `${BASE_URL}/mappings/check/?client_id=${encodeURIComponent(clientId)}` : `${BASE_URL}/mappings/check/`;
   const res = await fetch(url, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ fields })
   });
@@ -760,7 +728,6 @@ export async function resetMappings(clientId) {
   const url = clientId ? `${BASE_URL}/mappings/reset/?client_id=${encodeURIComponent(clientId)}` : `${BASE_URL}/mappings/reset/`;
   const res = await fetch(url, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -771,7 +738,6 @@ export async function resetMappings(clientId) {
 export async function updateUser(userId, userData) {
   const res = await fetch(`/admin-panel/api/users/${userId}/update/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(userData)
   });
@@ -783,7 +749,6 @@ export async function updateUser(userId, userData) {
 export async function deleteUser(userId) {
   const res = await fetch(`/admin-panel/api/users/${userId}/delete/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const data = await res.json();
@@ -793,7 +758,6 @@ export async function deleteUser(userId) {
 
 export async function fetchClientSmtpConfig(clientId) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/smtp/`, {
-    credentials: 'include',
     headers: getAuthHeaders()
   });
   const text = await res.text();
@@ -810,7 +774,6 @@ export async function fetchClientSmtpConfig(clientId) {
 export async function saveClientSmtpConfig(clientId, payload) {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/smtp/`, {
     method: 'POST',
-    credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
@@ -879,7 +842,6 @@ export async function viewEdiFile(clientId, fileId, fileType = 'input') {
   const res = await fetch(
     `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/`,
     {
-      credentials: 'include',
       headers: getAuthHeaders()
     }
   );
@@ -923,7 +885,6 @@ export async function downloadEdiFile(
   const res = await fetch(
     `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/?download=1`,
     {
-      credentials: 'include',
       headers: getAuthHeaders()
     }
   );
