@@ -1,5 +1,6 @@
 import React from "react";
 import TimeDisplay from "../components/TimeDisplay";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function FlowView({
   metrics,
@@ -11,18 +12,7 @@ export default function FlowView({
 
   return (
     <section className="view on" id="v-flow">
-      <div className="flow-title-row">
-        <div>
-          <h1>Flow</h1>
-          <p className="sub">
-            <span className="eyebrow" style={{ marginRight: "8px" }}>
-              TODAY &bull; {todayDateStr}
-            </span>
-            837 is optional reference only. MIR is built from validated 835 files using the active
-            mapping, then the output is ready for the configured MPL delivery path.
-          </p>
-        </div>
-      </div>
+      <WorkspaceHeader eyebrow={`Flow workspace · ${todayDateStr}`} title="Flow" description="837 is optional reference only. MIR is built from validated 835 files using the active mapping, then prepared for the configured delivery path." />
 
       {/* DYNAMIC PIPELINE TRACK */}
       <div className="pipe">
