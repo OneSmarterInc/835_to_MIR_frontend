@@ -247,6 +247,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setUploadExpiration('');
       await onRefresh();
     } catch (err) {
+      setUploadFile(null);
       setFeedback({
         isOpen: true,
         kind: 'bad',
