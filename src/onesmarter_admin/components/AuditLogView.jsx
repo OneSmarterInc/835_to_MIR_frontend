@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import TimeDisplay from '../../components/TimeDisplay';
 import { fetchAuditLogs } from '../services/api';
 import './AuditLogView.css';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 const INITIAL_FILTERS = { search: '', client_id: '', module: '', action: '', performed_by: '', date_from: '', date_to: '' };
 
@@ -74,9 +75,7 @@ export default function AuditLogView({ clients = [] }) {
   }, [page, pagination.total_pages]);
 
   return <section className="view on audit-view table-screen" id="v-audit">
-    <div className="hdr-row">
-      <div><h1>Audit Log</h1><p className="sub">Search and review the complete immutable history of client and administrative activity.</p></div>
-    </div>
+    <WorkspaceHeader eyebrow="Governance workspace" title="Audit Log" description="Search and review the complete immutable history of client and administrative activity." />
 
     <div className="card audit-filter-card">
       <div className="audit-search-row">
