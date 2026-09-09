@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import TimeDisplay from '../../components/TimeDisplay';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 /**
  * Stage Badge Renderer matching compliance status design tokens
@@ -73,14 +74,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
   return (
     <section className="view on table-screen" id="v-clients">
       {/* Header & Primary Action */}
-      <div className="hdr-row">
-        <div>
-          <h1>All Clients</h1>
-        </div>
-        <button className="btn primary" id="btn-add-client" onClick={onOpenAddClient}>
-          + Add Client
-        </button>
-      </div>
+      <WorkspaceHeader eyebrow="Client workspace" title="All Clients" description="Manage client onboarding, operational status, and lifecycle access."><button className="btn primary" id="btn-add-client" onClick={onOpenAddClient}>+ Add Client</button></WorkspaceHeader>
 
       {/* Database KPI Metric Cards */}
       <div className="metrics">
