@@ -4,6 +4,7 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import OffboardedClientBanner from './OffboardedClientBanner';
 import { canonicalTimeZone, EASTERN_TIME_ZONE, scheduleTimeZoneOptions, timeZoneDisplayName } from '../../utils/timezone';
 import './SftpAutomationView.css';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 const OPERATIONS = {
   '837': [
@@ -32,7 +33,8 @@ const scheduleLabel = row => {
 };
 
 function headers(extra = {}) {
-  return { ...extra, 'X-Admin-Screen': 'sftp-automation' };
+  const token = localStorage.getItem('onesmarter_admin_token');
+  return token ? { ...extra, Authorization: `Token ${token}`, 'X-Admin-Screen': 'sftp-automation' } : { ...extra, 'X-Admin-Screen': 'sftp-automation' };
 }
 async function apiJson(url, options = {}) {
   const response = await fetch(url, { credentials: 'include', ...options, headers: headers(options.headers) });
@@ -135,7 +137,7 @@ export default function SftpAutomationView({ clients = [], activeClientId = '', 
   };
 
   return <section className="view on sftp-auto-view table-screen">
-    <div className="sftp-auto-title"><div><h1>SFTP Automation</h1></div><div className="sftp-auto-client"><label>Client</label><ClientSelectDropdown clients={clients} value={clientId} onChange={chooseClient} fullWidth /></div></div>
+    <WorkspaceHeader eyebrow="Automation workspace" title="SFTP Automation" description="Schedule secure inbound retrieval and outbound delivery by file type."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={clientId} onChange={chooseClient} fullWidth /></div></WorkspaceHeader>
     <OffboardedClientBanner client={client} detail="Automation schedules are locked. Existing run history remains available." />
     <div className="sftp-auto-shell">
       <nav className="sftp-auto-nav" aria-label="Automation file types">{TYPES.map(value => <button key={value} className={type === value ? 'on' : ''} onClick={() => chooseType(value)}><span className="sftp-auto-nav-dot" />{value}</button>)}</nav>
