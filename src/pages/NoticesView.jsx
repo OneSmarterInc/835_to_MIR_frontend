@@ -1,14 +1,10 @@
 import React from "react";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function NoticesView() {
   return (
     <section className="view on" id="v-notices">
-      <div className="eyebrow">Returned from MPL</div>
-      <h1>Notices</h1>
-      <p className="sub">
-        MPL sends these back every few days rather than on a schedule. Relay keeps the original
-        and reads it back in plain language.
-      </p>
+      <WorkspaceHeader eyebrow="Returned from MPL" title="Notices" description="Review returned notices while preserving the original file and a plain-language interpretation." />
 
       <article className="card">
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
