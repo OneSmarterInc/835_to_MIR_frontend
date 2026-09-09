@@ -3,6 +3,7 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetchClientDocuments, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
 import OffboardedClientBanner from './OffboardedClientBanner';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 import './DocumentsView.css';
 
 export default function DocumentsView({ clients = [], activeClientId, onSelectClient }) {
@@ -102,23 +103,9 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
 
   return (
     <section className="view on table-screen" id="v-docs">
-      <div className="hdr-row">
-        <div>
-          <div className="documents-workspace-heading">
-            <ClientSelectDropdown
-              clients={clients}
-              value={selectedClientId}
-              onChange={(val) => {
-                setSelectedClientId(val);
-                if (onSelectClient) {
-                  onSelectClient(val);
-                }
-              }}
-            />
-            <h1 style={{ margin: 0 }}>Documents &amp; Agreements</h1>
-          </div>
-        </div>
-      </div>
+      <WorkspaceHeader eyebrow="Compliance workspace" title="Documents & Agreements" description="Review client agreements, delivery status, versions, and expiration dates.">
+        <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={(val) => { setSelectedClientId(val); if (onSelectClient) onSelectClient(val); }} fullWidth /></div>
+      </WorkspaceHeader>
 
       <OffboardedClientBanner
         client={currentClient}
