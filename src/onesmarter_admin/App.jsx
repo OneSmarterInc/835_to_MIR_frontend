@@ -9,6 +9,7 @@ import GoLiveView from './components/GoLiveView';
 import AccessView from './components/AccessView';
 import DefaultConfigsView from './components/DefaultConfigsView';
 import AuditLogView from './components/AuditLogView';
+import WorkspaceHeader from '../components/WorkspaceHeader';
 import AddClientModal from './components/modals/AddClientModal';
 import NotesModal from './components/modals/NotesModal';
 import AddRoleModal from './components/modals/AddRoleModal';
@@ -92,11 +93,6 @@ export default function App({ user, onLogout }) {
   const [offboardNotes, setOffboardNotes] = useState('');
   const [offboardStep1Done, setOffboardStep1Done] = useState(false);
 
-  // Remove credentials left behind by older frontend builds. Authentication is
-  // carried only by the Django session cookie now.
-  useEffect(() => {
-    localStorage.removeItem('onesmarter_admin_token');
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -133,8 +129,11 @@ export default function App({ user, onLogout }) {
 
   const loadAdminTrackedFiles = async () => {
     try {
+        const token = localStorage.getItem('onesmarter_admin_token');
+        const headers = token ? { Authorization: `Token ${token}` } : {};
         const res = await fetch('/edi835/api/tracked-files/', {
             credentials: 'include',
+            headers,
         });
 
         const contentType = res.headers.get('content-type') || '';
@@ -549,7 +548,7 @@ export default function App({ user, onLogout }) {
           )}
 
           {activeNav === 'promote' && (
-            selectedClientIsOffboarded ? <section className="view on"><div className="eyebrow">Go Live</div><h1>Workflow Locked</h1><div className="locked-view-client-bar"><label>Associate with Client:</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={handleSelectClientInGoLive} fullWidth /></div><OffboardedClientBanner client={selectedOperationalClient} detail="Go Live cannot be resumed, completed, or reset. Select another client above to continue." /></section> : <GoLiveView
+            selectedClientIsOffboarded ? <section className="view on"><WorkspaceHeader eyebrow="Stage promotion workspace" title="Go Live Readiness" description="This workflow is locked for the selected offboarded client."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={handleSelectClientInGoLive} fullWidth /></div></WorkspaceHeader><OffboardedClientBanner client={selectedOperationalClient} detail="Go Live cannot be resumed, completed, or reset. Select another client above to continue." /></section> : <GoLiveView
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClientInGoLive}
@@ -561,12 +560,7 @@ export default function App({ user, onLogout }) {
 
           {activeNav === 'trust' && (
             <section className="view on table-screen" id="v-trust">
-              <div className="hdr-row">
-                <div>
-                  <h1>Trust Center</h1>
-                  <p className="sub">Security, encryption, HIPAA safeguards, and compliance attestations.</p>
-                </div>
-              </div>
+              <WorkspaceHeader eyebrow="Governance workspace" title="Trust Center" description="Security, encryption, HIPAA safeguards, and compliance attestations." />
               <div className="metrics">
                 <div className="metric">
                   <div className="v" style={{ fontSize: '20px', fontWeight: 600 }}>SOC 2 Type II</div>
@@ -652,9 +646,7 @@ export default function App({ user, onLogout }) {
 
           {activeNav === 'ops' && (
             <section className="view on" id="v-ops">
-              <div className="eyebrow">Reliability</div>
-              <h1>Operations &amp; Delivery</h1>
-              <p className="sub">File delivery metrics, silent folder monitoring, and SLA tracking.</p>
+              <WorkspaceHeader eyebrow="Reliability workspace" title="Operations & Delivery" description="File delivery metrics, silent folder monitoring, and SLA tracking." />
               <div className="metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div className="metric">
                   <div className="v">1,248</div>
