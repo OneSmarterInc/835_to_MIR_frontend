@@ -1,14 +1,14 @@
 export const PHONE_COUNTRIES = [
-  { iso: 'US', name: 'United States', code: '+1', min: 10, max: 10 },
-  { iso: 'CA', name: 'Canada', code: '+1', min: 10, max: 10 },
+  { iso: 'US', name: 'United States', code: '+1', min: 10, max: 10, pattern: /^[2-9]\d{2}[2-9]\d{6}/, prefix: 'a valid area and exchange code' },
+  { iso: 'CA', name: 'Canada', code: '+1', min: 10, max: 10, pattern: /^[2-9]\d{2}[2-9]\d{6}/, prefix: 'a valid area and exchange code' },
   { iso: 'IN', name: 'India', code: '+91', min: 10, max: 10, pattern: /^[6-9]/ },
-  { iso: 'GB', name: 'United Kingdom', code: '+44', min: 10, max: 10 },
-  { iso: 'AU', name: 'Australia', code: '+61', min: 9, max: 9 },
-  { iso: 'NZ', name: 'New Zealand', code: '+64', min: 8, max: 10 },
-  { iso: 'AE', name: 'United Arab Emirates', code: '+971', min: 9, max: 9 },
-  { iso: 'SG', name: 'Singapore', code: '+65', min: 8, max: 8 },
-  { iso: 'DE', name: 'Germany', code: '+49', min: 10, max: 11 },
-  { iso: 'FR', name: 'France', code: '+33', min: 9, max: 9 },
+  { iso: 'GB', name: 'United Kingdom', code: '+44', min: 10, max: 10, pattern: /^7/, prefix: '7' },
+  { iso: 'AU', name: 'Australia', code: '+61', min: 9, max: 9, pattern: /^4/, prefix: '4' },
+  { iso: 'NZ', name: 'New Zealand', code: '+64', min: 8, max: 10, pattern: /^2/, prefix: '2' },
+  { iso: 'AE', name: 'United Arab Emirates', code: '+971', min: 9, max: 9, pattern: /^5/, prefix: '5' },
+  { iso: 'SG', name: 'Singapore', code: '+65', min: 8, max: 8, pattern: /^[89]/, prefix: '8 or 9' },
+  { iso: 'DE', name: 'Germany', code: '+49', min: 10, max: 11, pattern: /^1[5-7]/, prefix: '15, 16, or 17' },
+  { iso: 'FR', name: 'France', code: '+33', min: 9, max: 9, pattern: /^[67]/, prefix: '6 or 7' },
 ];
 
 export function cleanNationalNumber(value) {
@@ -17,7 +17,7 @@ export function cleanNationalNumber(value) {
 
 function normalizedNationalNumber(country, value) {
   const digits = cleanNationalNumber(value);
-  return country && !['US', 'CA', 'IN', 'SG', 'AE'].includes(country.iso) && digits.startsWith('0')
+  return country && !['US', 'CA', 'IN', 'SG'].includes(country.iso) && digits.startsWith('0')
     ? digits.slice(1)
     : digits;
 }
@@ -32,7 +32,7 @@ export function validateNationalNumber(countryIso, value, required = true) {
     return `${country.name} mobile numbers must contain ${expected}.`;
   }
   if (country.pattern && !country.pattern.test(digits)) {
-    return `${country.name} mobile numbers must start with ${country.iso === 'IN' ? '6, 7, 8, or 9' : 'a valid mobile prefix'}.`;
+    return `${country.name} mobile numbers must start with ${country.iso === 'IN' ? '6, 7, 8, or 9' : country.prefix || 'a valid mobile prefix'}.`;
   }
   return '';
 }
