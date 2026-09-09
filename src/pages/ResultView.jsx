@@ -8,9 +8,11 @@ import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
 import OffboardedClientBanner from "../onesmarter_admin/components/OffboardedClientBanner";
 import ReconciliationModal from "../components/ReconciliationModal";
 import { claimParts } from "../utils/claimNumber";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function authHeaders(extra = {}) {
-  return { ...extra };
+  const token = localStorage.getItem("onesmarter_admin_token");
+  return token ? { ...extra, Authorization: `Token ${token}` } : extra;
 }
 async function apiJson(url, options = {}) {
   const response = await portalFetch(url, { ...options, headers: authHeaders(options.headers || {}) });
@@ -250,12 +252,12 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
   const sortArrow = (key) => sort.key === key ? (sort.direction === "asc" ? "▲" : "▼") : "⇅";
 
   return <section className="view on result-view table-screen">
-    <h1>Reconciliation</h1>
-    <p className="sub">Compare every MIR claim with all processed RECON payment files.</p>
+    <WorkspaceHeader eyebrow="Payment workspace" title="Reconciliation" description="Compare every MIR claim with all processed RECON payment files.">
+      {isAdmin && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={clientId} onChange={setClientId} includeGlobal fullWidth /></div>}
+    </WorkspaceHeader>
     <OffboardedClientBanner client={currentAdminClient} detail="Existing reconciliation results remain available for review. New RECON uploads and processing are locked." />
     <div className="result-upload-panel">
-      <div className={`result-upload-row ${isAdmin ? "with-client" : ""}`}>
-        {isAdmin && <div className="result-compact-client"><label>Client</label><ClientSelectDropdown clients={clients} value={clientId} onChange={setClientId} includeGlobal fullWidth /></div>}
+      <div className="result-upload-row">
         <div className="result-compact-file"><label htmlFor="recon-file-input">RECON file</label><input id="recon-file-input" type="file" accept={fileAccept("RECON")} onChange={handleReconFileChange} disabled={isOffboarded} /></div>
         <button className="btn-gray result-process-button" onClick={uploadAndProcess} disabled={busy || isOffboarded}>{busy ? "Processing…" : "Process RECON"}</button>
       </div>
