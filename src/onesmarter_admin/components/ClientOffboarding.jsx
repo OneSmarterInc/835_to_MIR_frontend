@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { completeOffboardingStep, redoOffboardingStep } from '../services/api';
 import StepNotesHistory from './StepNotesHistory';
+import ClientSelectDropdown from './ClientSelectDropdown';
 import { showAppAlert } from '../../components/AppDialog';
+import './ClientOffboarding.css';
 
 const iconOnlyButtonStyle = {
   background: 'var(--surface)',
@@ -140,27 +142,19 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
 
   return (
     <section className="view on" id="v-offboard">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div className="eyebrow">Lifecycle Termination</div>
+      <header className="offboarding-heading-row">
+        <div className="offboarding-heading-copy">
+          <div className="offboarding-eyebrow">Lifecycle workspace</div>
           <h1>Offboarding Procedures</h1>
+          <p>Cryptographic key destruction and certified data return upon client contract conclusion.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {clients.length > 0 && (
-            <select 
-              value={activeClientId || ''} 
-              onChange={(e) => onSelectClient(e.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--line)', background: 'var(--surface)', cursor: 'pointer', outline: 'none' }}
-            >
-              <option value="" disabled>Select a Client</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
-      <p className="sub">Cryptographic key destruction and certified data return upon client contract conclusion.</p>
+        {clients.length > 0 && (
+          <div className="offboarding-client">
+            <label>Client</label>
+            <ClientSelectDropdown clients={clients} value={activeClientId || ''} onChange={onSelectClient} fullWidth />
+          </div>
+        )}
+      </header>
 
       {finalized && (
         <div role="status" style={{ marginTop: '16px', padding: '16px 18px', border: '1px solid var(--brick)', borderLeftWidth: '5px', background: 'var(--brick-bg)', color: 'var(--brick)' }}>
