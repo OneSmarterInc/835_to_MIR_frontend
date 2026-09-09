@@ -11,6 +11,8 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
   const [durationUnit, setDurationUnit] = useState('minutes');
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState('');
+  const [revokingGrantId, setRevokingGrantId] = useState(null);
+  const [revokeError, setRevokeError] = useState('');
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -149,7 +151,18 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
           {currentGrants.length > 0 && (
             <div className="admin-active-grants">
               <strong>Granted Client Access</strong>
-              {currentGrants.map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b><small>Time remaining: <strong>{formatRemaining(grant.expires_at)}</strong></small><small>Expires: {new Date(grant.expires_at).toLocaleString()}</small></span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant, user)}>Revoke Access</button></div>)}
+              {currentGrants.map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b><small>Time remaining: <strong>{formatRemaining(grant.expires_at)}</strong></small><small>Expires: {new Date(grant.expires_at).toLocaleString()}</small></span><button type="button" className="btn" disabled={revokingGrantId === grant.id} onClick={async () => {
+                setRevokeError('');
+                setRevokingGrantId(grant.id);
+                try {
+                  await onRevokeClientAccess(grant, user);
+                } catch (error) {
+                  setRevokeError(error.message || 'Unable to revoke client access.');
+                } finally {
+                  setRevokingGrantId(null);
+                }
+              }}>{revokingGrantId === grant.id ? 'Revoking…' : 'Revoke Access'}</button></div>)}
+              {revokeError && <div className="admin-client-grant-hint">{revokeError}</div>}
             </div>
           )}
         </div>
