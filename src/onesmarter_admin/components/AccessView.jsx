@@ -343,7 +343,7 @@ export default function AccessView({ currentUser }) {
         canManageScreens={isSuperAdmin}
         onSaveScreens={handleScreenPermissions}
         clients={clients}
-        activeGrants={(accessData?.active_client_grants || []).filter((grant) => grant.user_id === selectedUser?.id)}
+        activeGrants={(accessData?.active_client_grants || []).filter((grant) => String(grant.user_id) === String(selectedUser?.id))}
         onGrantClientAccess={handleGrantClientAccess}
         onRevokeClientAccess={handleRevokeClientAccess}
       />
