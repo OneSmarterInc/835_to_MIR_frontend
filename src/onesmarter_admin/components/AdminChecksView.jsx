@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import ChecksView from '../../pages/ChecksView';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 export default function AdminChecksView({ trackedFiles = [], clients = [], activeClientId = '', onSelectClient }) {
   const selectedClient = clients.find((client) => String(client.id) === String(activeClientId));
@@ -24,10 +25,7 @@ export default function AdminChecksView({ trackedFiles = [], clients = [], activ
 
   return (
     <section className="view on table-screen">
-      <div className="admin-checks-heading">
-        <h1>Checks</h1>
-        <ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} id="admin-checks-client" />
-      </div>
+      <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review inbound and outbound validation gates and their findings."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} id="admin-checks-client" fullWidth /></div></WorkspaceHeader>
 
       {!activeClientId ? (
         <div className="card" style={{ padding: '30px 20px', color: 'var(--ink-3)' }}>Select a client to view their checks.</div>
