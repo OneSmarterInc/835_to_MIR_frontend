@@ -15,10 +15,7 @@ import {
 } from '../../utils/timezone';
 
 function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = { ...extra };
-  if (token) headers['Authorization'] = `Token ${token}`;
-  return headers;
+  return { ...extra };
 }
 
 function toISODate(val) {
@@ -1159,7 +1156,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         setS11UseDefaultSmtp(checked);
                         if (checked) {
                           try {
-                            const res = await fetch('/admin-panel/api/default-smtp/', { headers: getAuthHeaders() });
+                            const res = await fetch('/admin-panel/api/default-smtp/', { credentials: 'include', headers: getAuthHeaders() });
                             const data = await res.json();
                             if (data && data.success && data.config) {
                               const cfg = data.config;
