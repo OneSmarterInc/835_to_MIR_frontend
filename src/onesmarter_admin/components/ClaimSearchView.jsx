@@ -30,10 +30,7 @@ const sanitize837Filename = value => {
 };
 
 async function downloadClaimWithFilename(claimId, filename) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = {};
-  if (token) headers.Authorization = `Token ${token}`;
-  headers['X-Admin-Screen'] = 'search';
+  const headers = { 'X-Admin-Screen': 'search' };
   const params = new URLSearchParams({ filename });
   const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/export/?${params}`, {
     credentials: 'include', headers,
@@ -206,10 +203,10 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     if (!activeClientId || renaming) return;
     setRenaming(true); setError(''); setNotice('');
     try {
-      const token = localStorage.getItem('onesmarter_admin_token');
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Token ${token}`;
-      headers['X-Admin-Screen'] = 'search';
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Admin-Screen': 'search',
+      };
       const res = await fetch('/edi835/api/837/sftp-rename/', {
         method: 'POST', credentials: 'include', headers,
         body: JSON.stringify({ client_id: activeClientId, filename_format: filename }),
