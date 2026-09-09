@@ -124,6 +124,13 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/New_York',
   }) : '—';
 
+  const displayState = doc => {
+    if (doc.expiration_date && doc.expiration_date < new Date().toISOString().slice(0, 10)) {
+      return 'EXPIRED';
+    }
+    return doc.state || '—';
+  };
+
   const openUpload = doc => {
     setUploadTarget(doc);
     setUploadFile(null);
@@ -185,6 +192,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
           <tbody>
             {documents.map((doc) => {
               const ext = doc.original_filename ? doc.original_filename.split('.').pop().toUpperCase() : '—';
+              const state = displayState(doc);
               return (
                 <tr key={doc.document_type}>
                   <td><b>{doc.document_name || '—'}</b></td>
@@ -195,7 +203,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
                   <td>{formatDate(doc.signed_or_sent_at)}</td>
                   <td>{doc.expiration_date ? formatDate(`${doc.expiration_date}T12:00:00`) : '—'}</td>
                   <td>{doc.version ? `v${doc.version}` : '—'}</td>
-                  <td><span className={`document-state state-${String(doc.state || '').toLowerCase().replaceAll(' ', '-')}`}>{doc.state || '—'}</span></td>
+                  <td><span className={`document-state state-${state.toLowerCase().replaceAll(' ', '-')}`}>{state}</span></td>
                   <td><div className="document-actions">
                       <button type="button" className="btn primary document-upload-btn" onClick={() => openUpload(doc)} disabled={currentClient?.stage === 'offboarded'}>Upload</button>
                       {doc.id && <>
