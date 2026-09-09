@@ -62,12 +62,12 @@ export async function fetchClientState(clientId) {
   return data.state;
 }
 
-export async function pushEdiFileToSftp(fileId) {
+export async function pushEdiFileToSftp(fileId, { force = false } = {}) {
   const res = await fetch('/edi835/api/sftp/push/', {
     method: 'POST',
     credentials: 'include',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ file_id: fileId }),
+    body: JSON.stringify({ file_id: fileId, force }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) {
@@ -292,6 +292,7 @@ export async function validateStaged835(clientId, file) {
   if (!res.ok || data.success === false) {
     const err = new Error(data.error || '835 validation failed');
     err.checks = data.checks || [];
+    err.fileId = data.file_id || null;
     throw err;
   }
   return data;
