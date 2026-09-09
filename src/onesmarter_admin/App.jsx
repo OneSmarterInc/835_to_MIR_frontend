@@ -92,6 +92,11 @@ export default function App({ user, onLogout }) {
   const [offboardNotes, setOffboardNotes] = useState('');
   const [offboardStep1Done, setOffboardStep1Done] = useState(false);
 
+  // Remove credentials left behind by older frontend builds. Authentication is
+  // carried only by the Django session cookie now.
+  useEffect(() => {
+    localStorage.removeItem('onesmarter_admin_token');
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -128,11 +133,8 @@ export default function App({ user, onLogout }) {
 
   const loadAdminTrackedFiles = async () => {
     try {
-        const token = localStorage.getItem('onesmarter_admin_token');
-        const headers = token ? { Authorization: `Token ${token}` } : {};
         const res = await fetch('/edi835/api/tracked-files/', {
             credentials: 'include',
-            headers,
         });
 
         const contentType = res.headers.get('content-type') || '';
