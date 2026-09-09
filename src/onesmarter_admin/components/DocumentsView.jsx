@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentFile } from '../services/api';
+import { fetchClientDocuments, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
 import OffboardedClientBanner from './OffboardedClientBanner';
 import './DocumentsView.css';
@@ -9,18 +9,12 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [viewingId, setViewingId] = useState(null);
   const [viewerFile, setViewerFile] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerDocTitle, setViewerDocTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [uploadTarget, setUploadTarget] = useState(null);
-  const [uploadFile, setUploadFile] = useState(null);
-  const [expirationDate, setExpirationDate] = useState('');
-  const fileInputRef = useRef(null);
 
   const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
 
@@ -86,31 +80,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     }
   }
 
-  async function handleFileUpload() {
-    const file = uploadFile;
-    if (!file || !expirationDate || !selectedClientId || !uploadTarget) return;
-
-    setUploading(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      const result = await uploadClientDocument(
-        selectedClientId, file, file.name.replace(/\.[^/.]+$/, ''),
-        uploadTarget.document_type, expirationDate,
-      );
-      setSuccessMessage(result.message || `Document '${file.name}' uploaded successfully.`);
-      await loadDocuments(selectedClientId);
-      setUploadTarget(null);
-      setUploadFile(null);
-      setExpirationDate('');
-    } catch (err) {
-      setErrorMessage(err.message || 'Document upload failed');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }
-
   function formatBytes(bytes) {
     if (bytes === null || bytes === undefined) return '—';
     if (bytes === 0) return '0 B';
@@ -129,13 +98,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
       return 'EXPIRED';
     }
     return doc.state || '—';
-  };
-
-  const openUpload = doc => {
-    setUploadTarget(doc);
-    setUploadFile(null);
-    setExpirationDate('');
-    setErrorMessage('');
   };
 
   return (
@@ -169,12 +131,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         </div>
       )}
 
-      {successMessage && (
-        <div className="good">
-          ✓ {successMessage}
-        </div>
-      )}
-
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-3)' }}>
           Loading documents for {currentClient?.name}...
@@ -205,7 +161,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
                   <td>{doc.version ? `v${doc.version}` : '—'}</td>
                   <td><span className={`document-state state-${state.toLowerCase().replaceAll(' ', '-')}`}>{state}</span></td>
                   <td><div className="document-actions">
-                      <button type="button" className="btn primary document-upload-btn" onClick={() => openUpload(doc)} disabled={currentClient?.stage === 'offboarded'}>Upload</button>
                       {doc.id && <>
                       <button
                         type="button"
@@ -257,20 +212,6 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         stepTitle={viewerDocTitle}
         stepNum=""
       />
-      {uploadTarget && <div className="document-upload-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !uploading && setUploadTarget(null)}>
-        <section className="document-upload-modal" role="dialog" aria-modal="true" aria-labelledby="document-upload-title">
-          <header><div><div className="eyebrow">DOCUMENT VERSION</div><h2 id="document-upload-title">Upload {uploadTarget.document_name}</h2></div><button type="button" className="modal-cross-btn" onClick={() => !uploading && setUploadTarget(null)}>×</button></header>
-          <div className="document-upload-body">
-            <div className="document-version-callout"><span>Uploading version</span><strong>v{uploadTarget.next_version}</strong></div>
-            <label htmlFor="document-version-file">Document file</label>
-            <input ref={fileInputRef} id="document-version-file" type="file" onChange={event => setUploadFile(event.target.files?.[0] || null)} />
-            <label htmlFor="document-expiration-date">Expiration date</label>
-            <input id="document-expiration-date" type="date" value={expirationDate} min={new Date().toISOString().slice(0, 10)} onChange={event => setExpirationDate(event.target.value)} />
-            <small>Every upload is retained as the next version, including a file that does not pass document validation.</small>
-          </div>
-          <footer><button type="button" className="btn" disabled={uploading} onClick={() => setUploadTarget(null)}>Cancel</button><button type="button" className="btn primary" disabled={!uploadFile || !expirationDate || uploading} onClick={handleFileUpload}>{uploading ? 'Uploading…' : `Upload v${uploadTarget.next_version}`}</button></footer>
-        </section>
-      </div>}
     </section>
   );
 }
