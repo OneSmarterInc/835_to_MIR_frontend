@@ -10,8 +10,7 @@ import ReconciliationModal from "../components/ReconciliationModal";
 import { claimParts } from "../utils/claimNumber";
 
 function authHeaders(extra = {}) {
-  const token = localStorage.getItem("onesmarter_admin_token");
-  return token ? { ...extra, Authorization: `Token ${token}` } : extra;
+  return { ...extra };
 }
 async function apiJson(url, options = {}) {
   const response = await portalFetch(url, { ...options, headers: authHeaders(options.headers || {}) });
