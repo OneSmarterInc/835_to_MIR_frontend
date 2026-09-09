@@ -131,7 +131,7 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
               <option value="weeks">Weeks</option>
               <option value="months">Months</option>
             </select>
-            <button type="button" className="btn" disabled={granting || !grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => {
+            <button type="button" className="btn primary" disabled={granting || !grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => {
               setGranting(true);
               setGrantError('');
               try {
