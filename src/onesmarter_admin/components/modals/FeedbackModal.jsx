@@ -16,7 +16,7 @@ export default function FeedbackModal({ isOpen, onClose, kind, title, content, c
                 <span className="vicon">{c.ok ? '✓' : '✕'}</span>
                 <div>
                   <div className="vl">{c.label}</div>
-                  <div className="vd" dangerouslySetInnerHTML={{ __html: c.detail }} />
+                  <div className="vd">{c.detail}</div>
                 </div>
               </div>
             ))}
