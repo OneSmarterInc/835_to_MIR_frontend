@@ -3,6 +3,7 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
 import OffboardedClientBanner from './OffboardedClientBanner';
+import './DocumentsView.css';
 
 export default function DocumentsView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
@@ -16,6 +17,9 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
   const [viewerDocTitle, setViewerDocTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [uploadTarget, setUploadTarget] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [expirationDate, setExpirationDate] = useState('');
   const fileInputRef = useRef(null);
 
   const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
@@ -82,17 +86,23 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     }
   }
 
-  async function handleFileUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file || !selectedClientId) return;
+  async function handleFileUpload() {
+    const file = uploadFile;
+    if (!file || !expirationDate || !selectedClientId || !uploadTarget) return;
 
     setUploading(true);
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      await uploadClientDocument(selectedClientId, file, file.name.replace(/\.[^/.]+$/, ''), 'General Document');
-      setSuccessMessage(`Document '${file.name}' uploaded and registered successfully.`);
+      const result = await uploadClientDocument(
+        selectedClientId, file, file.name.replace(/\.[^/.]+$/, ''),
+        uploadTarget.document_type, expirationDate,
+      );
+      setSuccessMessage(result.message || `Document '${file.name}' uploaded successfully.`);
       await loadDocuments(selectedClientId);
+      setUploadTarget(null);
+      setUploadFile(null);
+      setExpirationDate('');
     } catch (err) {
       setErrorMessage(err.message || 'Document upload failed');
     } finally {
@@ -102,12 +112,24 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
   }
 
   function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0 B';
+    if (bytes === null || bytes === undefined) return '—';
+    if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
+
+  const formatDate = value => value ? new Date(value).toLocaleDateString('en-US', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/New_York',
+  }) : '—';
+
+  const openUpload = doc => {
+    setUploadTarget(doc);
+    setUploadFile(null);
+    setExpirationDate('');
+    setErrorMessage('');
+  };
 
   return (
     <section className="view on table-screen" id="v-docs">
@@ -150,48 +172,33 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-3)' }}>
           Loading documents for {currentClient?.name}...
         </div>
-      ) : documents.length === 0 ? (
-        <div className="stub" style={{ textAlign: 'center', padding: '36px' }}>
-          <b>No documents available for this client.</b>
-          <p style={{ margin: '6px 0 0', color: 'var(--ink-2)' }}>
-            Upload legal agreements, compliance forms, or test data for {currentClient?.name} using the onboarding workflow.
-          </p>
-        </div>
       ) : (
-        <div className="admin-table-scroll">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="admin-table-scroll documents-register-wrap">
+        <table className="documents-register-table">
           <thead>
             <tr>
-              <th style={{ width: '25%' }}>Document</th>
-              <th style={{ width: '30%' }}>Template / Filename</th>
-              <th style={{ width: '15%' }}>Category</th>
-              <th style={{ width: '6%' }}>Format</th>
-              <th style={{ width: '7%' }}>Size</th>
-              <th style={{ width: '9%' }}>Uploaded By</th>
-              <th style={{ width: '8%', textAlign: 'right' }}>Actions</th>
+              <th>Document</th><th>Direction</th><th>Category</th><th>Format</th>
+              <th>Size</th><th>Uploaded By</th><th>Signed or Sent</th><th>Expires</th>
+              <th>Version</th><th>State</th><th>Action</th>
             </tr>
           </thead>
           <tbody>
             {documents.map((doc) => {
-              const ext = (doc.original_filename?.split('.').pop() || 'PDF').toUpperCase();
+              const ext = doc.original_filename ? doc.original_filename.split('.').pop().toUpperCase() : '—';
               return (
-                <tr key={doc.id}>
-                  <td>
-                    <b>{doc.document_name}</b>
-                  </td>
-                  <td>
-                    <code style={{ fontSize: '11.5px', wordBreak: 'break-all', display: 'inline-block' }}>
-                      {doc.original_filename}
-                    </code>
-                  </td>
-                  <td>{doc.document_type || 'Legal / Confidentiality'}</td>
-                  <td>
-                    <span className="mono" style={{ fontSize: '11px' }}>{ext}</span>
-                  </td>
+                <tr key={doc.document_type}>
+                  <td><b>{doc.document_name || '—'}</b></td>
+                  <td>{doc.direction || '—'}</td><td>{doc.category || '—'}</td>
+                  <td><span className="mono">{ext}</span></td>
                   <td className="num">{formatBytes(doc.file_size)}</td>
-                  <td>{doc.uploaded_by || 'Admin User'}</td>
-                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                  <td>{doc.uploaded_by || '—'}</td>
+                  <td>{formatDate(doc.signed_or_sent_at)}</td>
+                  <td>{doc.expiration_date ? formatDate(`${doc.expiration_date}T12:00:00`) : '—'}</td>
+                  <td>{doc.version ? `v${doc.version}` : '—'}</td>
+                  <td><span className={`document-state state-${String(doc.state || '').toLowerCase().replaceAll(' ', '-')}`}>{doc.state || '—'}</span></td>
+                  <td><div className="document-actions">
+                      <button type="button" className="btn primary document-upload-btn" onClick={() => openUpload(doc)} disabled={currentClient?.stage === 'offboarded'}>Upload</button>
+                      {doc.id && <>
                       <button
                         type="button"
                         className="btn icon-btn view-btn"
@@ -224,6 +231,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
                           </svg>
                         )}
                       </button>
+                      </>}
                     </div>
                   </td>
                 </tr>
@@ -241,6 +249,20 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         stepTitle={viewerDocTitle}
         stepNum=""
       />
+      {uploadTarget && <div className="document-upload-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !uploading && setUploadTarget(null)}>
+        <section className="document-upload-modal" role="dialog" aria-modal="true" aria-labelledby="document-upload-title">
+          <header><div><div className="eyebrow">DOCUMENT VERSION</div><h2 id="document-upload-title">Upload {uploadTarget.document_name}</h2></div><button type="button" className="modal-cross-btn" onClick={() => !uploading && setUploadTarget(null)}>×</button></header>
+          <div className="document-upload-body">
+            <div className="document-version-callout"><span>Uploading version</span><strong>v{uploadTarget.next_version}</strong></div>
+            <label htmlFor="document-version-file">Document file</label>
+            <input ref={fileInputRef} id="document-version-file" type="file" onChange={event => setUploadFile(event.target.files?.[0] || null)} />
+            <label htmlFor="document-expiration-date">Expiration date</label>
+            <input id="document-expiration-date" type="date" value={expirationDate} min={new Date().toISOString().slice(0, 10)} onChange={event => setExpirationDate(event.target.value)} />
+            <small>Every upload is retained as the next version, including a file that does not pass document validation.</small>
+          </div>
+          <footer><button type="button" className="btn" disabled={uploading} onClick={() => setUploadTarget(null)}>Cancel</button><button type="button" className="btn primary" disabled={!uploadFile || !expirationDate || uploading} onClick={handleFileUpload}>{uploading ? 'Uploading…' : `Upload v${uploadTarget.next_version}`}</button></footer>
+        </section>
+      </div>}
     </section>
   );
 }
