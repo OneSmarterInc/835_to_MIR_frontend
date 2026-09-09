@@ -93,7 +93,9 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
     try {
       // Use the same canonical name displayed in MIR OUTPUT as the browser
       // download name. This is intentionally explicit for the Admin Files page.
-      const res = await fetch(`${'/admin-panel/api'}/clients/${encodeURIComponent(selectedClientId)}/edi-files/${encodeURIComponent(file.id)}/mir/?download=1`, { headers: { Authorization: `Token ${localStorage.getItem('onesmarter_admin_token')}` } });
+      const res = await fetch(`${'/admin-panel/api'}/clients/${encodeURIComponent(selectedClientId)}/edi-files/${encodeURIComponent(file.id)}/mir/?download=1`, {
+        credentials: 'include',
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to download file');
