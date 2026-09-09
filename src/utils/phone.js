@@ -16,8 +16,13 @@ export function cleanNationalNumber(value) {
 }
 
 function normalizedNationalNumber(country, value) {
-  const digits = cleanNationalNumber(value);
-  return country && !['US', 'CA', 'IN', 'SG'].includes(country.iso) && digits.startsWith('0')
+  let digits = cleanNationalNumber(value);
+  if (!country) return digits;
+  const callingCode = cleanNationalNumber(country.code);
+  if (digits.length > country.max && digits.startsWith(callingCode)) {
+    digits = digits.slice(callingCode.length);
+  }
+  return !['US', 'CA', 'IN', 'SG'].includes(country.iso) && digits.startsWith('0')
     ? digits.slice(1)
     : digits;
 }
@@ -29,7 +34,7 @@ export function validateNationalNumber(countryIso, value, required = true) {
   if (!digits) return required ? 'Mobile number is required.' : '';
   if (digits.length < country.min || digits.length > country.max) {
     const expected = country.min === country.max ? `${country.min} digits` : `${country.min} to ${country.max} digits`;
-    return `${country.name} mobile numbers must contain ${expected}.`;
+    return `Enter ${expected} after ${country.code} for ${country.name} (${digits.length} entered).`;
   }
   if (country.pattern && !country.pattern.test(digits)) {
     return `${country.name} mobile numbers must start with ${country.iso === 'IN' ? '6, 7, 8, or 9' : country.prefix || 'a valid mobile prefix'}.`;
