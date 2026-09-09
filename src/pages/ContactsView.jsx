@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { safeFetchJson } from "../utils/api";
 import TimeDisplay from "../components/TimeDisplay";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function ContactsView() {
   const [contacts, setContacts] = useState([]);
@@ -27,14 +28,7 @@ export default function ContactsView() {
 
   return (
     <section className="view on table-screen" id="v-contacts">
-      <div className="hdr-row">
-        <div>
-          <h1 id="contacts-title">Your Assigned Contacts</h1>
-          <p className="sub">
-            The personnel registered during your onboarding phase.
-          </p>
-        </div>
-      </div>
+      <WorkspaceHeader eyebrow="Support workspace" title="Your Assigned Contacts" description="The personnel registered during your onboarding phase." />
 
       {loading && (
         <div style={{ textAlign: "center", padding: "40px" }}>
