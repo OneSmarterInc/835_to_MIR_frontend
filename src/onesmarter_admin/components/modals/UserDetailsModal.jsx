@@ -9,6 +9,8 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
   const [grantReason, setGrantReason] = useState('');
   const [durationValue, setDurationValue] = useState(30);
   const [durationUnit, setDurationUnit] = useState('minutes');
+  const [granting, setGranting] = useState(false);
+  const [grantError, setGrantError] = useState('');
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
 
   const isAdministrator = user.role === 'Admin' || user.role === 'Super Admin';
   const editable = canManageScreens && user.role === 'Admin';
+  const currentGrants = activeGrants.filter((grant) => new Date(grant.expires_at).getTime() > now);
   const toggleScreen = (key) => setScreens((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
 
   return (
@@ -128,10 +131,27 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
               <option value="weeks">Weeks</option>
               <option value="months">Months</option>
             </select>
-            <button type="button" className="btn" disabled={!grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => { await onGrantClientAccess(user, { client_id: grantClientId, reason: grantReason.trim(), duration_value: Number(durationValue), duration_unit: durationUnit }); setGrantReason(''); }}>Grant Access</button>
+            <button type="button" className="btn" disabled={granting || !grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => {
+              setGranting(true);
+              setGrantError('');
+              try {
+                await onGrantClientAccess(user, { client_id: grantClientId, reason: grantReason.trim(), duration_value: Number(durationValue), duration_unit: durationUnit });
+                setGrantReason('');
+              } catch (error) {
+                setGrantError(error.message || 'Unable to grant client access.');
+              } finally {
+                setGranting(false);
+              }
+            }}>{granting ? 'Granting…' : 'Grant Access'}</button>
           </div>
           {grantReason.length > 0 && grantReason.trim().length < 10 && <div className="admin-client-grant-hint">Enter at least 10 characters to enable Grant Access.</div>}
-          {activeGrants.filter((grant) => new Date(grant.expires_at).getTime() > now).map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b> · <strong>{formatRemaining(grant.expires_at)} remaining</strong> · expires {new Date(grant.expires_at).toLocaleString()}</span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant, user)}>Revoke</button></div>)}
+          {grantError && <div className="admin-client-grant-hint">{grantError}</div>}
+          {currentGrants.length > 0 && (
+            <div className="admin-active-grants">
+              <strong>Granted Client Access</strong>
+              {currentGrants.map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b><small>Time remaining: <strong>{formatRemaining(grant.expires_at)}</strong></small><small>Expires: {new Date(grant.expires_at).toLocaleString()}</small></span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant, user)}>Revoke Access</button></div>)}
+            </div>
+          )}
         </div>
       )}
 

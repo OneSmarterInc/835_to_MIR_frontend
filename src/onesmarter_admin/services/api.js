@@ -617,7 +617,8 @@ export async function redoGoLiveStep(clientId, stepNum) {
 // --- 4. Access Matrix & Dynamic Last Login Service ---
 export async function fetchAccessInfo() {
   const res = await fetch(`${BASE_URL}/access/info/`, {
-    headers: getAuthHeaders()
+    headers: getAuthHeaders(),
+    cache: 'no-store'
   });
   if (!res.ok) throw new Error('Failed to fetch access matrix');
   return res.json();
