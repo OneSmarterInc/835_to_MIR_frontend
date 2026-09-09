@@ -5,6 +5,7 @@ import { postStepData } from '../services/api';
 import ConfirmModal from './modals/ConfirmModal';
 import FeedbackModal from './modals/FeedbackModal';
 import TimeDisplay from '../../components/TimeDisplay';
+import './OnboardingLadder.css';
 
 export default function OnboardingLadder({ client, steps, roles, clients, onSelectClient, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
   const [returnPrompt, setReturnPrompt] = useState({ isOpen: false, pendingKey: '', stepName: '' });
@@ -111,16 +112,10 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
   if (isPermanentlyOffboarded) {
     return (
       <section className="view on onboarding-history-view" id="v-onboard">
-        <div className="hdr-row onboarding-history-header"><div>
-          <div className="eyebrow">Selected Client</div>
-          <div className="onboarding-client-heading">
-            <div className="onboarding-client-select">
-              <ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} fullWidth />
-            </div>
-            <h1>Onboarding History</h1>
-          </div>
-          <p className="sub">This client has been permanently offboarded. Onboarding cannot be resumed or restarted.</p>
-        </div></div>
+        <header className="onboarding-heading-row onboarding-history-header">
+          <div className="onboarding-heading-copy"><div className="onboarding-heading-eyebrow">Onboarding workspace</div><h1>Onboarding History</h1><p>This client has been permanently offboarded. Onboarding cannot be resumed or restarted.</p></div>
+          <div className="onboarding-heading-client"><label>Client</label><ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} fullWidth /></div>
+        </header>
         <div role="status" className="onboarding-lock-notice">
           <strong>Onboarding permanently locked</strong>
           <div>All previous onboarding steps are preserved below for read-only review. Upload, save, complete, delete, and redo actions are unavailable.</div>
@@ -145,20 +140,17 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
 
   return (
     <section className="view on" id="v-onboard">
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow" id="ob-eyebrow">Selected Client</div>
-          <div className="onboarding-workflow-heading">
-            <ClientSelectDropdown
-              id="client-select-hdr"
-              clients={clients}
-              value={client.id}
-              onChange={(value) => onSelectClient(value)}
-            />
-            <h1 id="ob-title" style={{ margin: 0 }}>Onboarding Workflow</h1>
-          </div>
+      <header className="onboarding-heading-row">
+        <div className="onboarding-heading-copy">
+          <div className="onboarding-heading-eyebrow" id="ob-eyebrow">Onboarding workspace</div>
+          <h1 id="ob-title">Onboarding Workflow</h1>
+          <p>Configure, validate, and complete every requirement for the selected client.</p>
         </div>
-      </div>
+        <div className="onboarding-heading-client">
+          <label>Client</label>
+          <ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} fullWidth />
+        </div>
+      </header>
 
       <div className="metrics onboarding-metrics">
         <div className="metric">
