@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { splitClaimNumber } from "../utils/claimNumber";
 import { process837Upload } from "../onesmarter_admin/services/api";
+import WorkspaceHeader from "../components/WorkspaceHeader";
+import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
 export default function ConversionsView({
   trackedFiles,
@@ -476,33 +478,12 @@ export default function ConversionsView({
 
   return (
     <section className="view on table-screen" id="v-batches">
-      <h1>Conversions</h1>
+      <WorkspaceHeader eyebrow="Conversion workspace" title="Conversions" description="Upload, validate, convert, and deliver healthcare transaction files.">
+        {isAdmin && clients?.length > 0 && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={handleClientChange} includeGlobal fullWidth /></div>}
+      </WorkspaceHeader>
 
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
-        {isAdmin && clients && clients.length > 0 && (
-          <div className="conversion-client-row">
-            <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => handleClientChange(e.target.value)}
-              style={{
-                padding: "6px 10px",
-                border: "1px solid var(--line, #e2e8f0)",
-                borderRadius: "4px",
-                fontSize: "12.5px",
-                background: "#fff",
-                color: "var(--ink, #000)",
-                minWidth: "220px"
-              }}
-            >
-              <option value="">-- None (Global System Default) --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
         <div className="start-conversion-header">
           <h2>Start a conversion</h2>
           <div className="step-pills">
