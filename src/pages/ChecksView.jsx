@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
 import ConversionErrorFindings from "../components/ConversionErrorFindings";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function parseDetails(raw) {
   if (!raw) return { findings: [], errors: [] };
@@ -126,7 +127,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <h1 className="checks-page-title">Checks</h1>}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review inbound and outbound validation gates and their findings." />}
 
       <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({
