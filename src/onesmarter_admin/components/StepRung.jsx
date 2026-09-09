@@ -1129,7 +1129,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                 <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
                   {step.extra?.mir_delivery?.mir_created && step.extra?.mir_delivery?.sftp_pushed && (
                     <button className="btn tiny primary" type="button" disabled={pushingMir} onClick={() => handlePushGeneratedMir(true)}>
-                      {pushingMir ? 'Pushing…' : 'Push to SFTP Again'}
+                      {pushingMir ? 'Pushing…' : 'Push Again To SFTP'}
                     </button>
                   )}
                   {step.extra?.mir_delivery?.mir_created && !step.extra?.mir_delivery?.sftp_pushed && (
