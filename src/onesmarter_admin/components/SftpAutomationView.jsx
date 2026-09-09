@@ -32,8 +32,7 @@ const scheduleLabel = row => {
 };
 
 function headers(extra = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  return token ? { ...extra, Authorization: `Token ${token}`, 'X-Admin-Screen': 'sftp-automation' } : { ...extra, 'X-Admin-Screen': 'sftp-automation' };
+  return { ...extra, 'X-Admin-Screen': 'sftp-automation' };
 }
 async function apiJson(url, options = {}) {
   const response = await fetch(url, { credentials: 'include', ...options, headers: headers(options.headers) });
