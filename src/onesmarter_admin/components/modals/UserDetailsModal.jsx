@@ -7,10 +7,31 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
   const [saving, setSaving] = useState(false);
   const [grantClientId, setGrantClientId] = useState('');
   const [grantReason, setGrantReason] = useState('');
+  const [durationValue, setDurationValue] = useState(30);
+  const [durationUnit, setDurationUnit] = useState('minutes');
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     setScreens(user?.admin_screens || []);
   }, [user, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || activeGrants.length === 0) return undefined;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [isOpen, activeGrants.length]);
+
+  const formatRemaining = (expiresAt) => {
+    const seconds = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - now) / 1000));
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (days) return `${days}d ${hours}h ${minutes}m ${secs}s`;
+    if (hours) return `${hours}h ${minutes}m ${secs}s`;
+    return `${minutes}m ${secs}s`;
+  };
 
   if (!user) return null;
 
@@ -91,18 +112,25 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
         </div>
       )}
 
-      {canManageScreens && isAdministrator && (
+      {canManageScreens && user.role === 'Admin' && (
         <div className="admin-screen-access">
-          <div className="admin-screen-access-heading"><strong>Temporary Client Data Access</strong><span>Expires automatically after 30 minutes.</span></div>
+          <div className="admin-screen-access-heading"><strong>Temporary Client Data Access</strong><span>Access expires automatically at the selected duration.</span></div>
           <div className="admin-client-grant-form">
             <select value={grantClientId} onChange={(event) => setGrantClientId(event.target.value)}>
               <option value="">Select client</option>
               {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
             </select>
             <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} placeholder="Business reason for protected-data access" />
-            <button type="button" className="btn" disabled={!grantClientId || grantReason.trim().length < 10} onClick={async () => { await onGrantClientAccess(user, { client_id: grantClientId, reason: grantReason.trim(), duration_minutes: 30 }); setGrantReason(''); }}>Grant 30 min</button>
+            <input type="number" min="1" step="1" value={durationValue} aria-label="Access duration" onChange={(event) => setDurationValue(event.target.value)} />
+            <select value={durationUnit} aria-label="Access duration unit" onChange={(event) => setDurationUnit(event.target.value)}>
+              <option value="minutes">Minutes</option>
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+              <option value="months">Months</option>
+            </select>
+            <button type="button" className="btn" disabled={!grantClientId || grantReason.trim().length < 10 || Number(durationValue) < 1} onClick={async () => { await onGrantClientAccess(user, { client_id: grantClientId, reason: grantReason.trim(), duration_value: Number(durationValue), duration_unit: durationUnit }); setGrantReason(''); }}>Grant Access</button>
           </div>
-          {activeGrants.map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b> · until {new Date(grant.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant.id)}>Revoke</button></div>)}
+          {activeGrants.filter((grant) => new Date(grant.expires_at).getTime() > now).map((grant) => <div className="admin-active-grant" key={grant.id}><span><b>{grant.client_name}</b> · <strong>{formatRemaining(grant.expires_at)} remaining</strong> · expires {new Date(grant.expires_at).toLocaleString()}</span><button type="button" className="btn" onClick={() => onRevokeClientAccess(grant, user)}>Revoke</button></div>)}
         </div>
       )}
 
