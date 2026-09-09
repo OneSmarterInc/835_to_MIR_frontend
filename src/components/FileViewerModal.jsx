@@ -24,10 +24,7 @@ export default function FileViewerModal({ fileId, onClose }) {
     setError(null);
     setActiveTab("835");
 
-    const adminToken = localStorage.getItem("onesmarter_admin_token");
-    const headers = adminToken ? { Authorization: `Token ${adminToken}` } : {};
-
-    portalFetch(`/api/file-content/${fileId}/`, { signal: controller.signal, headers })
+    portalFetch(`/api/file-content/${fileId}/`, { signal: controller.signal })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Could not retrieve file content");
