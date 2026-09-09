@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 import ClientSftpModal from './ClientSftpModal';
 import {
   fetchGoLiveState, uploadGoLiveDoc, downloadGoLiveTemplate,
@@ -302,24 +303,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
 
   return (
     <section className="view on" id="v-promote">
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow">Stage Promotion</div>
-          <div className="golive-workspace-heading">
-            <ClientSelectDropdown
-              clients={clients}
-              value={selectedClientId}
-              onChange={(val) => {
-                setSelectedClientId(val);
-                if (onSelectClient) {
-                  onSelectClient(val);
-                }
-              }}
-            />
-            <h1 style={{ margin: 0 }}>Go Live Readiness</h1>
-          </div>
-        </div>
-      </div>
+      <WorkspaceHeader eyebrow="Stage promotion workspace" title="Go Live Readiness" description="Verify production readiness and complete the client cutover workflow."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={(val) => { setSelectedClientId(val); if (onSelectClient) onSelectClient(val); }} fullWidth /></div></WorkspaceHeader>
 
       <div className="metrics golive-metrics">
         <div className="metric">
