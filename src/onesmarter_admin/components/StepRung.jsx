@@ -13,9 +13,13 @@ import {
   scheduleTimeLabel,
   scheduleTimeZoneOptions,
 } from '../../utils/timezone';
+import './StepUploadModal.css';
 
 function getAuthHeaders(extra = {}) {
-  return { ...extra };
+  const token = localStorage.getItem('onesmarter_admin_token');
+  const headers = { ...extra };
+  if (token) headers['Authorization'] = `Token ${token}`;
+  return headers;
 }
 
 function toISODate(val) {
@@ -60,6 +64,11 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [validating835, setValidating835] = useState(false);
   const [pushingMir, setPushingMir] = useState(false);
   const [showSftpModal, setShowSftpModal] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadExpiration, setUploadExpiration] = useState('');
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const uploadFileRef = useRef(null);
 
   const [s4Name, setS4Name] = useState('');
   const [s4Role, setS4Role] = useState('Technical Contact');
@@ -220,27 +229,35 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
   const [stText, setStText] = useState(step.extra?.submission?.submission_text || '');
 
-  const handleStandardFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleStandardFileUpload = async () => {
+    const file = uploadFile;
+    if (!file || !uploadExpiration) return;
+    setUploadingDocument(true);
     try {
-      const res = await uploadStepFile(clientId, step.key, file);
+      const res = await uploadStepFile(clientId, step.key, file, uploadExpiration);
       setFeedback({
         isOpen: true,
         kind: 'ok',
         title: 'Evidence Validated & Stored',
-        content: `Uploaded ${file.name} for Step ${displayStepNumber}.`,
+        content: `Uploaded ${file.name} as version ${res.version || (step.latestUpload?.version || 0) + 1}.`,
         checks: res.checks || []
       });
+      setUploadDialogOpen(false);
+      setUploadFile(null);
+      setUploadExpiration('');
       await onRefresh();
     } catch (err) {
       setFeedback({
         isOpen: true,
         kind: 'bad',
         title: 'Validation Failed',
-        content: err.message,
+        content: err.version ? `${err.message} The failed file was retained as version ${err.version}.` : err.message,
         checks: err.checks || []
       });
+      await onRefresh();
+    } finally {
+      setUploadingDocument(false);
+      if (uploadFileRef.current) uploadFileRef.current.value = '';
     }
   };
 
@@ -1156,7 +1173,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         setS11UseDefaultSmtp(checked);
                         if (checked) {
                           try {
-                            const res = await fetch('/admin-panel/api/default-smtp/', { credentials: 'include', headers: getAuthHeaders() });
+                            const res = await fetch('/admin-panel/api/default-smtp/', { headers: getAuthHeaders() });
                             const data = await res.json();
                             if (data && data.success && data.config) {
                               const cfg = data.config;
@@ -1610,22 +1627,44 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
           )}
 
           {(step.actionType === 'upload_template' || step.actionType === 'email_upload') && (
-            <label
+            <button
+              type="button"
               className={`btn icon-btn upload-btn ${step.done ? 'done' : ''}`}
-              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setUploadFile(null);
+                setUploadExpiration('');
+                setUploadDialogOpen(true);
+              }}
               title={step.actionType === 'email_upload' ? "Upload Email Confirmation (Images & Documents)" : "Upload File"}
               aria-label="Upload File"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
                 <path d="M5 20h14v-2H5v2zm0-10h4v6h6v-6h4l-7-7-7 7z" />
               </svg>
-              <input
-                type="file"
-                hidden
-                onChange={handleStandardFileUpload}
-                accept={step.actionType === 'email_upload' ? "image/*,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.tiff,.tif,.ico,.avif,.pdf,.eml,.msg,.txt,.doc,.docx" : (step.file ? ".pdf,.doc,.docx" : (step.ext ? `.${step.ext}` : undefined))}
-              />
-            </label>
+            </button>
+          )}
+
+          {uploadDialogOpen && (
+            <div className="step-upload-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !uploadingDocument && setUploadDialogOpen(false)}>
+              <section className="step-upload-modal" role="dialog" aria-modal="true" aria-labelledby={`step-upload-title-${step.id}`}>
+                <header>
+                  <div><div className="eyebrow">DOCUMENT UPLOAD</div><h2 id={`step-upload-title-${step.id}`}>Upload {step.title}</h2></div>
+                  <button type="button" className="modal-cross-btn" disabled={uploadingDocument} onClick={() => setUploadDialogOpen(false)}>×</button>
+                </header>
+                <div className="step-upload-body">
+                  <div className="step-upload-version"><span>Uploading version</span><strong>v{step.latestUpload?.next_version || ((step.latestUpload?.version || 0) + 1)}</strong></div>
+                  <label htmlFor={`step-upload-file-${step.id}`}>Document file</label>
+                  <input ref={uploadFileRef} id={`step-upload-file-${step.id}`} type="file" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} accept={step.actionType === 'email_upload' ? "image/*,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.tiff,.tif,.ico,.avif,.pdf,.eml,.msg,.txt,.doc,.docx" : (step.file ? ".pdf,.doc,.docx" : (step.ext ? `.${step.ext}` : undefined))} />
+                  <label htmlFor={`step-upload-expiration-${step.id}`}>Expiration date</label>
+                  <input id={`step-upload-expiration-${step.id}`} type="date" min={new Date().toISOString().slice(0, 10)} value={uploadExpiration} onChange={(event) => setUploadExpiration(event.target.value)} />
+                  <small>A failed validation is still retained as this version; the next attempt advances to the following version.</small>
+                </div>
+                <footer>
+                  <button type="button" className="btn" disabled={uploadingDocument} onClick={() => setUploadDialogOpen(false)}>Cancel</button>
+                  <button type="button" className="btn primary" disabled={!uploadFile || !uploadExpiration || uploadingDocument} onClick={handleStandardFileUpload}>{uploadingDocument ? 'Uploading…' : `Upload v${step.latestUpload?.next_version || ((step.latestUpload?.version || 0) + 1)}`}</button>
+                </footer>
+              </section>
+            </div>
           )}
 
           <button
