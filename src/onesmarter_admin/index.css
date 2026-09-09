@@ -549,6 +549,7 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .admin-client-grant-form { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(110px, 1fr) auto; gap: 8px; }
 .admin-client-grant-form > :nth-child(2) { grid-column: 2 / 4; }
 .admin-client-grant-form select, .admin-client-grant-form input { min-width: 0; padding: 8px 10px; border: 1px solid var(--line); background: var(--surface); }
+.admin-client-grant-form .btn.primary:disabled { background: var(--ink); border-color: var(--ink); color: #fff; opacity: 1; }
 .admin-active-grants { margin-top: 14px; }
 .admin-active-grants > strong { display: block; margin-bottom: 8px; font-size: 13px; }
 .admin-active-grant { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 12px; }
