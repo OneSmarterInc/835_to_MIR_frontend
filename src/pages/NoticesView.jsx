@@ -1,35 +1,92 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import WorkspaceHeader from "../components/WorkspaceHeader";
+import { safeFetchJson } from "../utils/api";
+import "./NoticesView.css";
+
+const ACTIVE = new Set(["RECEIVED", "PARSING_EMAIL", "MATCHING_CLAIMS", "COLLECTING_EVIDENCE", "RUNNING_VALIDATIONS", "ANALYZING"]);
+const statusLabel = (value) => String(value || "").replaceAll("_", " ");
+const dateLabel = (value) => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString(); };
+
+function NoticeModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ subject: "", sender: "", received_at: "", reporting_year: new Date().getFullYear(), claim_numbers: "", email_body: "" });
+  const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const update = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
+  const submit = async (event) => {
+    event.preventDefault(); setBusy(true); setError("");
+    try {
+      const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, received_at: form.received_at || null }) });
+      if (!res.ok || !data.success) throw new Error(data.error || "Unable to save this email.");
+      onCreated(data.notice);
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+  return <div className="mpl-modal-backdrop">
+    <form className="mpl-modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="mpl-email-title">
+      <div className="mpl-modal-head"><div><span>MPL EMAIL</span><h2 id="mpl-email-title">Add returned MIR email</h2></div><button type="button" onClick={onClose} aria-label="Close">×</button></div>
+      <div className="mpl-modal-body">
+        <p className="mpl-help">Copy the actual Outlook subject and email content. Supported subjects use <strong>MIR Back to the TPA File -- M/D thru M/D -- PROGRAM</strong>, optionally with Fw:, Re:, or Acknowledged.</p>
+        {error && <div className="mpl-error">{error}</div>}
+        <label><span>SUBJECT</span><input required value={form.subject} onChange={update("subject")} placeholder="MIR Back to the TPA File -- 9/2 thru 9/8 -- ABC" /></label>
+        <div className="mpl-form-grid">
+          <label><span>SENDER</span><input value={form.sender} onChange={update("sender")} placeholder="Scott Torello <email@example.com>" /></label>
+          <label><span>RECEIVED DATE</span><input type="datetime-local" value={form.received_at} onChange={update("received_at")} /></label>
+          <label><span>REPORTING YEAR</span><input type="number" min="2000" max="2100" required value={form.reporting_year} onChange={update("reporting_year")} /></label>
+          <label><span>CLAIM NUMBERS</span><input value={form.claim_numbers} onChange={update("claim_numbers")} placeholder="Comma-separated if known" /></label>
+        </div>
+        <label><span>EMAIL CONTENT</span><textarea required rows="12" value={form.email_body} onChange={update("email_body")} placeholder="Paste the full Outlook email here, including the latest message and quoted thread." /></label>
+      </div>
+      <div className="mpl-modal-actions"><button type="button" className="mpl-btn secondary" onClick={onClose}>Cancel</button><button className="mpl-btn primary" disabled={busy}>{busy ? "Saving…" : "Analyze Email"}</button></div>
+    </form>
+  </div>;
+}
+
+function RelatedFiles({ files = [] }) {
+  if (!files.length) return <p className="mpl-empty">No related files were verified.</p>;
+  return <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>TYPE</th><th>FILENAME</th><th>DATE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{files.map((file) => <tr key={`${file.type}-${file.id}`}><td>{file.type}</td><td className="mono">{file.filename}</td><td>{dateLabel(file.date)}</td><td><span className="mpl-state">{statusLabel(file.status)}</span></td><td><a className="mpl-file-link" href={file.download_url}>Download</a></td></tr>)}</tbody></table></div>;
+}
+
+function ClaimAnalysis({ claim, noticeId, onReview }) {
+  const analysis = claim.analysis;
+  if (!analysis) return <div className="mpl-empty">Evidence analysis is waiting to run.</div>;
+  return <div className="mpl-analysis">
+    <div className="mpl-analysis-heading"><div><span>AI-ASSISTED, EVIDENCE-BOUND REVIEW</span><h3>{claim.claim_number || claim.internal_claim_number}</h3></div><div className="mpl-confidence">{Math.round(analysis.confidence * 100)}% confidence<br/><small>Human review required</small></div></div>
+    <p className="mpl-summary">{analysis.summary}</p>
+    <h4>Claim timeline</h4><div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div>
+    <h4>Verified issues</h4>{analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}
+    <h4>Recommended resolution</h4><ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol>
+    <p className="mpl-caution">Recommendations require claims/EDI review. They may improve acceptance but do not guarantee payer approval.</p>
+    <h4>Related archived files</h4><RelatedFiles files={analysis.related_files} />
+    <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReview(noticeId, claim.claim_id, "APPROVED")}>Approve Analysis</button><button className="mpl-btn secondary" onClick={() => onReview(noticeId, claim.claim_id, "CHANGES_REQUIRED")}>Mark Changes Required</button><span className="mpl-state">{statusLabel(analysis.review_status)}</span></div>
+  </div>;
+}
+
+function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
+  const [expanded, setExpanded] = useState(false); const detail = notice.email_body !== undefined;
+  const toggle = async () => { if (!detail) await loadDetail(notice.id); setExpanded((old) => !old); };
+  return <article className="mpl-notice-card">
+    <div className="mpl-email-header"><div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2>{notice.subject}</h2><p>{notice.sender || "Sender not entered"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><div className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</div></div>
+    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span></div>{detail && <div className="mpl-message">{notice.latest_message || notice.email_body}</div>}<button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Hide full email" : detail ? "Show full email" : "Open email"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
+    {notice.last_error && <div className="mpl-warning">{notice.last_error}</div>}
+    {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
+    {ACTIVE.has(notice.status) && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
+    {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
+    {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
+  </article>;
+}
 
 export default function NoticesView() {
-  return (
-    <section className="view on" id="v-notices">
-      <WorkspaceHeader eyebrow="Returned from MPL" title="Notices" description="Review returned notices while preserving the original file and a plain-language interpretation." />
-
-      <article className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-          <div>
-            <div className="mono" style={{ fontSize: "13px", fontWeight: 600 }}>
-              MPL-RTN-20250806-114
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--ink-3)" }}>
-              6 Aug &bull; covers 1–5 Aug
-            </div>
-          </div>
-          <span className="tag bad">Needs an answer</span>
-        </div>
-        <pre>
-          {`RTN 20250806 ABCHEALTH
-BATCH 20250801-20250805 RECV 004 ACC 003 REJ 001
-FILE MIR_ABC_20250804_03 ST=R CD=E220 SEG=CLM OCC=00007
-CD=E220 TXT=PRV ID NOT ON FILE FOR SVC DT RANGE
-ACTION=RESUBMIT AFTER CORRECTION WINDOW=15D`}
-        </pre>
-        <p style={{ marginTop: "10px", fontSize: "13px", color: "var(--ink-2)" }}>
-          MPL took three of the four files sent last week and rejected one. The provider ID was
-          not on file for the service date range.
-        </p>
-      </article>
-    </section>
-  );
+  const [notices, setNotices] = useState([]); const [modal, setModal] = useState(false); const [error, setError] = useState("");
+  const refresh = useCallback(async () => { try { const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/"); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, []);
+  const loadDetail = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to open notice."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
+  const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to review analysis."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  return <section className="view on mpl-view" id="v-notices">
+    <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Enter the actual MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Add Email</button></WorkspaceHeader>
+    {error && <div className="mpl-error">{error}</div>}
+    {!notices.length && !error && <div className="mpl-zero"><h2>No MPL emails entered</h2><p>Add the first returned MIR email to begin claim investigation.</p><button className="mpl-btn primary" onClick={() => setModal(true)}>Add Email</button></div>}
+    <div className="mpl-notice-list">{notices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} />)}</div>
+    {modal && <NoticeModal onClose={() => setModal(false)} onCreated={(notice) => { setNotices((items) => [notice, ...items]); setModal(false); }} />}
+  </section>;
 }
