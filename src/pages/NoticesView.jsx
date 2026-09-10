@@ -9,8 +9,6 @@ const dateLabel = (value) => { if (!value) return "—"; const date = new Date(v
 
 function NoticeModal({ onClose, onCreated }) {
   const [file, setFile] = useState(null);
-  const [reportingYear, setReportingYear] = useState(new Date().getFullYear());
-  const [claimNumbers, setClaimNumbers] = useState("");
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError("");
@@ -18,8 +16,6 @@ function NoticeModal({ onClose, onCreated }) {
       if (!file || !file.name.toLowerCase().endsWith(".msg")) throw new Error("Select an Outlook .msg email file.");
       const body = new FormData();
       body.append("email_file", file);
-      body.append("reporting_year", String(reportingYear));
-      if (claimNumbers.trim()) body.append("claim_numbers", claimNumbers.trim());
       const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/", { method: "POST", body });
       if (!res.ok || !data.success) throw new Error(data.error || "Unable to upload this email.");
       onCreated(data.notice);
@@ -29,14 +25,10 @@ function NoticeModal({ onClose, onCreated }) {
     <form className="mpl-modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="mpl-email-title">
       <div className="mpl-modal-head"><div><span>MPL EMAIL UPLOAD</span><h2 id="mpl-email-title">Upload returned MIR email</h2></div><button type="button" onClick={onClose} aria-label="Close">×</button></div>
       <div className="mpl-modal-body">
-        <p className="mpl-help">Upload the original Outlook <strong>.msg</strong> file. Its subject, sender, received date, message body, and quoted thread will be extracted automatically.</p>
+        <p className="mpl-help">Upload the original Outlook <strong>.msg</strong> file. Its subject, sender, received date, reporting period, claim numbers, message body, and quoted thread will be extracted automatically.</p>
         {error && <div className="mpl-error">{error}</div>}
         <label><span>OUTLOOK EMAIL FILE</span><input required type="file" accept=".msg,application/vnd.ms-outlook" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
         {file && <p className="mpl-help">Selected: <strong>{file.name}</strong></p>}
-        <div className="mpl-form-grid">
-          <label><span>REPORTING YEAR</span><input type="number" min="2000" max="2100" required value={reportingYear} onChange={(event) => setReportingYear(event.target.value)} /></label>
-          <label><span>CLAIM NUMBERS (OPTIONAL)</span><input value={claimNumbers} onChange={(event) => setClaimNumbers(event.target.value)} placeholder="Comma-separated if known" /></label>
-        </div>
       </div>
       <div className="mpl-modal-actions"><button type="button" className="mpl-btn secondary" onClick={onClose}>Cancel</button><button className="mpl-btn primary" disabled={busy || !file}>{busy ? "Uploading…" : "Upload & Analyze"}</button></div>
     </form>
