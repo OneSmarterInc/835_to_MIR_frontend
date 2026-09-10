@@ -54,3 +54,21 @@
 .mpl-ai-response li + li {
   margin-top: 7px;
 }
+
+
+.mpl-source-results {
+  margin-top: 14px;
+}
+
+.mpl-source-results td {
+  vertical-align: top;
+}
+
+.mpl-source-results td small {
+  display: block;
+  white-space: nowrap;
+}
+
+.mpl-source-results td small + small {
+  margin-top: 4px;
+}
