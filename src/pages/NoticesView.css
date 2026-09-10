@@ -1,1 +1,56 @@
 .mpl-view{--mpl-navy:#111c2d;--mpl-teal:#0b806d;--mpl-line:#c9d5e1}.mpl-btn{min-height:40px;padding:9px 16px;border:1px solid transparent;border-radius:3px;font-weight:700;cursor:pointer}.mpl-btn.primary{background:var(--mpl-navy);color:#fff}.mpl-btn.secondary{border-color:var(--mpl-line);background:#fff;color:var(--mpl-navy)}.mpl-btn.light{border-color:#fff;background:#fff;color:var(--mpl-navy)}.mpl-btn:disabled{opacity:.55;cursor:not-allowed}.mpl-notice-list{display:grid;gap:18px}.mpl-notice-card{border:1px solid var(--mpl-line);background:#fff}.mpl-email-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:18px 20px;border-bottom:1px solid var(--mpl-line)}.mpl-email-type,.mpl-modal-head span,.mpl-analysis-heading>div>span{color:#70839b;font:700 10px ui-monospace,monospace;letter-spacing:.14em}.mpl-email-header h2{margin:5px 0 4px;font-size:17px}.mpl-email-header p{margin:0;color:#718197;font-size:12px}.mpl-status,.mpl-state,.mpl-severity{padding:6px 9px;background:#e7f4f1;color:#087363;font:700 10px ui-monospace,monospace;text-transform:uppercase;white-space:nowrap}.mpl-status.failed,.mpl-status.review_required,.mpl-severity.error{background:#f7e4e1;color:#a52d22}.mpl-severity.warning{background:#f8efd9;color:#9a6500}.mpl-email-body{padding:18px 20px}.mpl-email-meta{display:flex;gap:30px;margin-bottom:15px;color:#718197;font:10px ui-monospace,monospace;letter-spacing:.08em}.mpl-email-meta strong{margin-left:6px;color:#16202e}.mpl-message{padding:18px;border-left:3px solid var(--mpl-teal);background:#f6f9fb;white-space:pre-wrap;line-height:1.55}.mpl-thread-toggle{margin-top:10px;border:0;background:none;color:var(--mpl-teal);font-weight:700;cursor:pointer}.mpl-full-email{max-height:360px;overflow:auto;margin:12px 0 0;padding:16px;border:1px solid var(--mpl-line);background:#f6f9fb;white-space:pre-wrap}.mpl-processing,.mpl-warning{margin:0 20px 18px;padding:12px 14px}.mpl-processing{background:#e7f4f1;color:#087363;font-weight:700}.mpl-processing span{display:inline-block;width:9px;height:9px;margin-right:9px;border-radius:50%;background:#13a48c;animation:mpl-pulse 1s infinite}.mpl-warning,.mpl-error{border-left:3px solid #ad372a;background:#f9e9e6;color:#92291f}.mpl-error{margin-bottom:14px;padding:12px}.mpl-analysis{padding:20px;border-top:4px solid var(--mpl-navy);background:#f4f7fa}.mpl-analysis-heading{display:flex;justify-content:space-between;gap:20px}.mpl-analysis-heading h3{margin:5px 0}.mpl-confidence{text-align:right;color:var(--mpl-teal);font:700 18px ui-monospace,monospace}.mpl-confidence small{color:#718197;font-size:10px}.mpl-summary{padding:15px 17px;border-left:3px solid var(--mpl-teal);background:#fff;line-height:1.55}.mpl-analysis h4{margin:22px 0 9px}.mpl-timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));border:1px solid var(--mpl-line);background:#fff}.mpl-timeline>div{padding:13px;border-right:1px solid var(--mpl-line)}.mpl-timeline time,.mpl-timeline span{display:block;color:#718197;font-size:11px}.mpl-timeline strong{display:block;margin:5px 0}.mpl-table-wrap{overflow:auto}.mpl-table{width:100%;border-collapse:collapse;background:#fff}.mpl-table th,.mpl-table td{padding:11px 13px;border:1px solid var(--mpl-line);text-align:left}.mpl-table th{background:#f5f7fa;color:#60738c;font:700 10px ui-monospace,monospace;letter-spacing:.1em}.mpl-table td small{display:block;margin-top:4px;color:#718197}.mpl-file-link{color:var(--mpl-teal);font-weight:700}.mpl-actions{margin:0;padding:15px 15px 15px 42px;background:#fff}.mpl-actions li{margin:8px 0}.mpl-caution{color:#80601c;font-size:12px}.mpl-empty,.mpl-zero{padding:28px;color:#718197;text-align:center}.mpl-zero{border:1px solid var(--mpl-line);background:#fff}.mpl-card-actions{padding:0 20px 18px}.mpl-modal-backdrop{position:fixed;z-index:10000;inset:0;display:grid;place-items:start center;overflow:auto;padding:38px 15px;background:rgba(15,25,40,.72)}.mpl-modal{width:min(780px,100%);margin:auto;background:#eef3f7;box-shadow:0 24px 70px rgba(0,0,0,.35)}.mpl-modal-head{display:flex;justify-content:space-between;padding:23px 28px;border-bottom:3px solid #1bb69d;background:var(--mpl-navy);color:#fff}.mpl-modal-head h2{margin:5px 0 0}.mpl-modal-head button{width:42px;height:42px;border:1px solid #45576f;background:#1b2a40;color:#fff;font-size:27px}.mpl-modal-body{padding:24px 28px}.mpl-help{margin-top:0;color:#52657c;font-size:12px}.mpl-modal label{display:block;margin-top:15px}.mpl-modal label>span{display:block;margin-bottom:6px;color:#34445a;font:700 10px ui-monospace,monospace;letter-spacing:.1em}.mpl-modal input,.mpl-modal textarea{box-sizing:border-box;width:100%;padding:11px;border:1px solid #becddd;background:#fff;font:inherit}.mpl-modal textarea{resize:vertical;font-family:ui-monospace,monospace}.mpl-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.mpl-modal-actions{display:flex;justify-content:flex-end;gap:9px;padding:0 28px 24px}@keyframes mpl-pulse{50%{opacity:.3}}@media(max-width:650px){.mpl-email-header,.mpl-analysis-heading{flex-direction:column}.mpl-form-grid{grid-template-columns:1fr}.mpl-confidence{text-align:left}.mpl-email-meta{flex-direction:column;gap:7px}.mpl-modal-backdrop{padding:0}.mpl-modal{min-height:100vh}}
+
+
+.mpl-extracted,
+.mpl-ai-response {
+  margin: 16px 18px;
+  padding: 16px;
+  border: 1px solid var(--line, #cbd7e3);
+  background: #f8fafc;
+}
+
+.mpl-extracted h3,
+.mpl-ai-response h4 {
+  margin: 0 0 10px;
+}
+
+.mpl-claim-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mpl-claim-chips span {
+  padding: 6px 9px;
+  border: 1px solid #b7c7d7;
+  background: #fff;
+  color: #122033;
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.mpl-ai-response {
+  border-left: 3px solid #008c7a;
+}
+
+.mpl-ai-response > span {
+  color: #667b96;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.mpl-ai-response p {
+  margin: 10px 0 14px;
+  line-height: 1.55;
+}
+
+.mpl-ai-response ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.mpl-ai-response li + li {
+  margin-top: 7px;
+}
