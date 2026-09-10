@@ -8,33 +8,37 @@ const statusLabel = (value) => String(value || "").replaceAll("_", " ");
 const dateLabel = (value) => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString(); };
 
 function NoticeModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ subject: "", sender: "", received_at: "", reporting_year: new Date().getFullYear(), claim_numbers: "", email_body: "" });
+  const [file, setFile] = useState(null);
+  const [reportingYear, setReportingYear] = useState(new Date().getFullYear());
+  const [claimNumbers, setClaimNumbers] = useState("");
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  const update = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError("");
     try {
-      const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, received_at: form.received_at || null }) });
-      if (!res.ok || !data.success) throw new Error(data.error || "Unable to save this email.");
+      if (!file || !file.name.toLowerCase().endsWith(".msg")) throw new Error("Select an Outlook .msg email file.");
+      const body = new FormData();
+      body.append("email_file", file);
+      body.append("reporting_year", String(reportingYear));
+      if (claimNumbers.trim()) body.append("claim_numbers", claimNumbers.trim());
+      const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/", { method: "POST", body });
+      if (!res.ok || !data.success) throw new Error(data.error || "Unable to upload this email.");
       onCreated(data.notice);
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   return <div className="mpl-modal-backdrop">
     <form className="mpl-modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="mpl-email-title">
-      <div className="mpl-modal-head"><div><span>MPL EMAIL</span><h2 id="mpl-email-title">Add returned MIR email</h2></div><button type="button" onClick={onClose} aria-label="Close">×</button></div>
+      <div className="mpl-modal-head"><div><span>MPL EMAIL UPLOAD</span><h2 id="mpl-email-title">Upload returned MIR email</h2></div><button type="button" onClick={onClose} aria-label="Close">×</button></div>
       <div className="mpl-modal-body">
-        <p className="mpl-help">Copy the actual Outlook subject and email content. Supported subjects use <strong>MIR Back to the TPA File -- M/D thru M/D -- PROGRAM</strong>, optionally with Fw:, Re:, or Acknowledged.</p>
+        <p className="mpl-help">Upload the original Outlook <strong>.msg</strong> file. Its subject, sender, received date, message body, and quoted thread will be extracted automatically.</p>
         {error && <div className="mpl-error">{error}</div>}
-        <label><span>SUBJECT</span><input required value={form.subject} onChange={update("subject")} placeholder="MIR Back to the TPA File -- 9/2 thru 9/8 -- ABC" /></label>
+        <label><span>OUTLOOK EMAIL FILE</span><input required type="file" accept=".msg,application/vnd.ms-outlook" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
+        {file && <p className="mpl-help">Selected: <strong>{file.name}</strong></p>}
         <div className="mpl-form-grid">
-          <label><span>SENDER</span><input value={form.sender} onChange={update("sender")} placeholder="Scott Torello <email@example.com>" /></label>
-          <label><span>RECEIVED DATE</span><input type="datetime-local" value={form.received_at} onChange={update("received_at")} /></label>
-          <label><span>REPORTING YEAR</span><input type="number" min="2000" max="2100" required value={form.reporting_year} onChange={update("reporting_year")} /></label>
-          <label><span>CLAIM NUMBERS</span><input value={form.claim_numbers} onChange={update("claim_numbers")} placeholder="Comma-separated if known" /></label>
+          <label><span>REPORTING YEAR</span><input type="number" min="2000" max="2100" required value={reportingYear} onChange={(event) => setReportingYear(event.target.value)} /></label>
+          <label><span>CLAIM NUMBERS (OPTIONAL)</span><input value={claimNumbers} onChange={(event) => setClaimNumbers(event.target.value)} placeholder="Comma-separated if known" /></label>
         </div>
-        <label><span>EMAIL CONTENT</span><textarea required rows="12" value={form.email_body} onChange={update("email_body")} placeholder="Paste the full Outlook email here, including the latest message and quoted thread." /></label>
       </div>
-      <div className="mpl-modal-actions"><button type="button" className="mpl-btn secondary" onClick={onClose}>Cancel</button><button className="mpl-btn primary" disabled={busy}>{busy ? "Saving…" : "Analyze Email"}</button></div>
+      <div className="mpl-modal-actions"><button type="button" className="mpl-btn secondary" onClick={onClose}>Cancel</button><button className="mpl-btn primary" disabled={busy || !file}>{busy ? "Uploading…" : "Upload & Analyze"}</button></div>
     </form>
   </div>;
 }
@@ -64,7 +68,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
   const toggle = async () => { if (!detail) await loadDetail(notice.id); setExpanded((old) => !old); };
   return <article className="mpl-notice-card">
     <div className="mpl-email-header"><div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2>{notice.subject}</h2><p>{notice.sender || "Sender not entered"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><div className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</div></div>
-    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span></div>{detail && <div className="mpl-message">{notice.latest_message || notice.email_body}</div>}<button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Hide full email" : detail ? "Show full email" : "Open email"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
+    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div>{detail && <div className="mpl-message">{notice.latest_message || notice.email_body}</div>}<button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Hide full email" : detail ? "Show full email" : "Open email"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
     {notice.last_error && <div className="mpl-warning">{notice.last_error}</div>}
     {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
     {ACTIVE.has(notice.status) && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
@@ -83,9 +87,9 @@ export default function NoticesView() {
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to review analysis."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   return <section className="view on mpl-view" id="v-notices">
-    <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Enter the actual MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Add Email</button></WorkspaceHeader>
+    <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></WorkspaceHeader>
     {error && <div className="mpl-error">{error}</div>}
-    {!notices.length && !error && <div className="mpl-zero"><h2>No MPL emails entered</h2><p>Add the first returned MIR email to begin claim investigation.</p><button className="mpl-btn primary" onClick={() => setModal(true)}>Add Email</button></div>}
+    {!notices.length && !error && <div className="mpl-zero"><h2>No MPL emails uploaded</h2><p>Upload the first returned MIR .msg file to begin claim investigation.</p><button className="mpl-btn primary" onClick={() => setModal(true)}>Upload Email</button></div>}
     <div className="mpl-notice-list">{notices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} />)}</div>
     {modal && <NoticeModal onClose={() => setModal(false)} onCreated={(notice) => { setNotices((items) => [notice, ...items]); setModal(false); }} />}
   </section>;
