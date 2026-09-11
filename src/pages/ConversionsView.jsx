@@ -135,9 +135,38 @@ export default function ConversionsView({
     setIsValidated(false);
     setMirOutputText("");
     setActiveValidatedFileId(null);
+    setPartialDetails(null);
     setStep1State("active");
     setStep2State("");
     setStep3State("");
+  };
+
+  const captureHeldClaims = (data, fallbackId, fallbackStatus = "ARCHIVED") => {
+    const findings = Array.isArray(data?.findings) ? data.findings : [];
+    const heldCount = Number(data?.held_claims_count || 0);
+    const hasBlockingFinding = findings.some((finding) => {
+      const severity = String(finding?.severity || "").toUpperCase();
+      return severity === "HOLD" || severity === "REFUSE";
+    });
+
+    if (!data?.partial && heldCount <= 0 && !hasBlockingFinding) {
+      setPartialDetails(null);
+      return;
+    }
+
+    setPartialDetails({
+      id: data?.file_id || fallbackId,
+      status: data?.status || fallbackStatus,
+      output_path: data?.output_path || "",
+      delivered_claims_count: Number(data?.delivered_claims_count || 0),
+      held_claims_count: heldCount || new Set(
+        findings
+          .filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase()))
+          .map((finding) => finding.claim_control_number || finding.claim_number)
+          .filter(Boolean)
+      ).size,
+      conversion_findings: findings,
+    });
   };
 
   // Validate 835 Action (Single or Multi-file)
@@ -225,19 +254,11 @@ export default function ConversionsView({
 
       const data = await res.json();
       if (!res.ok || data.error) {
-        if ((data.findings || []).length) {
-          setPartialDetails({
-            id: data.file_id || activeValidatedFileId,
-            status: "ERROR",
-            output_path: data.output_path || "",
-            delivered_claims_count: data.delivered_claims_count || 0,
-            held_claims_count: data.held_claims_count || (data.findings || []).length,
-            conversion_findings: data.findings || [],
-          });
-        }
+        captureHeldClaims(data, activeValidatedFileId, "ERROR");
         throw new Error(data.error || "Conversion failed");
       }
 
+      captureHeldClaims(data, data.file_id || activeValidatedFileId, "ARCHIVED");
       setMirOutputText(data.text);
       if (data.combined_filename) {
         setCurrentFileName(data.combined_filename);
@@ -267,19 +288,12 @@ export default function ConversionsView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        if ((data.findings || []).length) {
-          setPartialDetails({
-            id: data.file_id || fileId,
-            status: "ERROR",
-            output_path: data.output_path || "",
-            delivered_claims_count: data.delivered_claims_count || 0,
-            held_claims_count: data.held_claims_count || (data.findings || []).length,
-            conversion_findings: data.findings || [],
-          });
-        } else {
+        captureHeldClaims(data, fileId, "ERROR");
+        if (!data.partial && !(data.findings || []).length) {
           alert(data.error || "Failed to convert file to MIR");
         }
       } else {
+        captureHeldClaims(data, data.file_id || fileId, "ARCHIVED");
         if (data.text) setMirOutputText(data.text);
       }
     } catch (err) {
@@ -505,6 +519,24 @@ export default function ConversionsView({
               onChange={handle835FileChange}
             />
             <div className="subtext">{file835Subtext}</div>
+            {Number(partialDetails?.held_claims_count || 0) > 0 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  padding: "8px 10px",
+                  border: "1px solid var(--ochre)",
+                  borderRadius: "4px",
+                  background: "var(--ochre-bg, #fff8e6)",
+                  fontSize: "12px",
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong>{partialDetails.held_claims_count} claim{Number(partialDetails.held_claims_count) === 1 ? "" : "s"} held.</strong>{" "}
+                {Number(partialDetails.delivered_claims_count || 0) > 0
+                  ? `${partialDetails.delivered_claims_count} other claim${Number(partialDetails.delivered_claims_count) === 1 ? " was" : "s were"} processed into MIR.`
+                  : "No clean claims were available to process into MIR."}
+              </div>
+            )}
           </div>
 
           {/* OPTIONAL 837 REFERENCE BOX */}
@@ -814,7 +846,9 @@ export default function ConversionsView({
                   if (f.status === "PROCESSING") {
                     statusTitle = "PROCESSING: 835 EDI file validated and stored in archive folder. Click to convert file into MIR.";
                   } else if (f.status === "ARCHIVED") {
-                    statusTitle = "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
+                    statusTitle = Number(f.held_claims_count || 0) > 0
+                      ? `ARCHIVED: MIR created from ${f.delivered_claims_count || 0} claim(s); ${f.held_claims_count} claim(s) were held for review.`
+                      : "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
                   } else if (f.status === "PARTIAL") {
                     statusTitle = "ERROR: This legacy partial run did not produce an approved complete MIR. Click to view claim findings.";
                   } else if (f.status === "ERROR") {
@@ -970,18 +1004,18 @@ export default function ConversionsView({
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="partial-title" onMouseDown={(event) => event.stopPropagation()} style={{ maxWidth: "760px", width: "calc(100% - 32px)" }}>
             <div className="modal-header">
               <div>
-                <h2 id="partial-title" style={{ margin: 0 }}>Unprocessed claims</h2>
+                <h2 id="partial-title" style={{ margin: 0 }}>Held claims</h2>
                 <div style={{ color: "var(--ink-3)", fontSize: "12px", marginTop: "4px" }}>
-                  Conversion failed · {partialDetails.held_claims_count || 0} claim(s) require review
+                  {Number(partialDetails.delivered_claims_count || 0) > 0 ? "Partial conversion completed" : "Conversion held"} · {partialDetails.held_claims_count || 0} claim(s) require review
                 </div>
               </div>
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setPartialDetails(null)}>×</button>
             </div>
             <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-              {(partialDetails.conversion_findings || []).length ? (
+              {(partialDetails.conversion_findings || []).filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase())).length ? (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr><th>Highmark Claim Number</th><th>Internal Claim Number</th><th>Rule</th><th>Reason</th></tr></thead>
-                  <tbody>{partialDetails.conversion_findings.map((finding, index) => (
+                  <tbody>{(partialDetails.conversion_findings || []).filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase())).map((finding, index) => (
                     <tr key={`${finding.claim_control_number || finding.claim_number || "claim"}-${finding.rule_code || index}-${index}`}>
                       <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).highmarkClaimNumber || "—"}</td>
                       <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).internalClaimNumber || "—"}</td>
