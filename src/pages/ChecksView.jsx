@@ -10,10 +10,23 @@ function parseDetails(raw) {
   catch (_) { return { findings: [], errors: [String(raw)] }; }
 }
 
+function formatTimestamp(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString();
+}
+
+function isBlockingConversionFinding(finding) {
+  const severity = String(finding?.severity || "").toUpperCase();
+  return severity === "HOLD" || severity === "REFUSE";
+}
+
 export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [activeChecksTab, setActiveChecksTab] = useState("validations");
 
   useEffect(() => {
     let alive = true;
@@ -42,12 +55,18 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const currentRun = allFiles[0] || null;
   const currentClaims = Number(currentRun?.claims_count || 0);
   const currentRecords = Number(currentRun?.records_count || 0);
-  const errorFiles = allFiles.filter((file) => String(file.status || "").toUpperCase() === "ERROR");
-  const heldCount = errorFiles.length;
+  const validationErrorFiles = useMemo(
+    () => allFiles.filter((file) => (
+      String(file.status || "").toUpperCase() === "ERROR"
+      && Number(file.held_claims_count || 0) === 0
+    )),
+    [allFiles]
+  );
+  const validationHeldCount = validationErrorFiles.length;
   const completedFiles = allFiles.filter((file) => ["ARCHIVED", "COMPLETED"].includes(String(file.status || "").toUpperCase()));
-  const deliveredClaims = completedFiles.reduce((sum, file) => sum + Number(file.claims_count || 0), 0);
+  const deliveredClaims = completedFiles.reduce((sum, file) => sum + Number(file.delivered_claims_count ?? file.claims_count ?? 0), 0);
 
-  const allFindings = useMemo(() => allFiles.flatMap((file) => {
+  const allFindings = useMemo(() => validationErrorFiles.flatMap((file) => {
     const details = parseDetails(file.error_message);
     if (Array.isArray(details.findings) && details.findings.length) return details.findings;
     return (details.errors || []).map((message) => ({
@@ -58,7 +77,53 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       source: "OneSmarter validation",
       severity: "Hold",
     }));
-  }), [allFiles]);
+  }), [validationErrorFiles]);
+
+  const conversionHeldClaims = useMemo(() => {
+    const rows = [];
+
+    allFiles.forEach((file) => {
+      const findings = Array.isArray(file.conversion_findings) ? file.conversion_findings : [];
+      const blocking = findings.filter(isBlockingConversionFinding);
+      const grouped = new Map();
+
+      blocking.forEach((finding, index) => {
+        const claimNumber = finding.claim_control_number || finding.claim_number || `Held claim ${index + 1}`;
+        const sourceFile = finding.source_filename || file.original_filename || file.stored_filename || "—";
+        const key = `${file.id || sourceFile}:${claimNumber}:${sourceFile}`;
+        const existing = grouped.get(key) || {
+          key,
+          claimNumber,
+          sourceFile,
+          importMode: file.ingestion_source || "MANUAL",
+          timestamp: file.processing_completed_at || file.processing_started_at || file.uploaded_at,
+          reasons: [],
+        };
+        const code = finding.rule_code || finding.rule_name || "Conversion hold";
+        const reason = finding.reason || finding.message || "Claim requires conversion review.";
+        existing.reasons.push(`${code}: ${reason}`);
+        grouped.set(key, existing);
+      });
+
+      if (!blocking.length && Number(file.held_claims_count || 0) > 0) {
+        for (let index = 0; index < Number(file.held_claims_count || 0); index += 1) {
+          const sourceFile = file.original_filename || file.stored_filename || "—";
+          grouped.set(`${file.id}:unknown:${index}`, {
+            key: `${file.id}:unknown:${index}`,
+            claimNumber: "Claim number unavailable",
+            sourceFile,
+            importMode: file.ingestion_source || "MANUAL",
+            timestamp: file.processing_completed_at || file.processing_started_at || file.uploaded_at,
+            reasons: ["Conversion hold details were not recorded for this historical run."],
+          });
+        }
+      }
+
+      rows.push(...grouped.values());
+    });
+
+    return rows.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  }, [allFiles]);
 
   const openMetric = (title, gate, value, description) => {
     setSelectedGroup({ title, gate, count: value, unit: "", description, source: "Current run", rules: [], findings: [] });
@@ -127,43 +192,109 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review inbound and outbound validation gates and their findings." />}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures and claim-level conversion holds." />}
 
-      <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
-        {gateCard({
-          gateKey: "gate1",
-          eyebrow: "Gate 1 · Inbound",
-          metrics: <>
-            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
-            {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
-          </>,
-          footer: "The rule totals above come from the backend validation catalog, not from frontend constants.",
-        })}
-
-        {gateCard({
-          gateKey: "gate2",
-          eyebrow: "Gate 2 · Inbound",
-          metrics: <>
-            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
-            {row("Findings", heldCount ? `${heldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", heldCount, "Files currently held because validation findings require attention."))}
-          </>,
-          footer: heldCount ? `${heldCount} file${heldCount === 1 ? " is" : "s are"} held before MIR generation.` : "No 835 files are currently held at this gate.",
-        })}
-
-        {gateCard({
-          gateKey: "gate3",
-          eyebrow: "Gate 3 · Outbound",
-          metrics: <>
-            {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
-            {row("Findings", allFindings.filter((f) => /mir|mp003|mp011|mp013|duplicate/i.test([f.rule_code, f.rule, f.source, f.what_found, f.reason].filter(Boolean).join(" "))).length.toLocaleString(), () => openMetric("Findings", "MIR before it goes", allFindings.length, "MIR-stage findings recorded before outbound delivery."))}
-          </>,
-          footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
-        })}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className={activeChecksTab === "validations" ? "btn" : "btn secondary"}
+          onClick={() => setActiveChecksTab("validations")}
+        >
+          Validations
+        </button>
+        <button
+          type="button"
+          className={activeChecksTab === "conversion" ? "btn" : "btn secondary"}
+          onClick={() => setActiveChecksTab("conversion")}
+        >
+          Conversion{conversionHeldClaims.length ? ` (${conversionHeldClaims.length})` : ""}
+        </button>
       </div>
 
-      <ConversionErrorFindings trackedFiles={allFiles} />
+      {activeChecksTab === "validations" ? (
+        <>
+          <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
+            {gateCard({
+              gateKey: "gate1",
+              eyebrow: "Gate 1 · Inbound",
+              metrics: <>
+                {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
+                {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
+              </>,
+              footer: "The rule totals above come from the backend validation catalog, not from frontend constants.",
+            })}
 
-      {selectedGroup && (
+            {gateCard({
+              gateKey: "gate2",
+              eyebrow: "Gate 2 · Inbound",
+              metrics: <>
+                {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
+                {row("Findings", validationHeldCount ? `${validationHeldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", validationHeldCount, "Files currently held because validation findings require attention."))}
+              </>,
+              footer: validationHeldCount ? `${validationHeldCount} file${validationHeldCount === 1 ? " is" : "s are"} held before MIR generation.` : "No 835 files are currently held at this gate.",
+            })}
+
+            {gateCard({
+              gateKey: "gate3",
+              eyebrow: "Gate 3 · Outbound",
+              metrics: <>
+                {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
+                {row("Conversion holds", conversionHeldClaims.length.toLocaleString(), () => setActiveChecksTab("conversion"))}
+              </>,
+              footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
+            })}
+          </div>
+
+          <ConversionErrorFindings trackedFiles={validationErrorFiles} />
+        </>
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--line)" }}>
+            <div className="eyebrow">Claim-level conversion holds</div>
+            <h2 style={{ margin: "5px 0 3px", fontSize: "18px" }}>Held claims</h2>
+            <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>
+              Claims listed here were excluded from MIR output while the other valid claims in the same conversion continued processing.
+            </div>
+          </div>
+
+          {conversionHeldClaims.length === 0 ? (
+            <div style={{ padding: "28px 18px", color: "var(--ink-3)", fontSize: "13px" }}>
+              No conversion-held claims are currently recorded.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th>CLAIM</th>
+                    <th>835 FILE</th>
+                    <th>IMPORT MODE</th>
+                    <th>TIMESTAMP</th>
+                    <th>HOLD REASON</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conversionHeldClaims.map((claim) => (
+                    <tr key={claim.key}>
+                      <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
+                      <td>{claim.sourceFile}</td>
+                      <td><span className="badge">{String(claim.importMode || "MANUAL").toUpperCase()}</span></td>
+                      <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.timestamp)}</td>
+                      <td style={{ minWidth: "320px" }}>
+                        {[...new Set(claim.reasons)].map((reason, index) => (
+                          <div key={`${claim.key}-reason-${index}`} style={{ marginBottom: index === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedGroup && activeChecksTab === "validations" && (
         <div role="dialog" aria-modal="true" aria-label={`${selectedGroup.title} details`} onClick={() => setSelectedGroup(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,35,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div className="card" onClick={(event) => event.stopPropagation()} style={{ width: "min(980px, 100%)", maxHeight: "80vh", overflow: "auto", padding: 0, boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
             <div style={{ padding: "20px 22px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start" }}>
