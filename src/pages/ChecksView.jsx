@@ -55,12 +55,18 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const currentRun = allFiles[0] || null;
   const currentClaims = Number(currentRun?.claims_count || 0);
   const currentRecords = Number(currentRun?.records_count || 0);
-  const errorFiles = allFiles.filter((file) => String(file.status || "").toUpperCase() === "ERROR");
-  const validationHeldCount = errorFiles.length;
+  const validationErrorFiles = useMemo(
+    () => allFiles.filter((file) => (
+      String(file.status || "").toUpperCase() === "ERROR"
+      && Number(file.held_claims_count || 0) === 0
+    )),
+    [allFiles]
+  );
+  const validationHeldCount = validationErrorFiles.length;
   const completedFiles = allFiles.filter((file) => ["ARCHIVED", "COMPLETED"].includes(String(file.status || "").toUpperCase()));
   const deliveredClaims = completedFiles.reduce((sum, file) => sum + Number(file.delivered_claims_count ?? file.claims_count ?? 0), 0);
 
-  const allFindings = useMemo(() => allFiles.flatMap((file) => {
+  const allFindings = useMemo(() => validationErrorFiles.flatMap((file) => {
     const details = parseDetails(file.error_message);
     if (Array.isArray(details.findings) && details.findings.length) return details.findings;
     return (details.errors || []).map((message) => ({
@@ -71,7 +77,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       source: "OneSmarter validation",
       severity: "Hold",
     }));
-  }), [allFiles]);
+  }), [validationErrorFiles]);
 
   const conversionHeldClaims = useMemo(() => {
     const rows = [];
@@ -239,7 +245,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             })}
           </div>
 
-          <ConversionErrorFindings trackedFiles={allFiles} />
+          <ConversionErrorFindings trackedFiles={validationErrorFiles} />
         </>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
