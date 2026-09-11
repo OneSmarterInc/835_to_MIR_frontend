@@ -7,21 +7,22 @@ function methodOf(options = {}) {
   return String(options?.method || 'GET').toUpperCase();
 }
 
-function pathnameOf(input) {
+function urlOf(input) {
   try {
     if (typeof input === 'string') {
-      return new URL(input, window.location.origin).pathname;
+      return new URL(input, window.location.origin);
     }
     if (input instanceof Request) {
-      return new URL(input.url, window.location.origin).pathname;
+      return new URL(input.url, window.location.origin);
     }
   } catch (_) {}
-  return '';
+  return null;
 }
 
 function isBackgroundPollingRequest(input, options = {}) {
   if (methodOf(options) !== 'GET') return false;
-  const path = pathnameOf(input);
+  const url = urlOf(input);
+  const path = url?.pathname || '';
   if (!path) return false;
 
   return (
@@ -66,8 +67,9 @@ export function installRequestGovernor() {
       }
     }
 
-    const path = pathnameOf(input);
-    const key = `${method}:${path}`;
+    const url = urlOf(input);
+    const requestIdentity = url ? `${url.pathname}${url.search}` : String(input);
+    const key = `${method}:${requestIdentity}`;
     const now = Date.now();
     const cached = cache.get(key);
     const cachedResponse = cloneCached(cached);
