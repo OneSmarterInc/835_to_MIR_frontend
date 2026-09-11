@@ -1,10 +1,15 @@
-const POLL_CACHE_MS = 15000;
+const DEFAULT_POLL_CACHE_MS = 15000;
+const TRACKED_FILES_CACHE_MS = 1000;
 const inFlight = new Map();
 const cache = new Map();
 let activeMutations = 0;
 
-function methodOf(options = {}) {
-  return String(options?.method || 'GET').toUpperCase();
+function methodOf(options = {}, input = null) {
+  if (options?.method) return String(options.method).toUpperCase();
+  if (typeof Request !== 'undefined' && input instanceof Request && input.method) {
+    return String(input.method).toUpperCase();
+  }
+  return 'GET';
 }
 
 function urlOf(input) {
@@ -20,7 +25,7 @@ function urlOf(input) {
 }
 
 function isBackgroundPollingRequest(input, options = {}) {
-  if (methodOf(options) !== 'GET') return false;
+  if (methodOf(options, input) !== 'GET') return false;
   const url = urlOf(input);
   const path = url?.pathname || '';
   if (!path) return false;
@@ -32,6 +37,15 @@ function isBackgroundPollingRequest(input, options = {}) {
     path === '/admin-panel/api/clients/' ||
     /^\/admin-panel\/api\/clients\/[^/]+\/state\/$/.test(path)
   );
+}
+
+function cacheLifetime(input) {
+  const path = urlOf(input)?.pathname || '';
+  // History is the live source for Conversion, Checks and Archive. Keep only a
+  // tiny cache so a DB commit becomes visible on the next refresh/poll instead
+  // of being hidden behind the old 15-second cache.
+  if (path === '/edi835/api/tracked-files/') return TRACKED_FILES_CACHE_MS;
+  return DEFAULT_POLL_CACHE_MS;
 }
 
 function cloneCached(entry) {
@@ -49,7 +63,7 @@ export function installRequestGovernor() {
   const nativeFetch = window.fetch.bind(window);
 
   window.fetch = async function governedFetch(input, options = {}) {
-    const method = methodOf(options);
+    const method = methodOf(options, input);
     const isPolling = isBackgroundPollingRequest(input, options);
 
     if (!isPolling) {
@@ -62,7 +76,9 @@ export function installRequestGovernor() {
         return await nativeFetch(input, options);
       } finally {
         activeMutations = Math.max(0, activeMutations - 1);
-        // Force the next background refresh to see the mutation's new state.
+        // Any successful or failed mutation may have changed server state.
+        // Drop polling caches so the refresh triggered by the screen reads DB
+        // state immediately.
         cache.clear();
       }
     }
@@ -74,20 +90,17 @@ export function installRequestGovernor() {
     const cached = cache.get(key);
     const cachedResponse = cloneCached(cached);
 
-    // During validation/conversion or while the tab is hidden, never start a
-    // competing poll if we already have usable screen data.
+    // Do not create background competition while an action is still running.
     if ((activeMutations > 0 || document.visibilityState === 'hidden') && cachedResponse) {
       return cachedResponse;
     }
 
-    // The UI currently asks for these endpoints every few seconds. Reuse a
-    // recent successful response instead of repeatedly hitting Django.
-    if (cachedResponse && now - cached.timestamp < POLL_CACHE_MS) {
+    if (cachedResponse && now - cached.timestamp < cacheLifetime(input)) {
       return cachedResponse;
     }
 
-    // If the previous poll is still waiting on Django, share it rather than
-    // opening another connection for the same resource.
+    // Never stack identical polls. Once the first fast DB response completes,
+    // every waiter receives the same response clone.
     const existing = inFlight.get(key);
     if (existing) {
       const response = await existing;
