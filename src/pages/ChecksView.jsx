@@ -27,6 +27,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [catalogError, setCatalogError] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [activeChecksTab, setActiveChecksTab] = useState("validations");
+  const [selectedConversionFileId, setSelectedConversionFileId] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -55,6 +56,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const currentRun = allFiles[0] || null;
   const currentClaims = Number(currentRun?.claims_count || 0);
   const currentRecords = Number(currentRun?.records_count || 0);
+
   const validationErrorFiles = useMemo(
     () => allFiles.filter((file) => (
       String(file.status || "").toUpperCase() === "ERROR"
@@ -62,6 +64,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     )),
     [allFiles]
   );
+
   const validationHeldCount = validationErrorFiles.length;
   const completedFiles = allFiles.filter((file) => ["ARCHIVED", "COMPLETED"].includes(String(file.status || "").toUpperCase()));
   const deliveredClaims = completedFiles.reduce((sum, file) => sum + Number(file.delivered_claims_count ?? file.claims_count ?? 0), 0);
@@ -79,51 +82,49 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     }));
   }), [validationErrorFiles]);
 
-  const conversionHeldClaims = useMemo(() => {
-    const rows = [];
-
-    allFiles.forEach((file) => {
+  const conversionFiles = useMemo(() => {
+    return allFiles.map((file) => {
       const findings = Array.isArray(file.conversion_findings) ? file.conversion_findings : [];
       const blocking = findings.filter(isBlockingConversionFinding);
-      const grouped = new Map();
+      const groupedClaims = new Map();
 
       blocking.forEach((finding, index) => {
         const claimNumber = finding.claim_control_number || finding.claim_number || `Held claim ${index + 1}`;
-        const sourceFile = finding.source_filename || file.original_filename || file.stored_filename || "—";
-        const key = `${file.id || sourceFile}:${claimNumber}:${sourceFile}`;
-        const existing = grouped.get(key) || {
-          key,
+        const existing = groupedClaims.get(claimNumber) || {
           claimNumber,
-          sourceFile,
-          importMode: file.ingestion_source || "MANUAL",
-          timestamp: file.processing_completed_at || file.processing_started_at || file.uploaded_at,
           reasons: [],
         };
         const code = finding.rule_code || finding.rule_name || "Conversion hold";
         const reason = finding.reason || finding.message || "Claim requires conversion review.";
         existing.reasons.push(`${code}: ${reason}`);
-        grouped.set(key, existing);
+        groupedClaims.set(claimNumber, existing);
       });
 
-      if (!blocking.length && Number(file.held_claims_count || 0) > 0) {
-        for (let index = 0; index < Number(file.held_claims_count || 0); index += 1) {
-          const sourceFile = file.original_filename || file.stored_filename || "—";
-          grouped.set(`${file.id}:unknown:${index}`, {
-            key: `${file.id}:unknown:${index}`,
+      const recordedHeldCount = Number(file.held_claims_count || 0);
+      if (!blocking.length && recordedHeldCount > 0) {
+        for (let index = 0; index < recordedHeldCount; index += 1) {
+          groupedClaims.set(`unknown-${index}`, {
             claimNumber: "Claim number unavailable",
-            sourceFile,
-            importMode: file.ingestion_source || "MANUAL",
-            timestamp: file.processing_completed_at || file.processing_started_at || file.uploaded_at,
             reasons: ["Conversion hold details were not recorded for this historical run."],
           });
         }
       }
 
-      rows.push(...grouped.values());
-    });
-
-    return rows.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+      return {
+        ...file,
+        _heldClaims: [...groupedClaims.values()],
+        _heldCount: recordedHeldCount || groupedClaims.size,
+      };
+    })
+      .filter((file) => file._heldCount > 0)
+      .sort((a, b) => new Date(b.processing_completed_at || b.uploaded_at || 0) - new Date(a.processing_completed_at || a.uploaded_at || 0));
   }, [allFiles]);
+
+  const selectedConversionFile = conversionFiles.find(
+    (file) => String(file.id) === String(selectedConversionFileId)
+  ) || null;
+
+  const conversionHeldClaimsCount = conversionFiles.reduce((sum, file) => sum + Number(file._heldCount || 0), 0);
 
   const openMetric = (title, gate, value, description) => {
     setSelectedGroup({ title, gate, count: value, unit: "", description, source: "Current run", rules: [], findings: [] });
@@ -194,104 +195,148 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     <section className="view on table-screen">
       {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures and claim-level conversion holds." />}
 
-      <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
+      <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
+        {gateCard({
+          gateKey: "gate1",
+          eyebrow: "Gate 1 · Inbound",
+          metrics: <>
+            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
+            {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
+          </>,
+          footer: "The rule totals above come from the backend validation catalog, not from frontend constants.",
+        })}
+
+        {gateCard({
+          gateKey: "gate2",
+          eyebrow: "Gate 2 · Inbound",
+          metrics: <>
+            {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
+            {row("Findings", validationHeldCount ? `${validationHeldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", validationHeldCount, "Files currently held because validation findings require attention."))}
+          </>,
+          footer: validationHeldCount ? `${validationHeldCount} file${validationHeldCount === 1 ? " is" : "s are"} held before MIR generation.` : "No 835 files are currently held at this gate.",
+        })}
+
+        {gateCard({
+          gateKey: "gate3",
+          eyebrow: "Gate 3 · Outbound",
+          metrics: <>
+            {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
+            {row("Conversion holds", conversionHeldClaimsCount.toLocaleString(), () => setActiveChecksTab("conversion"))}
+          </>,
+          footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: "8px", marginTop: "18px", marginBottom: "10px", flexWrap: "wrap" }}>
         <button
           type="button"
-          className={activeChecksTab === "validations" ? "btn" : "btn secondary"}
-          onClick={() => setActiveChecksTab("validations")}
+          className={activeChecksTab === "validations" ? "btn primary" : "btn"}
+          onClick={() => {
+            setActiveChecksTab("validations");
+            setSelectedConversionFileId("");
+          }}
         >
           Validations
         </button>
         <button
           type="button"
-          className={activeChecksTab === "conversion" ? "btn" : "btn secondary"}
-          onClick={() => setActiveChecksTab("conversion")}
+          className={activeChecksTab === "conversion" ? "btn primary" : "btn"}
+          onClick={() => {
+            setActiveChecksTab("conversion");
+            setSelectedGroup(null);
+          }}
         >
-          Conversion{conversionHeldClaims.length ? ` (${conversionHeldClaims.length})` : ""}
+          Conversion
         </button>
       </div>
 
       {activeChecksTab === "validations" ? (
-        <>
-          <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
-            {gateCard({
-              gateKey: "gate1",
-              eyebrow: "Gate 1 · Inbound",
-              metrics: <>
-                {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}
-                {row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}
-              </>,
-              footer: "The rule totals above come from the backend validation catalog, not from frontend constants.",
-            })}
-
-            {gateCard({
-              gateKey: "gate2",
-              eyebrow: "Gate 2 · Inbound",
-              metrics: <>
-                {row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "835 from the claims system", currentClaims, "Number of claims represented in the current run."))}
-                {row("Findings", validationHeldCount ? `${validationHeldCount} held` : "0", () => openMetric("Findings", "835 from the claims system", validationHeldCount, "Files currently held because validation findings require attention."))}
-              </>,
-              footer: validationHeldCount ? `${validationHeldCount} file${validationHeldCount === 1 ? " is" : "s are"} held before MIR generation.` : "No 835 files are currently held at this gate.",
-            })}
-
-            {gateCard({
-              gateKey: "gate3",
-              eyebrow: "Gate 3 · Outbound",
-              metrics: <>
-                {row("Records written", currentRecords.toLocaleString(), () => openMetric("Records written", "MIR before it goes", currentRecords, "Number of MIR records written for the current run."))}
-                {row("Conversion holds", conversionHeldClaims.length.toLocaleString(), () => setActiveChecksTab("conversion"))}
-              </>,
-              footer: currentClaims ? `${Math.min(deliveredClaims || currentRecords, currentClaims).toLocaleString()} of ${currentClaims.toLocaleString()} delivered or prepared for delivery.` : "No completed MIR outputs are available yet.",
-            })}
-          </div>
-
-          <ConversionErrorFindings trackedFiles={validationErrorFiles} />
-        </>
+        <ConversionErrorFindings trackedFiles={validationErrorFiles} showHeading={false} />
       ) : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--line)" }}>
-            <div className="eyebrow">Claim-level conversion holds</div>
-            <h2 style={{ margin: "5px 0 3px", fontSize: "18px" }}>Held claims</h2>
-            <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>
-              Claims listed here were excluded from MIR output while the other valid claims in the same conversion continued processing.
-            </div>
+        <section style={{ marginTop: "10px" }}>
+          <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+            <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th>835 FILE</th>
+                  <th>STATUS</th>
+                  <th>IMPORT MODE</th>
+                  <th>HELD CLAIMS</th>
+                  <th>PROCESSED</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conversionFiles.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>
+                      No files with conversion-held claims are currently recorded.
+                    </td>
+                  </tr>
+                ) : conversionFiles.map((file) => (
+                  <tr key={file.id}>
+                    <td style={{ fontWeight: 600 }}>{file.original_filename || file.stored_filename || "—"}</td>
+                    <td><span className="badge">{String(file.status || "ARCHIVED").toUpperCase()}</span></td>
+                    <td><span className="badge">{String(file.ingestion_source || "MANUAL").toUpperCase()}</span></td>
+                    <td className="num">{Number(file._heldCount || 0).toLocaleString()}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(file.processing_completed_at || file.uploaded_at)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => setSelectedConversionFileId(String(file.id))}
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        View findings
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {conversionHeldClaims.length === 0 ? (
-            <div style={{ padding: "28px 18px", color: "var(--ink-3)", fontSize: "13px" }}>
-              No conversion-held claims are currently recorded.
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th>CLAIM</th>
-                    <th>835 FILE</th>
-                    <th>IMPORT MODE</th>
-                    <th>TIMESTAMP</th>
-                    <th>HOLD REASON</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conversionHeldClaims.map((claim) => (
-                    <tr key={claim.key}>
-                      <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
-                      <td>{claim.sourceFile}</td>
-                      <td><span className="badge">{String(claim.importMode || "MANUAL").toUpperCase()}</span></td>
-                      <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.timestamp)}</td>
-                      <td style={{ minWidth: "320px" }}>
-                        {[...new Set(claim.reasons)].map((reason, index) => (
-                          <div key={`${claim.key}-reason-${index}`} style={{ marginBottom: index === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>
-                        ))}
-                      </td>
+          {selectedConversionFile && (
+            <div className="card" style={{ marginTop: "14px", padding: 0, overflow: "hidden" }}>
+              <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                <div>
+                  <div className="eyebrow">HELD CLAIMS FOR</div>
+                  <h3 style={{ margin: "4px 0 0", fontSize: "16px" }}>
+                    {selectedConversionFile.original_filename || selectedConversionFile.stored_filename || "Conversion file"}
+                  </h3>
+                </div>
+                <button type="button" className="btn" onClick={() => setSelectedConversionFileId("")}>Close findings</button>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th>CLAIM</th>
+                      <th>HOLD REASON</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {selectedConversionFile._heldClaims.length === 0 ? (
+                      <tr><td colSpan="2" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
+                    ) : selectedConversionFile._heldClaims.map((claim, index) => (
+                      <tr key={`${claim.claimNumber}-${index}`}>
+                        <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
+                        <td style={{ minWidth: "360px" }}>
+                          {[...new Set(claim.reasons)].map((reason, reasonIndex) => (
+                            <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>
+                              {reason}
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {selectedGroup && activeChecksTab === "validations" && (
@@ -305,7 +350,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
                   {Number(selectedGroup.count || 0).toLocaleString()} {selectedGroup.unit || ""}
                 </div>
               </div>
-              <button type="button" className="btn secondary" onClick={() => setSelectedGroup(null)}>Close</button>
+              <button type="button" className="btn" onClick={() => setSelectedGroup(null)}>Close</button>
             </div>
 
             <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--line)" }}>
