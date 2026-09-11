@@ -1,3 +1,5 @@
+const inFlightGetRequests = new Map();
+
 export function portalFetch(url, options = {}) {
   let requestUrl = url;
   if (typeof url === "string" && /^https?:\/\//i.test(url)) {
@@ -7,7 +9,16 @@ export function portalFetch(url, options = {}) {
   return fetch(requestUrl, { ...options, credentials: "include" });
 }
 
-export async function safeFetchJson(url, options = {}) {
+function shouldDeduplicate(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  return (
+    method === "GET" &&
+    typeof url === "string" &&
+    url.includes("/edi835/api/tracked-files/")
+  );
+}
+
+async function fetchJsonOnce(url, options = {}) {
   const res = await portalFetch(url, options);
   const contentType = res.headers.get("content-type") || "";
 
@@ -26,4 +37,23 @@ export async function safeFetchJson(url, options = {}) {
   }
 
   return { res, data };
+}
+
+export async function safeFetchJson(url, options = {}) {
+  if (!shouldDeduplicate(url, options)) {
+    return fetchJsonOnce(url, options);
+  }
+
+  const key = `${String(options.method || "GET").toUpperCase()}:${url}`;
+  const existing = inFlightGetRequests.get(key);
+  if (existing) return existing;
+
+  const request = fetchJsonOnce(url, options).finally(() => {
+    if (inFlightGetRequests.get(key) === request) {
+      inFlightGetRequests.delete(key);
+    }
+  });
+
+  inFlightGetRequests.set(key, request);
+  return request;
 }
