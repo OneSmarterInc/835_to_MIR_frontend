@@ -1,5 +1,7 @@
 const DEFAULT_POLL_CACHE_MS = 15000;
 const TRACKED_FILES_CACHE_MS = 1000;
+const CONVERSION_POLL_MS = 1500;
+const CONVERSION_MAX_POLLS = 800;
 const inFlight = new Map();
 const cache = new Map();
 let activeMutations = 0;
@@ -41,9 +43,6 @@ function isBackgroundPollingRequest(input, options = {}) {
 
 function cacheLifetime(input) {
   const path = urlOf(input)?.pathname || '';
-  // History is the live source for Conversion, Checks and Archive. Keep only a
-  // tiny cache so a DB commit becomes visible on the next refresh/poll instead
-  // of being hidden behind the old 15-second cache.
   if (path === '/edi835/api/tracked-files/') return TRACKED_FILES_CACHE_MS;
   return DEFAULT_POLL_CACHE_MS;
 }
@@ -56,6 +55,123 @@ function cloneCached(entry) {
   }
 }
 
+function jsonBody(options = {}) {
+  if (typeof options?.body !== 'string') return null;
+  try {
+    return JSON.parse(options.body);
+  } catch (_) {
+    return null;
+  }
+}
+
+function shouldUseAsyncConversion(input, options = {}) {
+  const url = urlOf(input);
+  if (methodOf(options, input) !== 'POST' || url?.pathname !== '/api/convert/') return false;
+  const body = jsonBody(options);
+  // Single-file Process MIR always has the validated file id. Multi-file
+  // conversions still use the existing endpoint until they have durable rows.
+  return Boolean(body?.file_id) && !Array.isArray(body?.files);
+}
+
+function asyncConversionUrl(input) {
+  const url = urlOf(input);
+  if (!url) return '/api/convert-async/';
+  url.pathname = '/api/convert-async/';
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+function responseFromJson(payload, status = 200) {
+  return new Response(JSON.stringify(payload || {}), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runAsyncConversion(nativeFetch, input, options = {}) {
+  const endpoint = asyncConversionUrl(input);
+  const startOptions = {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: options.credentials || 'include',
+  };
+
+  // Queueing is the only mutation that must complete synchronously. Once the
+  // worker owns the job, allow normal tracked-files polling so PROCESSING and
+  // the final result appear in Conversion/Checks/Archive immediately.
+  activeMutations += 1;
+  let startResponse;
+  try {
+    startResponse = await nativeFetch(endpoint, startOptions);
+  } finally {
+    activeMutations = Math.max(0, activeMutations - 1);
+    cache.clear();
+  }
+
+  let startData = {};
+  try {
+    startData = await startResponse.clone().json();
+  } catch (_) {}
+
+  if ((!startResponse.ok && startResponse.status !== 202) || !startData?.job_id) {
+    return responseFromJson(
+      startData?.error ? startData : { error: `Conversion could not be queued (${startResponse.status}).` },
+      startResponse.status || 500
+    );
+  }
+
+  const statusUrl = new URL(endpoint);
+  statusUrl.searchParams.set('job_id', startData.job_id);
+
+  for (let attempt = 0; attempt < CONVERSION_MAX_POLLS; attempt += 1) {
+    await sleep(CONVERSION_POLL_MS);
+    const statusResponse = await nativeFetch(statusUrl.toString(), {
+      method: 'GET',
+      credentials: options.credentials || 'include',
+      headers: { Accept: 'application/json' },
+    });
+
+    let statusData = {};
+    try {
+      statusData = await statusResponse.json();
+    } catch (_) {
+      if (!statusResponse.ok) {
+        return responseFromJson({ error: `Unable to read conversion status (${statusResponse.status}).` }, statusResponse.status || 500);
+      }
+      continue;
+    }
+
+    if (!statusResponse.ok) {
+      return responseFromJson(statusData, statusResponse.status);
+    }
+
+    if (statusData.state === 'COMPLETED') {
+      cache.clear();
+      return responseFromJson(statusData.result || { success: true }, Number(statusData.status_code || 200));
+    }
+
+    if (statusData.state === 'FAILED') {
+      cache.clear();
+      const result = statusData.result || { success: false, error: 'Background conversion failed.' };
+      return responseFromJson(result, Number(statusData.status_code || 500));
+    }
+  }
+
+  return responseFromJson({
+    success: false,
+    error: 'Conversion is still running in the background. Refresh the Conversion screen to see its latest status.',
+  }, 504);
+}
+
 export function installRequestGovernor() {
   if (window.__mir835RequestGovernorInstalled) return;
   window.__mir835RequestGovernorInstalled = true;
@@ -63,6 +179,10 @@ export function installRequestGovernor() {
   const nativeFetch = window.fetch.bind(window);
 
   window.fetch = async function governedFetch(input, options = {}) {
+    if (shouldUseAsyncConversion(input, options)) {
+      return runAsyncConversion(nativeFetch, input, options);
+    }
+
     const method = methodOf(options, input);
     const isPolling = isBackgroundPollingRequest(input, options);
 
@@ -76,9 +196,6 @@ export function installRequestGovernor() {
         return await nativeFetch(input, options);
       } finally {
         activeMutations = Math.max(0, activeMutations - 1);
-        // Any successful or failed mutation may have changed server state.
-        // Drop polling caches so the refresh triggered by the screen reads DB
-        // state immediately.
         cache.clear();
       }
     }
@@ -90,7 +207,6 @@ export function installRequestGovernor() {
     const cached = cache.get(key);
     const cachedResponse = cloneCached(cached);
 
-    // Do not create background competition while an action is still running.
     if ((activeMutations > 0 || document.visibilityState === 'hidden') && cachedResponse) {
       return cachedResponse;
     }
@@ -99,8 +215,6 @@ export function installRequestGovernor() {
       return cachedResponse;
     }
 
-    // Never stack identical polls. Once the first fast DB response completes,
-    // every waiter receives the same response clone.
     const existing = inFlight.get(key);
     if (existing) {
       const response = await existing;
