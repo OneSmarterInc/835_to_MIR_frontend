@@ -27,7 +27,7 @@ function NoticeModal({ onClose, onCreated }) {
       <div className="mpl-modal-body">
         <p className="mpl-help">Upload the original Outlook <strong>.msg</strong> file. Its subject, sender, received date, reporting period, claim numbers, message body, and quoted thread will be extracted automatically.</p>
         {error && <div className="mpl-error">{error}</div>}
-        <label><span>OUTLOOK EMAIL FILE</span><input required type="file" accept=".msg,application/vnd.ms-outlook" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
+        <label><span>OUTLOOK EMAIL FILE</span><input required type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
         {file && <p className="mpl-help">Selected: <strong>{file.name}</strong></p>}
       </div>
       <div className="mpl-modal-actions"><button type="button" className="mpl-btn secondary" onClick={onClose}>Cancel</button><button className="mpl-btn primary" disabled={busy || !file}>{busy ? "Uploading…" : "Upload & Analyze"}</button></div>
