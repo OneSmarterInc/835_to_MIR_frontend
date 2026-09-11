@@ -103,12 +103,14 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         const existing = groupedClaims.get(groupKey) || {
           claimNumber,
           reasons: [],
+          previousMirFilename: null,
           previousSentAt: null,
           eligibleSendAt: null,
         };
         const code = finding.rule_code || finding.rule_name || "Conversion hold";
         const reason = finding.reason || finding.message || "Claim requires conversion review.";
         existing.reasons.push(`${code}: ${reason}`);
+        if (finding.previous_mir_filename) existing.previousMirFilename = finding.previous_mir_filename;
         if (finding.previous_sent_at) existing.previousSentAt = finding.previous_sent_at;
         if (finding.eligible_send_at) existing.eligibleSendAt = finding.eligible_send_at;
         groupedClaims.set(groupKey, existing);
@@ -120,6 +122,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           groupedClaims.set(`unknown-${index}`, {
             claimNumber: "Claim number unavailable",
             reasons: ["Conversion hold details were not recorded for this historical run."],
+            previousMirFilename: null,
             previousSentAt: null,
             eligibleSendAt: null,
           });
@@ -222,14 +225,15 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr><th>CLAIM</th><th>HOLD REASON</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
+                  <thead><tr><th>CLAIM</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
                   <tbody>
                     {selectedConversionFile._heldClaims.length === 0 ? (
-                      <tr><td colSpan="4" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
+                      <tr><td colSpan="5" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
                     ) : selectedConversionFile._heldClaims.map((claim, index) => (
                       <tr key={`${claim.claimNumber}-${index}`}>
                         <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
                         <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
+                        <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
                         <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
                         <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.eligibleSendAt)}</td>
                       </tr>
