@@ -42,3 +42,45 @@
 .universal-source-status.absent{color:var(--ink-3)}
 
 .universal-source-internal { display: block; margin-top: 5px; font-size: 12px; color: #10233b; overflow-wrap: anywhere; }
+
+
+/* Compact universal claim result grid */
+.universal-claim-table{
+  min-width:1040px!important;
+  table-layout:fixed;
+}
+.universal-claim-table th,
+.universal-claim-table td{
+  padding:11px 13px!important;
+  vertical-align:middle;
+}
+.universal-claim-table th{
+  font-size:10px;
+  line-height:1.25;
+}
+.universal-claim-table th:nth-child(1){width:180px}
+.universal-claim-table th:nth-child(2){width:145px}
+.universal-claim-table th:nth-child(3){width:160px}
+.universal-claim-table th:nth-child(n+4):nth-child(-n+7){width:175px}
+.universal-claim-row td{height:64px}
+.universal-source-cell{min-width:0}
+.universal-source-file{
+  display:block;
+  overflow:hidden;
+  color:var(--ink);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.35;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.universal-source-cell small{
+  display:block!important;
+  max-width:none!important;
+  margin-top:4px!important;
+  color:var(--ink-3);
+  font-size:10px!important;
+  line-height:1.25;
+  white-space:nowrap!important;
+}
+.universal-source-empty{color:var(--ink-3)}
