@@ -58,12 +58,24 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
-  const [expanded, setExpanded] = useState(false); const [claimsExpanded, setClaimsExpanded] = useState(false); const detail = notice.email_body !== undefined;
+  const [expanded, setExpanded] = useState(false); const [claimsExpanded, setClaimsExpanded] = useState(false); const detail = notice.email_body !== undefined; const analysisReady = !ACTIVE.has(notice.status) && Boolean(notice.ai_response || notice.status === "COMPLETED" || notice.status === "REVIEW_REQUIRED");
   const toggle = async () => { if (!detail) await loadDetail(notice.id); setExpanded((old) => !old); };
   return <article className="mpl-notice-card">
     <div className="mpl-email-header"><div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2>{notice.subject}</h2><p>{notice.sender || "Sender not entered"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><div className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</div></div>
-    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div><button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Show less" : "Read more"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
-    {!!notice.extracted_claim_numbers?.length && <section className="mpl-extracted">
+    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div><button className="mpl-thread-toggle" onClick={toggle}><span aria-hidden="true">✉</span> {expanded ? "Hide Email" : "Email"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
+    {ACTIVE.has(notice.status) && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
+    {analysisReady && notice.ai_response && <section className="mpl-ai-response">
+      <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
+      <p>{notice.ai_response}</p>
+      {!!notice.extracted_claim_numbers?.length && <><h4>Claims considered in this analysis</h4><div className="mpl-ai-claim-review">{notice.extracted_claim_numbers.map((number) => {
+        const match = notice.source_matches?.find((item) => item.claim_number === number);
+        const issues = match?.reported_issues || [];
+        const sources = match?.sources || [];
+        return <div key={number}><strong>{number}</strong><span>{issues.length ? issues.map((issue) => (issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")).filter(Boolean).join(" · ") : "No issue confidently associated"}</span><small>{sources.length ? sources.map((source) => `${source.type}: ${source.filename}`).join(" · ") : "No matching archived source"}</small></div>;
+      })}</div></>}
+      {!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}
+    </section>}
+    {analysisReady && !!notice.extracted_claim_numbers?.length && <section className="mpl-extracted">
       <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
         <span><strong>Extracted Claims</strong><small>{notice.extracted_claim_numbers.length} claim{notice.extracted_claim_numbers.length === 1 ? "" : "s"} · issue details and matched source files</small></span>
         <b>{claimsExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{claimsExpanded ? "−" : "+"}</i></b>
@@ -76,10 +88,8 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
         {!!notice.source_matches?.some((match) => match.sources?.length) && <div className="mpl-table-wrap mpl-source-results"><table className="mpl-table"><thead><tr><th>CLAIM</th><th>SOURCE</th><th>FILENAME</th><th>STATUS</th><th>INFORMATION</th><th>ACTION</th></tr></thead><tbody>{notice.source_matches.flatMap((match) => (match.sources || []).map((source, index) => <tr key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}><td className="mono">{match.claim_number}</td><td><span className="mpl-state">{source.type}</span></td><td className="mono">{source.filename}</td><td>{statusLabel(source.status)}</td><td>{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><strong>{statusLabel(key)}:</strong> {String(value)}</small>)}</td><td><a className="mpl-file-link" href={source.download_url}>Download</a></td></tr>))}</tbody></table></div>}
       </div>}
     </section>}
-    {notice.ai_response && <section className="mpl-ai-response"><span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span><p>{notice.ai_response}</p>{!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}</section>}
-    {notice.last_error && <div className="mpl-warning">{notice.last_error}</div>}
+    {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
     {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
-    {ACTIVE.has(notice.status) && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
     {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
     {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
   </article>;
