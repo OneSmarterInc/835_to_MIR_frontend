@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 import { safeFetchJson } from "../utils/api";
 import "./NoticesView.css";
@@ -162,7 +163,13 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
       <td><span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span></td>
       <td><button type="button" className="mpl-row-open" onClick={toggleCard} aria-expanded={cardExpanded}>{cardExpanded ? "Close" : "Open"} <b aria-hidden="true">{cardExpanded ? "−" : "+"}</b></button></td>
     </tr>
-    {cardExpanded && <tr className="mpl-notice-detail-row"><td colSpan="8"><div className="mpl-notice-detail">
+    {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCardExpanded(false); }}>
+      <section className="mpl-detail-modal" role="dialog" aria-modal="true" aria-labelledby={`mpl-notice-${notice.id}-title`}>
+        <header className="mpl-detail-modal-header">
+          <div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2 id={`mpl-notice-${notice.id}-title`}>{notice.subject}</h2><p>{notice.sender || "Sender unavailable"} · {dateLabel(notice.received_at || notice.created_at)}</p></div>
+          <button type="button" onClick={() => setCardExpanded(false)} aria-label="Close email details">×</button>
+        </header>
+        <div className="mpl-detail-modal-scroll"><div className="mpl-notice-detail">
       <div className="mpl-email-toolbar">
         <div className="mpl-email-meta">
           <span>PROGRAM <strong>{notice.program || "—"}</strong></span>
@@ -237,7 +244,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
       {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
       {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
       {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
-    </div></td></tr>}
+    </div></div></section></div>, document.body)}
   </>;
 }
 
