@@ -42,19 +42,92 @@ function RelatedFiles({ files = [] }) {
 }
 
 function ClaimAnalysis({ claim, noticeId, onReview }) {
+  const [expanded, setExpanded] = useState(false);
+  const [savingDecision, setSavingDecision] = useState("");
+  const [decisionError, setDecisionError] = useState("");
   const analysis = claim.analysis;
-  if (!analysis) return <div className="mpl-empty">Evidence analysis is waiting to run.</div>;
-  return <div className="mpl-analysis">
-    <div className="mpl-analysis-heading"><div><span>AI-ASSISTED, EVIDENCE-BOUND REVIEW</span><h3>{claim.claim_number || claim.internal_claim_number}</h3></div><div className="mpl-confidence">{Math.round(analysis.confidence * 100)}% confidence<br/><small>Human review required</small></div></div>
-    <p className="mpl-summary">{analysis.summary}</p>
-    <h4>Claim timeline</h4><div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div>
-    <h4>Verified issues</h4>{analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}
-    {!![...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length && <><h4>Unclear or not understood</h4><ul className="mpl-uncertainty">{(analysis.unknown_codes || []).map((item) => <li key={`code-${item}`}><strong>Unknown code:</strong> {item}</li>)}{(analysis.unclear_items || []).map((item, index) => <li key={`unclear-${index}`}>{item}</li>)}{(analysis.missing_evidence || []).map((item, index) => <li key={`missing-${index}`}><strong>Missing evidence:</strong> {item}</li>)}</ul></>}
-    <h4>Recommended resolution</h4><ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol>
-    <p className="mpl-caution">Recommendations require claims/EDI review. They may improve acceptance but do not guarantee payer approval.</p>
-    <h4>Related archived files</h4><RelatedFiles files={analysis.related_files} />
-    <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReview(noticeId, claim.claim_id, "APPROVED")}>Approve Analysis</button><button className="mpl-btn secondary" onClick={() => onReview(noticeId, claim.claim_id, "CHANGES_REQUIRED")}>Mark Changes Required</button><span className="mpl-state">{statusLabel(analysis.review_status)}</span></div>
-  </div>;
+  const claimNumber = claim.claim_number || claim.internal_claim_number;
+  if (!analysis) return <div className="mpl-claim-waiting"><strong>{claimNumber}</strong><span>Evidence analysis is waiting to run.</span></div>;
+
+  const reviewStatus = analysis.review_status || "PENDING";
+  const submitDecision = async (decision) => {
+    setSavingDecision(decision);
+    setDecisionError("");
+    try {
+      await onReview(noticeId, claim.claim_id, decision);
+    } catch (error) {
+      setDecisionError(error.message || "Unable to save this review decision.");
+    } finally {
+      setSavingDecision("");
+    }
+  };
+
+  return <section className={`mpl-claim-analysis ${reviewStatus.toLowerCase()}`}>
+    <button type="button" className="mpl-claim-analysis-header" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
+      <span>
+        <small>INDIVIDUAL CLAIM REVIEW</small>
+        <strong>{claimNumber}</strong>
+        <em>{analysis.primary_issue_code ? statusLabel(analysis.primary_issue_code) : `${analysis.findings.length} verified finding${analysis.findings.length === 1 ? "" : "s"}`}</em>
+      </span>
+      <span className="mpl-claim-header-side">
+        <b>{Math.round(analysis.confidence * 100)}% <small>confidence</small></b>
+        <i className={`mpl-review-state ${reviewStatus.toLowerCase()}`}>{statusLabel(reviewStatus)}</i>
+        <span className="mpl-claim-expand">{expanded ? "Collapse" : "Review"} <b aria-hidden="true">{expanded ? "−" : "+"}</b></span>
+      </span>
+    </button>
+
+    {expanded && <div className="mpl-claim-analysis-body">
+      <div className="mpl-claim-ai-output">
+        <span>AI ANALYSIS</span>
+        <p>{analysis.summary}</p>
+      </div>
+
+      <div className="mpl-claim-metrics">
+        <span><b>{analysis.findings.length}</b> verified findings</span>
+        <span><b>{analysis.timeline.length}</b> timeline events</span>
+        <span><b>{analysis.related_files.length}</b> related files</span>
+        <span><b>{analysis.recommended_actions.length}</b> recommended actions</span>
+      </div>
+
+      <details className="mpl-claim-detail-panel">
+        <summary>Verified issues <span>{analysis.findings.length}</span></summary>
+        <div>{analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table mpl-findings-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}</div>
+      </details>
+
+      <details className="mpl-claim-detail-panel">
+        <summary>Recommended resolution <span>{analysis.recommended_actions.length}</span></summary>
+        <div><ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol><p className="mpl-caution">Recommendations require claims/EDI review and do not guarantee payer approval.</p></div>
+      </details>
+
+      {!![...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length && <details className="mpl-claim-detail-panel mpl-needs-clarification">
+        <summary>Unclear or not understood <span>{[...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length}</span></summary>
+        <div><ul className="mpl-uncertainty">{(analysis.unknown_codes || []).map((item) => <li key={`code-${item}`}><strong>Unknown code:</strong> {item}</li>)}{(analysis.unclear_items || []).map((item, index) => <li key={`unclear-${index}`}>{item}</li>)}{(analysis.missing_evidence || []).map((item, index) => <li key={`missing-${index}`}><strong>Missing evidence:</strong> {item}</li>)}</ul></div>
+      </details>}
+
+      <details className="mpl-claim-detail-panel">
+        <summary>Claim timeline <span>{analysis.timeline.length}</span></summary>
+        <div><div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div></div>
+      </details>
+
+      <details className="mpl-claim-detail-panel">
+        <summary>Related archived files <span>{analysis.related_files.length}</span></summary>
+        <div><RelatedFiles files={analysis.related_files} /></div>
+      </details>
+
+      <div className={`mpl-review-decision ${reviewStatus.toLowerCase()}`}>
+        <div>
+          <small>HUMAN REVIEW DECISION</small>
+          <strong>{reviewStatus === "APPROVED" ? "Analysis approved" : reviewStatus === "CHANGES_REQUIRED" ? "Changes requested" : "Review required"}</strong>
+          <span>{reviewStatus === "APPROVED" ? "This analysis has been accepted for the operational workflow." : reviewStatus === "CHANGES_REQUIRED" ? "This analysis is flagged for correction and re-review." : "Confirm whether this analysis is acceptable or needs correction."}</span>
+        </div>
+        <div className="mpl-review-actions">
+          <button type="button" className={`mpl-decision-btn approve ${reviewStatus === "APPROVED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("APPROVED")}>{savingDecision === "APPROVED" ? "Saving…" : reviewStatus === "APPROVED" ? "✓ Approved" : "✓ Approve analysis"}</button>
+          <button type="button" className={`mpl-decision-btn changes ${reviewStatus === "CHANGES_REQUIRED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("CHANGES_REQUIRED")}>{savingDecision === "CHANGES_REQUIRED" ? "Saving…" : reviewStatus === "CHANGES_REQUIRED" ? "! Changes requested" : "Request changes"}</button>
+        </div>
+        {decisionError && <p className="mpl-decision-error">{decisionError}</p>}
+      </div>
+    </div>}
+  </section>;
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
@@ -114,6 +187,18 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
       {analysisReady && notice.ai_response && <section className="mpl-ai-response">
         <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
         <p>{notice.ai_response}</p>
+        {!!sourceMatches.length && <div className="mpl-overall-claim-summary">
+          <h4>Overall claim summary</h4>
+          <div>{sourceMatches.map((match) => {
+            const issues = match.reported_issues || [];
+            const sourceTypes = [...new Set((match.sources || []).map((source) => source.type))];
+            return <article key={match.claim_number}>
+              <strong>{match.claim_number}</strong>
+              <div>{issues.length ? issues.map((issue, index) => <p key={`${match.claim_number}-summary-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description ? <> · {issue.description}</> : null}</p>) : <p>No issue was confidently associated from the email.</p>}</div>
+              <small>{sourceTypes.length ? sourceTypes.join(" · ") : "No matching archived source"}</small>
+            </article>;
+          })}</div>
+        </div>}
         {!!notice.ai_suggestions?.length && <div className="mpl-ai-next-steps"><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></div>}
       </section>}
 
@@ -171,7 +256,7 @@ export default function NoticesView() {
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
-  const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to review analysis."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) { const message = data.error || "Unable to review analysis."; setError(message); throw new Error(message); } setError(""); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); return data.notice; };
   return <section className="view on mpl-view" id="v-notices">
     <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></WorkspaceHeader>
     {error && <div className="mpl-error">{error}</div>}
