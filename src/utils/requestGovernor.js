@@ -1,8 +1,7 @@
 const DEFAULT_POLL_CACHE_MS = 15000;
-// Tracked files are loaded once and reused until a write/mutation clears the
-// request cache. This prevents the existing 3-second UI timers from repeatedly
-// downloading the large tracked-files payload.
-const TRACKED_FILES_CACHE_MS = Number.POSITIVE_INFINITY;
+// Tracked-file history is no longer polled every three seconds. Keep a short
+// cache only to collapse duplicate requests triggered by the same UI action.
+const TRACKED_FILES_CACHE_MS = 15000;
 const CONVERSION_POLL_MS = 1500;
 const CONVERSION_MAX_POLLS = 800;
 const inFlight = new Map();
@@ -199,7 +198,7 @@ export function installRequestGovernor() {
       } finally {
         activeMutations = Math.max(0, activeMutations - 1);
         // Any completed write may affect tracked-file state. Invalidate once so
-        // the next existing UI refresh obtains the current tracked-file list.
+        // the next explicit UI refresh obtains the current summary.
         cache.clear();
       }
     }
