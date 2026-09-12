@@ -268,8 +268,7 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
   </section>;
 }
 
-function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
-  const [cardExpanded, setCardExpanded] = useState(false);
+function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, cardExpanded, onOpen, onClose }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [claimsExpanded, setClaimsExpanded] = useState(true);
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
@@ -283,18 +282,22 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
   useEffect(() => {
     if (!cardExpanded) return undefined;
     const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event) => { if (event.key === "Escape") setCardExpanded(false); };
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [cardExpanded]);
+  }, [cardExpanded, onClose]);
 
   const toggleCard = async () => {
-    if (!cardExpanded && !detail) await loadDetail(notice.id);
-    setCardExpanded((value) => !value);
+    if (cardExpanded) {
+      onClose();
+      return;
+    }
+    if (!detail) await loadDetail(notice.id);
+    onOpen(notice.id);
   };
   const toggleEmail = async () => {
     if (!detail) await loadDetail(notice.id);
@@ -311,11 +314,11 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
       <td className="mpl-period-cell">{notice.period_start || "—"} – {notice.period_end || "—"}</td>
       <td><span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span></td>
     </tr>
-    {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCardExpanded(false); }}>
+    {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation">
       <section className="mpl-detail-modal" role="dialog" aria-modal="true" aria-labelledby={`mpl-notice-${notice.id}-title`}>
         <header className="mpl-detail-modal-header">
           <div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2 id={`mpl-notice-${notice.id}-title`}>{notice.subject}</h2><p>{notice.sender || "Sender unavailable"} · {dateLabel(notice.received_at || notice.created_at)}</p></div>
-          <button type="button" onClick={() => setCardExpanded(false)} aria-label="Close email details">×</button>
+          <button type="button" onClick={onClose} aria-label="Close email details">×</button>
         </header>
         <div className="mpl-detail-modal-scroll"><div className="mpl-notice-detail">
       <div className="mpl-email-toolbar">
@@ -411,6 +414,7 @@ export default function NoticesView() {
   const [sort, setSort] = useState({ key: "received", direction: "desc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [openNoticeId, setOpenNoticeId] = useState(null);
 
   const refresh = useCallback(async () => { try { const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/"); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, []);
   const loadDetail = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to open notice."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
@@ -480,7 +484,7 @@ export default function NoticesView() {
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{visibleNotices.length ? visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{visibleNotices.length ? visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
