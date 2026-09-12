@@ -42,6 +42,58 @@ function RelatedFiles({ files = [] }) {
   return <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>TYPE</th><th>FILENAME</th><th>DATE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{files.map((file) => <tr key={`${file.type}-${file.id}`}><td>{file.type}</td><td className="mono">{file.filename}</td><td>{dateLabel(file.date)}</td><td><span className="mpl-state">{statusLabel(file.status)}</span></td><td><a className="mpl-file-link" href={file.download_url}>Download</a></td></tr>)}</tbody></table></div>;
 }
 
+function SourceFileViewer({ claimNumber, sources, onClose }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const selected = sources[selectedIndex];
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setContent("");
+    fetch(selected.download_url, { credentials: "same-origin" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load the archived file.");
+        return response.text();
+      })
+      .then((text) => { if (!cancelled) setContent(text); })
+      .catch((reason) => { if (!cancelled) setError(reason.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected]);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return createPortal(<div className="mpl-file-viewer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="mpl-file-viewer" role="dialog" aria-modal="true" aria-labelledby="mpl-file-viewer-title">
+      <header>
+        <div><span>MATCHED SOURCE EVIDENCE</span><h3 id="mpl-file-viewer-title">{selected.type} file for claim {claimNumber}</h3></div>
+        <button type="button" onClick={onClose} aria-label="Close file viewer">×</button>
+      </header>
+      <div className="mpl-file-viewer-toolbar">
+        <label><span>FILE</span><select value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>{sources.map((source, index) => <option value={index} key={`${source.type}-${source.filename}-${index}`}>{source.filename}</option>)}</select></label>
+        <dl>
+          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || claimNumber || "—"}</dd></div>
+          <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
+          <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
+        </dl>
+        <a className="mpl-btn primary" href={selected.download_url}>Download file</a>
+      </div>
+      <div className="mpl-file-content">
+        <div><strong>File content</strong><small>{selected.filename}</small></div>
+        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <pre>{content || "This archived file has no stored text content."}</pre>}
+      </div>
+    </section>
+  </div>, document.body);
+}
+
 function ClaimAnalysis({ claim, noticeId, onReview }) {
   const [savingDecision, setSavingDecision] = useState("");
   const [decisionError, setDecisionError] = useState("");
@@ -105,6 +157,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [claimsExpanded, setClaimsExpanded] = useState(true);
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
+  const [sourcePreview, setSourcePreview] = useState(null);
   const detail = notice.email_body !== undefined;
   const isActive = ACTIVE.has(notice.status);
   const analysisReady = !isActive && Boolean(notice.ai_response || notice.status === "COMPLETED" || notice.status === "REVIEW_REQUIRED");
@@ -198,26 +251,33 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
         })}</div></div>}
       </section>}
 
-      {analysisReady && !!totalSources && <section className="mpl-disclosure">
+      {analysisReady && !!sourceMatches.length && <section className="mpl-disclosure">
         <button type="button" className="mpl-section-toggle" aria-expanded={sourcesExpanded} onClick={() => setSourcesExpanded((value) => !value)}>
-          <span><strong>Matched source files</strong><small>{matchedClaims.length} claim{matchedClaims.length === 1 ? "" : "s"} · {totalSources} verified 837, MIR, 835, or reconciliation match{totalSources === 1 ? "" : "es"}</small></span>
+          <span><strong>Matched source files</strong><small>{matchedClaims.length} claim{matchedClaims.length === 1 ? "" : "s"} · {totalSources} verified 835, MIR, reconciliation, or 837 match{totalSources === 1 ? "" : "es"}</small></span>
           <b>{sourcesExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{sourcesExpanded ? "−" : "+"}</i></b>
         </button>
-        {sourcesExpanded && <div className="mpl-disclosure-content mpl-table-wrap">
-          <table className="mpl-table mpl-compact-source-table">
-            <thead><tr><th>CLAIM</th><th>MATCHED SOURCES</th></tr></thead>
-            <tbody>{matchedClaims.map((match) => <tr key={match.claim_number}>
-              <td className="mono">{match.claim_number}</td>
-              <td><div className="mpl-source-stack">{match.sources.map((source, index) => <div className="mpl-source-row" key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}>
-                <span className="mpl-state">{source.type}</span>
-                <span className="mpl-source-file"><strong>{source.filename}</strong><small>{statusLabel(source.status)}{source.date ? ` · ${dateLabel(source.date)}` : ""}</small></span>
-                <span className="mpl-source-facts">{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><b>{statusLabel(key)}:</b> {String(value ?? "—")}</small>)}</span>
-                <a className="mpl-file-link" href={source.download_url}>Download</a>
-              </div>)}</div></td>
+        {sourcesExpanded && <div className="mpl-disclosure-content mpl-source-matrix-wrap">
+          <table className="mpl-table mpl-source-matrix">
+            <thead>
+              <tr><th rowSpan="2">CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th></tr>
+              <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
+            </thead>
+            <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
+              <td className="mono mpl-matrix-claim">{match.claim_number}</td>
+              {["835", "MIR", "RECON", "837"].flatMap((type) => {
+                const files = (match.sources || []).filter((source) => source.type.toUpperCase() === type);
+                const numbers = [...new Set(files.map((source) => source.internal_claim_number || match.claim_number).filter(Boolean))];
+                return [
+                  <td key={`${match.claim_number}-${type}-number`} className="mono mpl-matrix-number">{numbers.length ? numbers.map((number) => <span key={number}>{number}</span>) : <span className="mpl-no-match">—</span>}</td>,
+                  <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><span aria-hidden="true">👁</span></button> : <span className="mpl-no-match">—</span>}</td>,
+                ];
+              })}
             </tr>)}</tbody>
           </table>
         </div>}
       </section>}
+
+      {sourcePreview && <SourceFileViewer claimNumber={sourcePreview.claimNumber} sources={sourcePreview.sources} onClose={() => setSourcePreview(null)} />}
 
       {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
       {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
