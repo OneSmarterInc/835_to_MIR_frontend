@@ -105,6 +105,7 @@ const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [content, setContent] = useState("");
+  const [claimRows, setClaimRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const firstMatchRef = useRef(null);
@@ -115,12 +116,20 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     setLoading(true);
     setError("");
     setContent("");
-    portalFetch(selected.download_url)
+    setClaimRows([]);
+    portalFetch(`${selected.download_url}?view=1`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load the archived file.");
-        return response.text();
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || "Unable to load the archived file.");
+        return data;
       })
-      .then((text) => { if (!cancelled) setContent(text); })
+      .then((data) => {
+        if (!cancelled) {
+          setContent(String(data.content || ""));
+          setClaimRows(Array.isArray(data.claim_rows) ? data.claim_rows : []);
+        }
+      })
       .catch((reason) => { if (!cancelled) setError(reason.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -138,7 +147,16 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  const internalNumbers = String(selected.internal_claim_number || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const storedInternalNumbers = String(selected.internal_claim_number || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const visibleInternalPattern = new RegExp(`${escapePattern(String(claimNumber))}([A-Za-z][A-Za-z0-9_-]{1,30})`, "gi");
+  const inferredInternalNumbers = [];
+  let inferredMatch;
+  while ((inferredMatch = visibleInternalPattern.exec(content)) !== null) {
+    const value = inferredMatch[0];
+    if (!inferredInternalNumbers.some((item) => item.toUpperCase() === value.toUpperCase())) inferredInternalNumbers.push(value);
+  }
+  const internalNumbers = [...new Set([...storedInternalNumbers, ...inferredInternalNumbers])];
+  const displayedInternalNumber = internalNumbers.join(", ");
   const highmarkCount = countOccurrences(content, claimNumber);
   const internalCount = internalNumbers.reduce((total, number) => total + countOccurrences(content, number), 0);
   const terms = [...new Set([claimNumber, ...internalNumbers].filter(Boolean))].sort((left, right) => right.length - left.length);
@@ -166,7 +184,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       <div className="mpl-file-viewer-toolbar">
         <label><span>FILE</span><select value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>{sources.map((source, index) => <option value={index} key={`${source.type}-${source.filename}-${index}`}>{source.filename}</option>)}</select></label>
         <dl>
-          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || "Not found"}</dd></div>
+          <div><dt>Internal claim number</dt><dd>{displayedInternalNumber || "Not found"}</dd></div>
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
@@ -179,7 +197,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       </div>
       <div className={`mpl-file-content ${["835", "MIR", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
         <div><strong>File content</strong><small>{selected.filename}</small></div>
-        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{viewerLines(content, selected.type).map(renderLine)}</div>}
+        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{(claimRows.length ? claimRows : viewerLines(content, selected.type)).map(renderLine)}</div>}
       </div>
     </section>
   </div>, document.body);
