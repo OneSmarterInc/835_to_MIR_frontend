@@ -1,10 +1,14 @@
-const DEFAULT_POLL_CACHE_MS = 15000;
-const TRACKED_FILES_CACHE_MS = 1000;
+const CHANGE_TOKEN_URL = '/edi835/api/ui-change-token/';
+const CHANGE_CHECK_MS = 10000;
+const POLL_CACHE_MS = CHANGE_CHECK_MS;
 const CONVERSION_POLL_MS = 1500;
 const CONVERSION_MAX_POLLS = 800;
 const inFlight = new Map();
 const cache = new Map();
 let activeMutations = 0;
+let lastKnownChangeToken = null;
+let lastChangeCheckAt = 0;
+let changeTokenInFlight = null;
 
 function methodOf(options = {}, input = null) {
   if (options?.method) return String(options.method).toUpperCase();
@@ -37,14 +41,9 @@ function isBackgroundPollingRequest(input, options = {}) {
     path === '/edi835/api/metrics/' ||
     path === '/edi835/api/sftp/get/' ||
     path === '/admin-panel/api/clients/' ||
-    /^\/admin-panel\/api\/clients\/[^/]+\/state\/$/.test(path)
+    /^\/admin-panel\/api\/clients\/[^/]+\/state\/$/.test(path) ||
+    /^\/admin-panel\/api\/clients\/[^/]+\/offboarding\/state\/$/.test(path)
   );
-}
-
-function cacheLifetime(input) {
-  const path = urlOf(input)?.pathname || '';
-  if (path === '/edi835/api/tracked-files/') return TRACKED_FILES_CACHE_MS;
-  return DEFAULT_POLL_CACHE_MS;
 }
 
 function cloneCached(entry) {
@@ -53,6 +52,12 @@ function cloneCached(entry) {
   } catch (_) {
     return null;
   }
+}
+
+function invalidatePollingCache() {
+  cache.clear();
+  lastKnownChangeToken = null;
+  lastChangeCheckAt = 0;
 }
 
 function jsonBody(options = {}) {
@@ -93,6 +98,51 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function authHeaders(options = {}) {
+  const headers = new Headers(options.headers || {});
+  const result = { Accept: 'application/json' };
+  const authorization = headers.get('Authorization');
+  if (authorization) result.Authorization = authorization;
+  return result;
+}
+
+async function readChangeToken(nativeFetch, options = {}) {
+  const now = Date.now();
+  if (lastKnownChangeToken && now - lastChangeCheckAt < CHANGE_CHECK_MS) {
+    return { ok: true, changed: false };
+  }
+  if (changeTokenInFlight) return changeTokenInFlight;
+
+  changeTokenInFlight = nativeFetch(CHANGE_TOKEN_URL, {
+    method: 'GET',
+    credentials: options.credentials || 'include',
+    headers: authHeaders(options),
+    cache: 'no-store',
+  })
+    .then(async (response) => {
+      if (!response.ok) return { ok: false, changed: true };
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (_) {
+        return { ok: false, changed: true };
+      }
+      const token = String(data?.token || '');
+      if (!token) return { ok: false, changed: true };
+
+      const changed = lastKnownChangeToken !== null && token !== lastKnownChangeToken;
+      lastKnownChangeToken = token;
+      lastChangeCheckAt = Date.now();
+      return { ok: true, changed };
+    })
+    .catch(() => ({ ok: false, changed: true }))
+    .finally(() => {
+      changeTokenInFlight = null;
+    });
+
+  return changeTokenInFlight;
+}
+
 async function runAsyncConversion(nativeFetch, input, options = {}) {
   const endpoint = asyncConversionUrl(input);
   const startOptions = {
@@ -106,15 +156,14 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
   };
 
   // Queueing is the only mutation that must complete synchronously. Once the
-  // worker owns the job, allow normal tracked-files polling so PROCESSING and
-  // the final result appear in Conversion/Checks/Archive immediately.
+  // worker owns the job, its small job-status endpoint remains activity-specific.
   activeMutations += 1;
   let startResponse;
   try {
     startResponse = await nativeFetch(endpoint, startOptions);
   } finally {
     activeMutations = Math.max(0, activeMutations - 1);
-    cache.clear();
+    invalidatePollingCache();
   }
 
   let startData = {};
@@ -155,12 +204,12 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
     }
 
     if (statusData.state === 'COMPLETED') {
-      cache.clear();
+      invalidatePollingCache();
       return responseFromJson(statusData.result || { success: true }, Number(statusData.status_code || 200));
     }
 
     if (statusData.state === 'FAILED') {
-      cache.clear();
+      invalidatePollingCache();
       const result = statusData.result || { success: false, error: 'Background conversion failed.' };
       return responseFromJson(result, Number(statusData.status_code || 500));
     }
@@ -196,7 +245,7 @@ export function installRequestGovernor() {
         return await nativeFetch(input, options);
       } finally {
         activeMutations = Math.max(0, activeMutations - 1);
-        cache.clear();
+        invalidatePollingCache();
       }
     }
 
@@ -204,15 +253,40 @@ export function installRequestGovernor() {
     const requestIdentity = url ? `${url.pathname}${url.search}` : String(input);
     const key = `${method}:${requestIdentity}`;
     const now = Date.now();
-    const cached = cache.get(key);
-    const cachedResponse = cloneCached(cached);
+    let cached = cache.get(key);
+    let cachedResponse = cloneCached(cached);
 
-    if ((activeMutations > 0 || document.visibilityState === 'hidden') && cachedResponse) {
+    // A hidden tab never burns network traffic merely to keep dashboard data warm.
+    if (document.visibilityState === 'hidden' && cachedResponse) {
       return cachedResponse;
     }
 
-    if (cachedResponse && now - cached.timestamp < cacheLifetime(input)) {
+    // During a mutation, preserve the last stable dashboard snapshot. The
+    // mutation invalidates it as soon as the write finishes.
+    if (activeMutations > 0 && cachedResponse) {
       return cachedResponse;
+    }
+
+    if (cachedResponse && now - cached.timestamp < POLL_CACHE_MS) {
+      return cachedResponse;
+    }
+
+    if (cachedResponse) {
+      const changeState = await readChangeToken(nativeFetch, options);
+      if (changeState.ok && !changeState.changed) {
+        // Database fingerprint is unchanged. Extend the cached response instead
+        // of downloading the same metrics/files/client state again.
+        cached.timestamp = Date.now();
+        cache.set(key, cached);
+        return cachedResponse;
+      }
+      if (changeState.ok && changeState.changed) {
+        cache.clear();
+        cached = null;
+        cachedResponse = null;
+      }
+      // If the tiny token endpoint is unavailable, fall through to the real
+      // endpoint. Correctness wins over caching during a backend/network issue.
     }
 
     const existing = inFlight.get(key);
