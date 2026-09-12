@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import WorkspaceHeader from "../components/WorkspaceHeader";
-import { safeFetchJson } from "../utils/api";
+import { portalFetch, safeFetchJson } from "../utils/api";
+import EyeIcon from "../components/EyeIcon";
 import "./NoticesView.css";
 
 const ACTIVE = new Set(["RECEIVED", "PARSING_EMAIL", "MATCHING_CLAIMS", "COLLECTING_EVIDENCE", "RUNNING_VALIDATIONS", "ANALYZING"]);
@@ -54,7 +55,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     setLoading(true);
     setError("");
     setContent("");
-    fetch(selected.download_url, { credentials: "same-origin" })
+    portalFetch(selected.download_url)
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load the archived file.");
         return response.text();
@@ -74,13 +75,13 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   return createPortal(<div className="mpl-file-viewer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="mpl-file-viewer" role="dialog" aria-modal="true" aria-labelledby="mpl-file-viewer-title">
       <header>
-        <div><span>MATCHED SOURCE EVIDENCE</span><h3 id="mpl-file-viewer-title">{selected.type} file for claim {claimNumber}</h3></div>
+        <div><span>MATCHED SOURCE EVIDENCE</span><h3 id="mpl-file-viewer-title">{selected.type} file for Highmark claim {claimNumber}</h3></div>
         <button type="button" onClick={onClose} aria-label="Close file viewer">×</button>
       </header>
       <div className="mpl-file-viewer-toolbar">
         <label><span>FILE</span><select value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>{sources.map((source, index) => <option value={index} key={`${source.type}-${source.filename}-${index}`}>{source.filename}</option>)}</select></label>
         <dl>
-          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || claimNumber || "—"}</dd></div>
+          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || "Not found in the 837 database"}</dd></div>
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
@@ -259,17 +260,17 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
         {sourcesExpanded && <div className="mpl-disclosure-content mpl-source-matrix-wrap">
           <table className="mpl-table mpl-source-matrix">
             <thead>
-              <tr><th rowSpan="2">CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th></tr>
+              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th></tr>
               <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
             </thead>
             <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
               <td className="mono mpl-matrix-claim">{match.claim_number}</td>
               {["835", "MIR", "RECON", "837"].flatMap((type) => {
                 const files = (match.sources || []).filter((source) => source.type.toUpperCase() === type);
-                const numbers = [...new Set(files.map((source) => source.internal_claim_number || match.claim_number).filter(Boolean))];
+                const numbers = [...new Set(files.map((source) => source.internal_claim_number).filter(Boolean))];
                 return [
                   <td key={`${match.claim_number}-${type}-number`} className="mono mpl-matrix-number">{numbers.length ? numbers.map((number) => <span key={number}>{number}</span>) : <span className="mpl-no-match">—</span>}</td>,
-                  <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><span aria-hidden="true">👁</span></button> : <span className="mpl-no-match">—</span>}</td>,
+                  <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
                 ];
               })}
             </tr>)}</tbody>
