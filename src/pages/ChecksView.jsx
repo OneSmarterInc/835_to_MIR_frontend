@@ -64,6 +64,11 @@ function isBlockingConversionFinding(finding) {
   return severity === "HOLD" || severity === "REFUSE";
 }
 
+function isDuplicateFinding(finding) {
+  const code = String(finding?.rule_code || finding?.rule_name || "").toUpperCase();
+  return code.startsWith("DUPLICATE");
+}
+
 export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState("");
@@ -139,6 +144,13 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
           previousMirFilename: null,
           previousSentAt: null,
           eligibleSendAt: null,
+          resolvedMirFilename: null,
+          resolvedAt: null,
+          resolvedSource835Filename: null,
+          alertCount: 0,
+          lastAlertSentAt: null,
+          hasResolvedNonDuplicate: false,
+          hasUnresolvedNonDuplicate: false,
         };
         const code = finding.rule_code || finding.rule_name || "Conversion hold";
         const reason = finding.reason || finding.message || "Claim requires conversion review.";
@@ -146,6 +158,19 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         if (finding.previous_mir_filename) existing.previousMirFilename = finding.previous_mir_filename;
         if (finding.previous_sent_at) existing.previousSentAt = finding.previous_sent_at;
         if (finding.eligible_send_at) existing.eligibleSendAt = finding.eligible_send_at;
+        if (finding.hold_resolved_mir_filename) existing.resolvedMirFilename = finding.hold_resolved_mir_filename;
+        if (finding.hold_resolved_at) existing.resolvedAt = finding.hold_resolved_at;
+        if (finding.hold_resolved_source_835_filename) existing.resolvedSource835Filename = finding.hold_resolved_source_835_filename;
+        existing.alertCount = Math.max(existing.alertCount, Number(finding.seven_day_hold_alert_count || 0));
+        if (finding.seven_day_hold_last_alert_sent_at) existing.lastAlertSentAt = finding.seven_day_hold_last_alert_sent_at;
+
+        if (!isDuplicateFinding(finding)) {
+          if (String(finding.hold_resolution_status || "").toUpperCase() === "RESOLVED") {
+            existing.hasResolvedNonDuplicate = true;
+          } else {
+            existing.hasUnresolvedNonDuplicate = true;
+          }
+        }
         groupedClaims.set(groupKey, existing);
       });
 
@@ -158,17 +183,34 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             previousMirFilename: null,
             previousSentAt: null,
             eligibleSendAt: null,
+            resolvedMirFilename: null,
+            resolvedAt: null,
+            resolvedSource835Filename: null,
+            alertCount: 0,
+            lastAlertSentAt: null,
+            hasResolvedNonDuplicate: false,
+            hasUnresolvedNonDuplicate: true,
           });
         }
       }
 
+      const heldClaims = [...groupedClaims.values()].map((claim) => ({
+        ...claim,
+        resolutionStatus: claim.hasResolvedNonDuplicate && !claim.hasUnresolvedNonDuplicate
+          ? "RESOLVED"
+          : "UNRESOLVED",
+      }));
+      const unresolvedCount = heldClaims.filter((claim) => claim.resolutionStatus !== "RESOLVED").length;
+
       return {
         ...file,
-        _heldClaims: [...groupedClaims.values()],
-        _heldCount: recordedHeldCount || groupedClaims.size,
+        _heldClaims: heldClaims,
+        _issueCount: heldClaims.length,
+        _heldCount: recordedHeldCount || unresolvedCount,
+        _unresolvedCount: unresolvedCount,
       };
     })
-      .filter((file) => file._heldCount > 0)
+      .filter((file) => file._issueCount > 0 || file._heldCount > 0)
       .sort((a, b) => new Date(b.processing_completed_at || b.uploaded_at || 0) - new Date(a.processing_completed_at || a.uploaded_at || 0));
   }, [allFiles]);
 
@@ -259,13 +301,26 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr><th>CLAIM</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
+                  <thead><tr><th>CLAIM</th><th>RESOLUTION</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
                   <tbody>
                     {selectedConversionFile._heldClaims.length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
+                      <tr><td colSpan="6" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
                     ) : selectedConversionFile._heldClaims.map((claim, index) => (
                       <tr key={`${claim.claimNumber}-${index}`}>
                         <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
+                        <td style={{ minWidth: "210px" }}>
+                          <span className="badge">{claim.resolutionStatus}</span>
+                          {claim.resolutionStatus === "RESOLVED" ? (
+                            <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)", lineHeight: 1.45 }}>
+                              {claim.resolvedMirFilename && <div>Resolved in: {claim.resolvedMirFilename}</div>}
+                              {claim.resolvedAt && <div>{formatTimestamp(claim.resolvedAt)}</div>}
+                            </div>
+                          ) : claim.alertCount > 0 ? (
+                            <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)" }}>
+                              Daily alerts: {claim.alertCount}/7
+                            </div>
+                          ) : null}
+                        </td>
                         <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
                         <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
                         <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
