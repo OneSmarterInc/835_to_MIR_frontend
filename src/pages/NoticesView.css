@@ -264,3 +264,17 @@
 .mpl-sort-header:hover,.mpl-sort-header.active{color:#0b806d}
 .mpl-sort-header.active>span{color:#0b806d}
 .mpl-notice-row{cursor:pointer}
+
+
+/* Portaled modal must own the MPL theme variables it cannot inherit from .mpl-view. */
+.mpl-detail-modal-backdrop{
+  --mpl-navy:#111c2d;
+  --mpl-teal:#0b806d;
+  --mpl-line:#c9d5e1;
+  --line:#c9d5e1;
+}
+.mpl-detail-modal-header{background:#111c2d;color:#fff}
+.mpl-detail-modal-header h2{color:#fff}
+.mpl-detail-modal-header p{color:#b9c7d8}
+.mpl-detail-modal .mpl-btn.primary{background:#111c2d;color:#fff}
+.mpl-detail-modal .mpl-btn.secondary{border-color:#c9d5e1;background:#fff;color:#111c2d}
