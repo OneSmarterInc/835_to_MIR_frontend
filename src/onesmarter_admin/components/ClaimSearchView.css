@@ -84,3 +84,13 @@
   white-space:nowrap!important;
 }
 .universal-source-empty{color:var(--ink-3)}
+
+/* Keep adjacent identity headings visually distinct. */
+.universal-claim-table{min-width:1160px!important}
+.universal-claim-table th{white-space:normal!important}
+.universal-claim-table th+th{border-left:1px solid var(--line)}
+.universal-claim-table th:nth-child(1){width:190px}
+.universal-claim-table th:nth-child(2){width:185px;padding-left:18px!important;padding-right:18px!important}
+.universal-claim-table th:nth-child(3){width:170px;padding-left:18px!important}
+.universal-claim-table td:nth-child(2){padding-left:18px!important;padding-right:18px!important}
+.universal-claim-table td:nth-child(3){padding-left:18px!important}
