@@ -40,3 +40,5 @@
 .universal-source-status{display:inline-flex;padding:3px 6px;border-radius:2px;font:700 9px/1.2 var(--display);letter-spacing:.05em;text-transform:uppercase}
 .universal-source-status.present{background:var(--teal-bg);color:var(--teal)}
 .universal-source-status.absent{color:var(--ink-3)}
+
+.universal-source-internal { display: block; margin-top: 5px; font-size: 12px; color: #10233b; overflow-wrap: anywhere; }
