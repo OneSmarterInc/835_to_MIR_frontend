@@ -74,7 +74,7 @@ function Claim837Modal({ claimId, namingFormat, onClose }) {
     catch (err) { setError(err.message); }
     finally { setPushing(false); }
   };
-  return <div className="claim837-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
+  return <div className="claim837-backdrop claim837-summary-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
     <div className="claim837-modal" role="dialog" aria-modal="true" aria-label="837 claim summary">
       <header><div><div className="eyebrow">837 CLAIM SUMMARY</div><h2>{claim ? [claim.highmark_claim_number, claim.internal_claim_number].filter(Boolean).join(' · ') || 'Claim details' : 'Loading claim…'}</h2></div><button type="button" className="claim837-close" onClick={onClose} aria-label="Close">&times;</button></header>
       {error && <div className="claim837-message error">{error}</div>}
