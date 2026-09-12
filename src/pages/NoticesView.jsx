@@ -161,6 +161,9 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const internalCount = internalNumbers.reduce((total, number) => total + countOccurrences(content, number), 0);
   const terms = [...new Set([claimNumber, ...internalNumbers].filter(Boolean))].sort((left, right) => right.length - left.length);
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join("|")})`, "gi") : null;
+  const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
+    .map((row) => String(row || "").replace(/\r\n?|\n/g, " "))
+    .filter((row) => row.length);
   let firstMatchAssigned = false;
   const renderLine = (line, lineIndex) => {
     if (!pattern) return <div className="mpl-source-code-line" key={lineIndex}>{line || " "}</div>;
@@ -195,9 +198,9 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
         <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>
         <small>Yellow = Highmark claim · Blue = internal claim</small>
       </div>
-      <div className={`mpl-file-content ${["835", "MIR", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
+      <div className={`mpl-file-content ${["835", "MIR", "RECON", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
         <div><strong>File content</strong><small>{selected.filename}</small></div>
-        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{(claimRows.length ? claimRows : viewerLines(content, selected.type)).map(renderLine)}</div>}
+        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{displayRows.map(renderLine)}</div>}
       </div>
     </section>
   </div>, document.body);
