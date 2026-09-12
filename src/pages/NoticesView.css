@@ -249,3 +249,18 @@
 @media(max-width:650px){.mpl-detail-modal-backdrop{padding:0}.mpl-detail-modal{width:100vw;max-height:100vh;height:100vh;border:0;border-radius:0}.mpl-detail-modal-header{padding:12px}.mpl-detail-modal-header h2{font-size:15px}.mpl-register-toolbar{gap:8px}.mpl-universal-search{min-width:100%}.mpl-pagination{align-items:flex-start;gap:8px}.mpl-pagination strong{font-size:9px}}
 
 .mpl-notice-row{cursor:pointer}
+
+
+/* Single universal search with sortable columns */
+.mpl-notice-table th:nth-child(1){width:110px}
+.mpl-notice-table th:nth-child(2){width:32%}
+.mpl-notice-table th:nth-child(3){width:19%}
+.mpl-notice-table th:nth-child(4){width:150px}
+.mpl-notice-table th:nth-child(5){width:85px}
+.mpl-notice-table th:nth-child(6){width:175px}
+.mpl-notice-table th:nth-child(7){width:130px}
+.mpl-sort-header{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-align:left;cursor:pointer}
+.mpl-sort-header>span{color:#8da0b5;font:700 13px/1 ui-monospace,monospace}
+.mpl-sort-header:hover,.mpl-sort-header.active{color:#0b806d}
+.mpl-sort-header.active>span{color:#0b806d}
+.mpl-notice-row{cursor:pointer}
