@@ -58,18 +58,23 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
-  const [expanded, setExpanded] = useState(false); const detail = notice.email_body !== undefined;
+  const [expanded, setExpanded] = useState(false); const [claimsExpanded, setClaimsExpanded] = useState(false); const detail = notice.email_body !== undefined;
   const toggle = async () => { if (!detail) await loadDetail(notice.id); setExpanded((old) => !old); };
   return <article className="mpl-notice-card">
     <div className="mpl-email-header"><div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2>{notice.subject}</h2><p>{notice.sender || "Sender not entered"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><div className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</div></div>
     <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div><button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Show less" : "Read more"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
     {!!notice.extracted_claim_numbers?.length && <section className="mpl-extracted">
-      <h3>Extracted Claims</h3>
-      <div className="mpl-claim-list">{notice.extracted_claim_numbers.map((number) => {
-        const issues = reportedIssuesFor(notice, number);
-        return <div className="mpl-claim-item" key={number}><strong>{number}</strong>{issues.length ? <div>{issues.map((issue, index) => <span key={`${number}-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>)}</div> : <small>No issue text was confidently associated with this claim.</small>}</div>;
-      })}</div>
-      {!!notice.source_matches?.length && <div className="mpl-table-wrap mpl-source-results"><table className="mpl-table"><thead><tr><th>CLAIM</th><th>SOURCE</th><th>FILENAME</th><th>STATUS</th><th>INFORMATION</th><th>ACTION</th></tr></thead><tbody>{notice.source_matches.flatMap((match) => (match.sources || []).map((source, index) => <tr key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}><td className="mono">{match.claim_number}</td><td><span className="mpl-state">{source.type}</span></td><td className="mono">{source.filename}</td><td>{statusLabel(source.status)}</td><td>{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><strong>{statusLabel(key)}:</strong> {String(value)}</small>)}</td><td><a className="mpl-file-link" href={source.download_url}>Download</a></td></tr>))}</tbody></table></div>}
+      <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
+        <span><strong>Extracted Claims</strong><small>{notice.extracted_claim_numbers.length} claim{notice.extracted_claim_numbers.length === 1 ? "" : "s"} · issue details and matched source files</small></span>
+        <b>{claimsExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{claimsExpanded ? "−" : "+"}</i></b>
+      </button>
+      {claimsExpanded && <div className="mpl-extracted-content">
+        <div className="mpl-claim-list">{notice.extracted_claim_numbers.map((number) => {
+          const issues = reportedIssuesFor(notice, number);
+          return <div className="mpl-claim-item" key={number}><strong>{number}</strong>{issues.length ? <div>{issues.map((issue, index) => <span key={`${number}-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>)}</div> : <small>No issue text was confidently associated with this claim.</small>}</div>;
+        })}</div>
+        {!!notice.source_matches?.some((match) => match.sources?.length) && <div className="mpl-table-wrap mpl-source-results"><table className="mpl-table"><thead><tr><th>CLAIM</th><th>SOURCE</th><th>FILENAME</th><th>STATUS</th><th>INFORMATION</th><th>ACTION</th></tr></thead><tbody>{notice.source_matches.flatMap((match) => (match.sources || []).map((source, index) => <tr key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}><td className="mono">{match.claim_number}</td><td><span className="mpl-state">{source.type}</span></td><td className="mono">{source.filename}</td><td>{statusLabel(source.status)}</td><td>{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><strong>{statusLabel(key)}:</strong> {String(value)}</small>)}</td><td><a className="mpl-file-link" href={source.download_url}>Download</a></td></tr>))}</tbody></table></div>}
+      </div>}
     </section>}
     {notice.ai_response && <section className="mpl-ai-response"><span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span><p>{notice.ai_response}</p>{!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}</section>}
     {notice.last_error && <div className="mpl-warning">{notice.last_error}</div>}
