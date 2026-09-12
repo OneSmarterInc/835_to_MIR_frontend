@@ -28,6 +28,23 @@ function urlOf(input) {
   return null;
 }
 
+function scopeAdminChecksRequest(input) {
+  if (typeof input !== 'string') return input;
+
+  const selectedClientId = new URLSearchParams(window.location.search).get('client');
+  if (!selectedClientId) return input;
+
+  const url = urlOf(input);
+  if (!url || url.searchParams.has('client_id')) return input;
+
+  const isConversionHoldSummary = url.pathname === '/edi835/api/checks/conversion-holds/';
+  const isTrackedFileDetails = /^\/edi835\/api\/tracked-files\/[^/]+\/details\/$/.test(url.pathname);
+  if (!isConversionHoldSummary && !isTrackedFileDetails) return input;
+
+  url.searchParams.set('client_id', selectedClientId);
+  return url.toString();
+}
+
 function isBackgroundPollingRequest(input, options = {}) {
   if (methodOf(options, input) !== 'GET') return false;
   const url = urlOf(input);
@@ -180,6 +197,8 @@ export function installRequestGovernor() {
   const nativeFetch = window.fetch.bind(window);
 
   window.fetch = async function governedFetch(input, options = {}) {
+    input = scopeAdminChecksRequest(input);
+
     if (shouldUseAsyncConversion(input, options)) {
       return runAsyncConversion(nativeFetch, input, options);
     }
