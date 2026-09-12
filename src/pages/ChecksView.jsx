@@ -26,6 +26,38 @@ function formatTimestamp(value) {
   });
 }
 
+function formatDuplicateEligibleTimestamp(previousSentAt, fallbackEligibleSendAt) {
+  if (!previousSentAt) return formatTimestamp(fallbackEligibleSendAt);
+  const parsed = new Date(previousSentAt);
+  if (Number.isNaN(parsed.getTime())) return formatTimestamp(fallbackEligibleSendAt);
+
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(parsed).map((part) => [part.type, part.value])
+  );
+  const fourthDay = new Date(Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day) + 3,
+    12,
+    0,
+    0
+  ));
+  const year = fourthDay.getUTCFullYear();
+  const month = String(fourthDay.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(fourthDay.getUTCDate()).padStart(2, "0");
+  const zoneName = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  }).formatToParts(fourthDay).find((part) => part.type === "timeZoneName")?.value || "ET";
+
+  return `${month}/${day}/${year}, 05:30:00 PM ${zoneName}`;
+}
+
 function isBlockingConversionFinding(finding) {
   const severity = String(finding?.severity || "").toUpperCase();
   return severity === "HOLD" || severity === "REFUSE";
@@ -235,7 +267,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
                         <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
                         <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
                         <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.eligibleSendAt)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatDuplicateEligibleTimestamp(claim.previousSentAt, claim.eligibleSendAt)}</td>
                       </tr>
                     ))}
                   </tbody>
