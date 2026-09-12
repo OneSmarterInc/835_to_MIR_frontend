@@ -199,7 +199,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
         <small>Yellow = Highmark claim · Blue = internal claim</small>
       </div>
       <div className={`mpl-file-content ${["835", "MIR", "RECON", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
-        <div><strong>File content</strong><small>{selected.filename}</small></div>
+        <div className="mpl-file-content-heading"><strong>File content</strong><small>{selected.filename}</small></div>
         {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{displayRows.map(renderLine)}</div>}
       </div>
     </section>
