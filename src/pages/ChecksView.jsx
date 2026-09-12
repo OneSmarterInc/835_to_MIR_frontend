@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
 import ConversionErrorFindings from "../components/ConversionErrorFindings";
+import HeldReleaseHistory from "../components/HeldReleaseHistory";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function parseDetails(raw) {
@@ -212,7 +213,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures and claim-level conversion holds." />}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, and held-claim SFTP releases." />}
 
       <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({ gateKey: "gate1", eyebrow: "Gate 1 · Inbound", metrics: <>{row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}{row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}</>, footer: "The rule totals above come from the backend validation catalog, not from frontend constants." })}
@@ -223,11 +224,12 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       <div style={{ display: "flex", gap: "8px", marginTop: "18px", marginBottom: "10px", flexWrap: "wrap" }}>
         <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); setSelectedConversionFileId(""); }}>Validations</button>
         <button type="button" className={activeChecksTab === "conversion" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("conversion"); setSelectedGroup(null); }}>Conversion</button>
+        <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); setSelectedConversionFileId(""); }}>Held SFTP Releases</button>
       </div>
 
       {activeChecksTab === "validations" ? (
         <ConversionErrorFindings trackedFiles={validationErrorFiles} showHeading={false} />
-      ) : (
+      ) : activeChecksTab === "conversion" ? (
         <section style={{ marginTop: "10px" }}>
           <div className="card" style={{ padding: 0, overflowX: "auto" }}>
             <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -276,6 +278,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             </div>
           )}
         </section>
+      ) : (
+        <HeldReleaseHistory />
       )}
 
       {selectedGroup && activeChecksTab === "validations" && (
