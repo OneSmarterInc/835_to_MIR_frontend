@@ -278,3 +278,43 @@
 .mpl-detail-modal-header p{color:#b9c7d8}
 .mpl-detail-modal .mpl-btn.primary{background:#111c2d;color:#fff}
 .mpl-detail-modal .mpl-btn.secondary{border-color:#c9d5e1;background:#fff;color:#111c2d}
+
+
+/* Extracted-claim source matrix */
+.mpl-source-matrix-wrap{overflow:auto}
+.mpl-source-matrix{min-width:1180px;table-layout:fixed}
+.mpl-source-matrix thead tr:first-child th{padding:9px 8px;background:#e9f0f5;color:#111c2d;text-align:center;border-bottom:1px solid #aebdcc}
+.mpl-source-matrix thead tr:first-child th:first-child{text-align:left;width:180px}
+.mpl-source-matrix thead tr:nth-child(2) th{padding:7px 8px;font-size:9px;line-height:1.25;text-align:left}
+.mpl-source-matrix th.mpl-matrix-action-heading{width:54px;text-align:center}
+.mpl-source-matrix td{padding:10px 8px;vertical-align:middle}
+.mpl-source-matrix td.mpl-matrix-claim{font-weight:800;color:#111c2d;white-space:nowrap}
+.mpl-matrix-number span{display:block;overflow-wrap:anywhere;font-size:11px}
+.mpl-matrix-number span+span{margin-top:4px;padding-top:4px;border-top:1px solid #e2e8ee}
+.mpl-matrix-action{text-align:center}
+.mpl-eye-button{display:inline-grid;place-items:center;width:34px;height:30px;border:1px solid #9fb1c1;border-radius:3px;background:#fff;color:#0b806d;cursor:pointer;font-size:15px;transition:background .15s,border-color .15s,transform .15s}
+.mpl-eye-button:hover{border-color:#0b806d;background:#e9f6f3;transform:translateY(-1px)}
+.mpl-eye-button:focus-visible{outline:3px solid rgba(11,128,109,.25);outline-offset:2px}
+.mpl-no-match{color:#91a0af}
+
+/* Authenticated archive-content viewer opened by each eye action */
+.mpl-file-viewer-backdrop{position:fixed;z-index:10040;inset:0;display:grid;place-items:center;padding:26px;background:rgba(8,17,29,.78)}
+.mpl-file-viewer{display:flex;flex-direction:column;width:min(1280px,95vw);height:min(820px,92vh);overflow:hidden;border:1px solid #7890a5;border-radius:5px;background:#f4f7fa;box-shadow:0 28px 90px rgba(0,0,0,.42);color:#111c2d}
+.mpl-file-viewer>header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 18px;border-bottom:3px solid #1bb69d;background:#111c2d;color:#fff}
+.mpl-file-viewer>header span{color:#8fb0c9;font:700 10px/1.2 ui-monospace,monospace;letter-spacing:.16em}
+.mpl-file-viewer>header h3{margin:5px 0 0;color:#fff;font-size:18px}
+.mpl-file-viewer>header button{width:36px;height:36px;border:1px solid #52657c;background:#1b2a40;color:#fff;font-size:23px;cursor:pointer}
+.mpl-file-viewer-toolbar{display:grid;grid-template-columns:minmax(280px,1fr) minmax(420px,1.7fr) auto;align-items:end;gap:14px;padding:13px 16px;border-bottom:1px solid #c9d5e1;background:#fff}
+.mpl-file-viewer-toolbar label>span{display:block;margin-bottom:5px;color:#647991;font:700 9px/1.2 ui-monospace,monospace;letter-spacing:.13em}
+.mpl-file-viewer-toolbar select{width:100%;height:36px;padding:0 10px;border:1px solid #b6c5d2;background:#fff;color:#111c2d;font-weight:700}
+.mpl-file-viewer-toolbar dl{display:grid;grid-template-columns:1.25fr 1fr .7fr;gap:6px;margin:0}
+.mpl-file-viewer-toolbar dl>div{min-width:0;padding:6px 9px;border-left:2px solid #d5e0e8}
+.mpl-file-viewer-toolbar dt{color:#6c7f94;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.mpl-file-viewer-toolbar dd{margin:3px 0 0;overflow-wrap:anywhere;font:700 11px/1.35 ui-monospace,monospace}
+.mpl-file-viewer-toolbar .mpl-btn{display:inline-flex;align-items:center;justify-content:center;height:36px;white-space:nowrap;text-decoration:none}
+.mpl-file-content{display:flex;flex:1;min-height:0;flex-direction:column;padding:14px 16px 16px}
+.mpl-file-content>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.mpl-file-content>div small{color:#647991}
+.mpl-file-content pre{flex:1;min-height:0;margin:0;overflow:auto;padding:14px;border:1px solid #b8c7d4;background:#fff;color:#1c2b3d;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.mpl-file-view-error{padding:12px;border-left:3px solid #b47716;background:#fff5e6;color:#805000}
+@media(max-width:900px){.mpl-file-viewer-backdrop{padding:0}.mpl-file-viewer{width:100vw;height:100vh;max-height:none;border:0;border-radius:0}.mpl-file-viewer-toolbar{grid-template-columns:1fr}.mpl-file-viewer-toolbar dl{grid-template-columns:1fr 1fr 1fr}}
