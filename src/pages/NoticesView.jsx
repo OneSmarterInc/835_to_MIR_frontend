@@ -58,40 +58,108 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
-  const [expanded, setExpanded] = useState(false); const [claimsExpanded, setClaimsExpanded] = useState(false); const detail = notice.email_body !== undefined; const analysisReady = !ACTIVE.has(notice.status) && Boolean(notice.ai_response || notice.status === "COMPLETED" || notice.status === "REVIEW_REQUIRED");
-  const toggle = async () => { if (!detail) await loadDetail(notice.id); setExpanded((old) => !old); };
-  return <article className="mpl-notice-card">
-    <div className="mpl-email-header"><div><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h2>{notice.subject}</h2><p>{notice.sender || "Sender not entered"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><div className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</div></div>
-    <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div><button className="mpl-thread-toggle" onClick={toggle}><span aria-hidden="true">✉</span> {expanded ? "Hide Email" : "Email"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
-    {ACTIVE.has(notice.status) && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
-    {analysisReady && notice.ai_response && <section className="mpl-ai-response">
-      <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
-      <p>{notice.ai_response}</p>
-      {!!notice.extracted_claim_numbers?.length && <><h4>Claims considered in this analysis</h4><div className="mpl-ai-claim-review">{notice.extracted_claim_numbers.map((number) => {
-        const match = notice.source_matches?.find((item) => item.claim_number === number);
-        const issues = match?.reported_issues || [];
-        const sources = match?.sources || [];
-        return <div key={number}><strong>{number}</strong><div>{issues.length ? issues.map((issue, index) => <span key={`${number}-ai-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>) : <span>No issue confidently associated</span>}</div><small>{sources.length ? sources.map((source) => `${source.type}: ${source.filename}`).join(" · ") : "No matching archived source"}</small></div>;
-      })}</div></>}
-      {!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}
-    </section>}
-    {analysisReady && !!notice.extracted_claim_numbers?.length && <section className="mpl-extracted">
-      <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
-        <span><strong>Extracted Claims</strong><small>{notice.extracted_claim_numbers.length} claim{notice.extracted_claim_numbers.length === 1 ? "" : "s"} · issue details and matched source files</small></span>
-        <b>{claimsExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{claimsExpanded ? "−" : "+"}</i></b>
-      </button>
-      {claimsExpanded && <div className="mpl-extracted-content">
-        <div className="mpl-claim-list">{notice.extracted_claim_numbers.map((number) => {
-          const issues = reportedIssuesFor(notice, number);
-          return <div className="mpl-claim-item" key={number}><strong>{number}</strong>{issues.length ? <div>{issues.map((issue, index) => <span key={`${number}-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>)}</div> : <small>No issue text was confidently associated with this claim.</small>}</div>;
-        })}</div>
-        {!!notice.source_matches?.some((match) => match.sources?.length) && <div className="mpl-table-wrap mpl-source-results"><table className="mpl-table"><thead><tr><th>CLAIM</th><th>SOURCE</th><th>FILENAME</th><th>STATUS</th><th>INFORMATION</th><th>ACTION</th></tr></thead><tbody>{notice.source_matches.flatMap((match) => (match.sources || []).map((source, index) => <tr key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}><td className="mono">{match.claim_number}</td><td><span className="mpl-state">{source.type}</span></td><td className="mono">{source.filename}</td><td>{statusLabel(source.status)}</td><td>{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><strong>{statusLabel(key)}:</strong> {String(value)}</small>)}</td><td><a className="mpl-file-link" href={source.download_url}>Download</a></td></tr>))}</tbody></table></div>}
-      </div>}
-    </section>}
-    {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
-    {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
-    {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
-    {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
+  const [cardExpanded, setCardExpanded] = useState(false);
+  const [emailExpanded, setEmailExpanded] = useState(false);
+  const [claimsExpanded, setClaimsExpanded] = useState(false);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const detail = notice.email_body !== undefined;
+  const isActive = ACTIVE.has(notice.status);
+  const analysisReady = !isActive && Boolean(notice.ai_response || notice.status === "COMPLETED" || notice.status === "REVIEW_REQUIRED");
+  const sourceMatches = notice.source_matches || [];
+  const matchedClaims = sourceMatches.filter((match) => match.sources?.length);
+  const totalSources = matchedClaims.reduce((total, match) => total + match.sources.length, 0);
+
+  const toggleCard = async () => {
+    if (!cardExpanded && !detail) await loadDetail(notice.id);
+    setCardExpanded((value) => !value);
+  };
+  const toggleEmail = async () => {
+    if (!detail) await loadDetail(notice.id);
+    setEmailExpanded((value) => !value);
+  };
+
+  return <article className={`mpl-notice-card ${cardExpanded ? "is-open" : ""}`}>
+    <button type="button" className="mpl-notice-summary" onClick={toggleCard} aria-expanded={cardExpanded}>
+      <span className="mpl-summary-main">
+        <span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span>
+        <strong>{notice.subject}</strong>
+        <span className="mpl-summary-meta">
+          <span>{notice.sender || "Sender unavailable"}</span>
+          <span>{dateLabel(notice.received_at || notice.created_at)}</span>
+          <span>{notice.program || "Program unavailable"}</span>
+          {(notice.period_start || notice.period_end) && <span>{notice.period_start || "—"} – {notice.period_end || "—"}</span>}
+        </span>
+      </span>
+      <span className="mpl-summary-side">
+        <span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span>
+        <span className="mpl-open-label">{cardExpanded ? "Close" : "Open"} <b aria-hidden="true">{cardExpanded ? "−" : "+"}</b></span>
+      </span>
+    </button>
+
+    {cardExpanded && <div className="mpl-notice-detail">
+      <div className="mpl-email-toolbar">
+        <div className="mpl-email-meta">
+          <span>PROGRAM <strong>{notice.program || "—"}</strong></span>
+          <span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>
+        </div>
+        <div className="mpl-email-actions">
+          <button type="button" className="mpl-thread-toggle" onClick={toggleEmail}><span aria-hidden="true">✉</span> {emailExpanded ? "Hide email" : "Email"}</button>
+          {notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download .msg</a>}
+        </div>
+      </div>
+      {emailExpanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}
+
+      {isActive && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
+
+      {analysisReady && notice.ai_response && <section className="mpl-ai-response">
+        <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
+        <p>{notice.ai_response}</p>
+        {!!notice.ai_suggestions?.length && <div className="mpl-ai-next-steps"><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></div>}
+      </section>}
+
+      {analysisReady && !!notice.extracted_claim_numbers?.length && <section className="mpl-disclosure">
+        <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
+          <span><strong>Claims considered in this analysis</strong><small>{notice.extracted_claim_numbers.length} extracted claim{notice.extracted_claim_numbers.length === 1 ? "" : "s"} · reported issues and evidence coverage</small></span>
+          <b>{claimsExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{claimsExpanded ? "−" : "+"}</i></b>
+        </button>
+        {claimsExpanded && <div className="mpl-disclosure-content"><div className="mpl-ai-claim-review">{notice.extracted_claim_numbers.map((number) => {
+          const match = sourceMatches.find((item) => item.claim_number === number);
+          const issues = match?.reported_issues || [];
+          const sources = match?.sources || [];
+          return <div key={number}>
+            <strong>{number}</strong>
+            <div>{issues.length ? issues.map((issue, index) => <span key={`${number}-issue-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>) : <span>No issue confidently associated</span>}</div>
+            <small>{sources.length ? [...new Set(sources.map((source) => source.type))].join(" · ") : "No matching archived source"}</small>
+          </div>;
+        })}</div></div>}
+      </section>}
+
+      {analysisReady && !!totalSources && <section className="mpl-disclosure">
+        <button type="button" className="mpl-section-toggle" aria-expanded={sourcesExpanded} onClick={() => setSourcesExpanded((value) => !value)}>
+          <span><strong>Matched source files</strong><small>{matchedClaims.length} claim{matchedClaims.length === 1 ? "" : "s"} · {totalSources} verified 837, MIR, 835, or reconciliation match{totalSources === 1 ? "" : "es"}</small></span>
+          <b>{sourcesExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{sourcesExpanded ? "−" : "+"}</i></b>
+        </button>
+        {sourcesExpanded && <div className="mpl-disclosure-content mpl-table-wrap">
+          <table className="mpl-table mpl-compact-source-table">
+            <thead><tr><th>CLAIM</th><th>MATCHED SOURCES</th></tr></thead>
+            <tbody>{matchedClaims.map((match) => <tr key={match.claim_number}>
+              <td className="mono">{match.claim_number}</td>
+              <td><div className="mpl-source-stack">{match.sources.map((source, index) => <div className="mpl-source-row" key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}>
+                <span className="mpl-state">{source.type}</span>
+                <span className="mpl-source-file"><strong>{source.filename}</strong><small>{statusLabel(source.status)}{source.date ? ` · ${dateLabel(source.date)}` : ""}</small></span>
+                <span className="mpl-source-facts">{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><b>{statusLabel(key)}:</b> {String(value ?? "—")}</small>)}</span>
+                <a className="mpl-file-link" href={source.download_url}>Download</a>
+              </div>)}</div></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+      </section>}
+
+      {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
+      {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
+      {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
+      {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
+    </div>}
   </article>;
 }
 
