@@ -462,6 +462,10 @@ export default function NoticesView() {
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * pageSize;
   const visibleNotices = sortedNotices.slice(pageStart, pageStart + pageSize);
+  const openNotice = openNoticeId ? notices.find((notice) => notice.id === openNoticeId) : null;
+  const renderedNotices = openNotice && !visibleNotices.some((notice) => notice.id === openNotice.id)
+    ? [...visibleNotices, openNotice]
+    : visibleNotices;
 
   return <section className="view on mpl-view" id="v-notices">
     <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></WorkspaceHeader>
@@ -484,7 +488,7 @@ export default function NoticesView() {
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{visibleNotices.length ? visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
