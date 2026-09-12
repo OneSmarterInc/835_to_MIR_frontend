@@ -50,7 +50,19 @@ async function downloadClaimWithFilename(claimId, filename) {
   setTimeout(() => URL.revokeObjectURL(href), 1500);
 }
 
-function Claim837Modal({ claimId, namingFormat, onClose }) {
+
+function ClaimOperationalDetails({ operational }) {
+  const data = operational || { status: 'CLEAR', history: [], findings: [], occurrence_count: 0 };
+  return <section className="claim-operational">
+    <div className="claim-operational-heading"><div><div className="eyebrow">CLAIM HISTORY</div><h3>Operational history</h3></div><div className="claim-operational-badges"><span className={`claim-operation-badge ${data.duplicate ? 'warning' : 'clear'}`}>Duplicate: {data.duplicate ? 'Yes' : 'No'}</span><span className={`claim-operation-badge ${data.held ? 'held' : 'clear'}`}>Hold: {data.held ? 'Yes' : 'No'}</span><span className="claim-operation-badge">{data.occurrence_count || 0} occurrence(s)</span></div></div>
+    {data.findings?.length > 0 && <div className="claim-operational-findings">{data.findings.map((finding, index) => <div key={index}><b>{finding.rule_code || finding.code || finding.error_code || finding.decision || 'Finding'}</b><span>{finding.message || finding.description || finding.reason || 'Stored processing finding'}</span></div>)}</div>}
+    <div className="claim837-table-wrap claim-history-table"><table><thead><tr><th>Source</th><th>File</th><th>Internal claim number</th><th>Status</th><th>Received</th></tr></thead><tbody>
+      {data.history?.length ? data.history.map((event, index) => <tr key={`${event.source}-${event.file_name}-${index}`}><td><b>{String(event.source || '').toUpperCase()}</b></td><td>{event.file_name || '—'}</td><td>{event.internal_claim_number || '—'}</td><td>{event.status || '—'}</td><td>{dateTime(event.arrived_at)}</td></tr>) : <tr><td colSpan="5" className="empty">No stored claim history was found.</td></tr>}
+    </tbody></table></div>
+  </section>;
+}
+
+function Claim837Modal({ claimId, namingFormat, summary, onClose }) {
   const [claim, setClaim] = useState(null);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -89,6 +101,7 @@ function Claim837Modal({ claimId, namingFormat, onClose }) {
         <div className="claim837-lifecycle">
           {['835', 'mir', 'recon', '837'].map(type => { const item = claim.lifecycle?.[type] || {}; return <div key={type} className={item.exists ? 'present' : 'absent'}><span className="claim837-presence-icon" aria-hidden="true">{item.exists ? '✓' : '—'}</span><div><span>{type.toUpperCase()}</span><b>{item.exists ? `Found in ${type.toUpperCase()}` : `Not found in ${type.toUpperCase()}`}</b><small>{item.exists ? `${item.file_name || 'File recorded'}${item.internal_claim_number ? ` · internal ${item.internal_claim_number}` : ''} · arrived ${dateTime(item.arrived_at)}${type === '835' && item.source ? ` · ${item.source}` : ''}` : type === '835' ? 'No linked source 835 record' : 'No matching claim record'}</small></div></div>; })}
         </div>
+        <ClaimOperationalDetails operational={summary?.operational} />
         <div className="claim837-facts">
           <div><span>Patient control number</span><b>{claim.patient_control_number || '—'}</b></div>
           <div><span>Subscriber</span><b>{claim.subscriber_name || '—'}</b></div>
@@ -127,6 +140,7 @@ function UniversalClaimModal({ row, onClose }) {
       <div className="claim837-lifecycle">
         {['835', 'mir', 'recon', '837'].map(type => { const item = row.lifecycle?.[type] || {}; return <div key={type} className={item.exists ? 'present' : 'absent'}><span className="claim837-presence-icon" aria-hidden="true">{item.exists ? '✓' : '—'}</span><div><span>{type.toUpperCase()}</span><b>{item.exists ? `Found in ${type.toUpperCase()}` : `Not found in ${type.toUpperCase()}`}</b><small>{item.exists ? `${item.file_name || 'File recorded'}${item.internal_claim_number ? ` · internal ${item.internal_claim_number}` : ''} · arrived ${dateTime(item.arrived_at)}` : 'No matching claim record'}</small></div></div>; })}
       </div>
+      <ClaimOperationalDetails operational={row.operational} />
       <footer><button type="button" className="btn" onClick={onClose}>Close</button></footer>
     </div>
   </div>;
@@ -164,6 +178,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [active837Filename, setActive837Filename] = useState(DEFAULT_837_FILENAME_FORMAT);
   const [notice, setNotice] = useState('');
   const [claimId, setClaimId] = useState(null);
+  const [claimSummary, setClaimSummary] = useState(null);
   const [sourceClaim, setSourceClaim] = useState(null);
   const [fileQuery, setFileQuery] = useState('');
   const [filePage, setFilePage] = useState(1);
@@ -258,7 +273,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
     </div>
     <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table"><thead><tr><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>835</th><th>MIR</th><th>RECON</th><th>837</th></tr></thead><tbody>
-      {!rows.length ? <tr><td colSpan="7" className="empty">{query.trim() && !loading ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'Universal claim search results will appear here.'}</td></tr> : rows.map(row => { const openRow = () => row.has_837 === false ? setSourceClaim(row) : setClaimId(row.id); return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
+      {!rows.length ? <tr><td colSpan="7" className="empty">{query.trim() && !loading ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'Universal claim search results will appear here.'}</td></tr> : rows.map(row => { const openRow = () => { if (row.has_837 === false) setSourceClaim(row); else { setClaimSummary(row); setClaimId(row.id); } }; return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
     </tbody></table></div></div>
     <section className="claim-files-section">
       <div className="claim-files-heading"><div><div className="eyebrow">837 FILE HISTORY</div><h2>837 Files</h2><p>{fileData.count} file{fileData.count === 1 ? '' : 's'} for the selected client</p></div><button type="button" className="btn" disabled={!activeClientId || fileLoading} onClick={() => setFileRefresh(value => value + 1)}>Refresh</button></div>
@@ -269,7 +284,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       </tbody></table></div></div>
       <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
     </section>
-    {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} onClose={() => setClaimId(null)} />}
+    {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} summary={claimSummary} onClose={() => { setClaimId(null); setClaimSummary(null); }} />}
     {sourceClaim && <UniversalClaimModal row={sourceClaim} onClose={() => setSourceClaim(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
   </section>;
