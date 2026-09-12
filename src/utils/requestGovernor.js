@@ -1,15 +1,13 @@
 const DEFAULT_POLL_CACHE_MS = 15000;
-const TRACKED_FILES_CHANGE_CHECK_MS = 3000;
-const TRACKED_FILES_PATH = '/edi835/api/tracked-files/';
-const TRACKED_FILES_TOKEN_URL = '/edi835/api/ui-change-token/';
+// Tracked files are loaded once and reused until a write/mutation clears the
+// request cache. This prevents the existing 3-second UI timers from repeatedly
+// downloading the large tracked-files payload.
+const TRACKED_FILES_CACHE_MS = Number.POSITIVE_INFINITY;
 const CONVERSION_POLL_MS = 1500;
 const CONVERSION_MAX_POLLS = 800;
 const inFlight = new Map();
 const cache = new Map();
 let activeMutations = 0;
-let trackedFilesToken = null;
-let trackedFilesTokenCheckedAt = 0;
-let trackedFilesTokenInFlight = null;
 
 function methodOf(options = {}, input = null) {
   if (options?.method) return String(options.method).toUpperCase();
@@ -31,11 +29,6 @@ function urlOf(input) {
   return null;
 }
 
-function isTrackedFilesRequest(input, options = {}) {
-  if (methodOf(options, input) !== 'GET') return false;
-  return urlOf(input)?.pathname === TRACKED_FILES_PATH;
-}
-
 function isBackgroundPollingRequest(input, options = {}) {
   if (methodOf(options, input) !== 'GET') return false;
   const url = urlOf(input);
@@ -43,13 +36,18 @@ function isBackgroundPollingRequest(input, options = {}) {
   if (!path) return false;
 
   return (
-    path === TRACKED_FILES_PATH ||
+    path === '/edi835/api/tracked-files/' ||
     path === '/edi835/api/metrics/' ||
     path === '/edi835/api/sftp/get/' ||
     path === '/admin-panel/api/clients/' ||
-    /^\/admin-panel\/api\/clients\/[^/]+\/state\/$/.test(path) ||
-    /^\/admin-panel\/api\/clients\/[^/]+\/offboarding\/state\/$/.test(path)
+    /^\/admin-panel\/api\/clients\/[^/]+\/state\/$/.test(path)
   );
+}
+
+function cacheLifetime(input) {
+  const path = urlOf(input)?.pathname || '';
+  if (path === '/edi835/api/tracked-files/') return TRACKED_FILES_CACHE_MS;
+  return DEFAULT_POLL_CACHE_MS;
 }
 
 function cloneCached(entry) {
@@ -98,90 +96,6 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function authHeaders(options = {}) {
-  const headers = new Headers(options.headers || {});
-  const result = { Accept: 'application/json' };
-  const authorization = headers.get('Authorization');
-  if (authorization) result.Authorization = authorization;
-  return result;
-}
-
-function markTrackedFilesForImmediateChangeCheck() {
-  trackedFilesTokenCheckedAt = 0;
-}
-
-function clearPollingCacheAfterMutation() {
-  // Keep the large tracked-files snapshot. The tiny tracked-files token will
-  // decide whether that snapshot really became stale. Other dashboard caches
-  // keep their previous invalidation behavior.
-  const trackedEntries = [];
-  for (const [key, value] of cache.entries()) {
-    if (key.includes(`:${TRACKED_FILES_PATH}`)) trackedEntries.push([key, value]);
-  }
-  cache.clear();
-  for (const [key, value] of trackedEntries) cache.set(key, value);
-  markTrackedFilesForImmediateChangeCheck();
-}
-
-function resetAllPollingCache() {
-  cache.clear();
-  trackedFilesToken = null;
-  trackedFilesTokenCheckedAt = 0;
-}
-
-function isAuthenticationMutation(input) {
-  const path = urlOf(input)?.pathname || '';
-  return (
-    path.startsWith('/accounts/api/login') ||
-    path.startsWith('/accounts/api/logout') ||
-    path.startsWith('/admin-panel/api/login') ||
-    path.startsWith('/admin-panel/api/logout')
-  );
-}
-
-async function readTrackedFilesToken(nativeFetch, options = {}) {
-  const now = Date.now();
-  if (
-    trackedFilesToken !== null &&
-    now - trackedFilesTokenCheckedAt < TRACKED_FILES_CHANGE_CHECK_MS
-  ) {
-    return { ok: true, changed: false };
-  }
-
-  if (trackedFilesTokenInFlight) return trackedFilesTokenInFlight;
-
-  trackedFilesTokenInFlight = nativeFetch(TRACKED_FILES_TOKEN_URL, {
-    method: 'GET',
-    credentials: options.credentials || 'include',
-    headers: authHeaders(options),
-    cache: 'no-store',
-  })
-    .then(async (response) => {
-      if (!response.ok) return { ok: false, changed: true };
-
-      let data = null;
-      try {
-        data = await response.json();
-      } catch (_) {
-        return { ok: false, changed: true };
-      }
-
-      const nextToken = String(data?.token || '');
-      if (!nextToken) return { ok: false, changed: true };
-
-      const changed = trackedFilesToken !== null && nextToken !== trackedFilesToken;
-      trackedFilesToken = nextToken;
-      trackedFilesTokenCheckedAt = Date.now();
-      return { ok: true, changed };
-    })
-    .catch(() => ({ ok: false, changed: true }))
-    .finally(() => {
-      trackedFilesTokenInFlight = null;
-    });
-
-  return trackedFilesTokenInFlight;
-}
-
 async function runAsyncConversion(nativeFetch, input, options = {}) {
   const endpoint = asyncConversionUrl(input);
   const startOptions = {
@@ -195,15 +109,14 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
   };
 
   // Queueing is the only mutation that must complete synchronously. Once the
-  // worker owns the job, allow normal tracked-file change detection while the
-  // activity-specific job endpoint reports progress.
+  // worker owns the job, allow normal tracked-files refresh after completion.
   activeMutations += 1;
   let startResponse;
   try {
     startResponse = await nativeFetch(endpoint, startOptions);
   } finally {
     activeMutations = Math.max(0, activeMutations - 1);
-    clearPollingCacheAfterMutation();
+    cache.clear();
   }
 
   let startData = {};
@@ -244,12 +157,12 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
     }
 
     if (statusData.state === 'COMPLETED') {
-      clearPollingCacheAfterMutation();
+      cache.clear();
       return responseFromJson(statusData.result || { success: true }, Number(statusData.status_code || 200));
     }
 
     if (statusData.state === 'FAILED') {
-      clearPollingCacheAfterMutation();
+      cache.clear();
       const result = statusData.result || { success: false, error: 'Background conversion failed.' };
       return responseFromJson(result, Number(statusData.status_code || 500));
     }
@@ -285,11 +198,9 @@ export function installRequestGovernor() {
         return await nativeFetch(input, options);
       } finally {
         activeMutations = Math.max(0, activeMutations - 1);
-        if (isAuthenticationMutation(input)) {
-          resetAllPollingCache();
-        } else {
-          clearPollingCacheAfterMutation();
-        }
+        // Any completed write may affect tracked-file state. Invalidate once so
+        // the next existing UI refresh obtains the current tracked-file list.
+        cache.clear();
       }
     }
 
@@ -297,31 +208,14 @@ export function installRequestGovernor() {
     const requestIdentity = url ? `${url.pathname}${url.search}` : String(input);
     const key = `${method}:${requestIdentity}`;
     const now = Date.now();
-    let cached = cache.get(key);
-    let cachedResponse = cloneCached(cached);
+    const cached = cache.get(key);
+    const cachedResponse = cloneCached(cached);
 
     if ((activeMutations > 0 || document.visibilityState === 'hidden') && cachedResponse) {
       return cachedResponse;
     }
 
-    if (isTrackedFilesRequest(input, options)) {
-      // The application may still ask every three seconds, but the actual
-      // tracked-files endpoint is downloaded only when its database-backed
-      // fingerprint changes. Otherwise return the existing response locally.
-      const changeState = await readTrackedFilesToken(nativeFetch, options);
-
-      if (cachedResponse && changeState.ok && !changeState.changed) {
-        return cachedResponse;
-      }
-
-      if (cachedResponse && changeState.ok && changeState.changed) {
-        cache.delete(key);
-        cached = null;
-        cachedResponse = null;
-      }
-      // If the token endpoint is unavailable, fall through to the real
-      // tracked-files endpoint so correctness is never sacrificed for caching.
-    } else if (cachedResponse && now - cached.timestamp < DEFAULT_POLL_CACHE_MS) {
+    if (cachedResponse && now - cached.timestamp < cacheLifetime(input)) {
       return cachedResponse;
     }
 
