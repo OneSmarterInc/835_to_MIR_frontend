@@ -9,3 +9,20 @@
 
 .claim837-modal>footer{justify-content:space-between;border-top:1px solid var(--line);margin-top:20px}.claim837-footer-actions{display:flex;gap:8px}.claim837-footer-actions .btn{display:inline-flex;align-items:center;gap:8px}.claim837-footer-actions svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.claim837-lifecycle{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 24px 20px}.claim837-lifecycle>div{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line)}.claim837-lifecycle>div.present{border-left-color:var(--teal)}.claim837-lifecycle>div.absent{border-left-color:var(--ink-3)}.claim837-lifecycle>div>div{display:grid;gap:2px}.claim837-lifecycle span:not(.claim837-presence-icon){font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}.claim837-lifecycle small{color:var(--ink-3)}.claim837-presence-icon{display:grid;place-items:center;flex:0 0 28px;height:28px;border-radius:50%;background:var(--teal-bg);color:var(--teal);font-weight:800}.claim837-lifecycle .absent .claim837-presence-icon{background:var(--paper);color:var(--ink-3)}
 @media(max-width:900px){.claim837-lifecycle{grid-template-columns:1fr}.claim837-modal>footer{align-items:stretch;flex-direction:column}.claim837-footer-actions{display:grid;grid-template-columns:1fr 1fr}.claim837-footer-actions .btn{justify-content:center}}
+
+
+/* Full-viewport 837 claim summary. Rename dialog keeps its existing size. */
+.claim837-backdrop:has(>.claim837-modal){
+  align-items:stretch;
+  justify-content:stretch;
+  padding:0;
+}
+.claim837-backdrop>.claim837-modal{
+  width:100vw;
+  height:100vh;
+  max-height:100vh;
+  margin:0;
+  overflow:auto;
+  border-radius:0;
+  box-shadow:none;
+}
