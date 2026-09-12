@@ -45,28 +45,52 @@ function RelatedFiles({ files = [] }) {
 
 function viewerLines(rawContent, fileType) {
   const content = String(rawContent || "").replace(/\r\n?/g, "\n");
-  if (String(fileType).toUpperCase() !== "837") return content.split("\n");
+  const type = String(fileType || "").toUpperCase();
+
+  if (type === "MIR") {
+    const physicalRows = content.split("\n").filter((line) => line.length);
+    if (physicalRows.length > 1) return physicalRows;
+    // Older stored MIR output can be concatenated without newline characters.
+    // Each claim record starts with HI followed by its numeric Highmark key.
+    const inferredRows = content.split(/(?=HI\d{15,})/).filter(Boolean);
+    return inferredRows.length ? inferredRows : [content];
+  }
+
+  if (!["835", "837"].includes(type)) return content.split("\n");
 
   const delimiter = content.startsWith("ISA") && content.length > 105 ? content[105] : "~";
+  const claimTag = type === "835" ? "CLP" : "CLM";
   const segments = content.split(delimiter).map((segment) => segment.trim()).filter(Boolean);
   const lines = [];
   let envelope = [];
   let claim = [];
+
+  const flushClaim = () => {
+    if (claim.length) {
+      lines.push(claim.join(delimiter) + delimiter);
+      claim = [];
+    }
+  };
+  const flushEnvelope = () => {
+    if (envelope.length) {
+      lines.push(envelope.join(delimiter) + delimiter);
+      envelope = [];
+    }
+  };
+
   segments.forEach((segment) => {
     const tag = segment.split("*", 1)[0].toUpperCase();
-    if (tag === "CLM") {
-      if (claim.length) lines.push(claim.join(delimiter) + delimiter);
-      else if (envelope.length) lines.push(envelope.join(delimiter) + delimiter);
-      envelope = [];
+    if (tag === claimTag) {
+      flushClaim();
+      flushEnvelope();
       claim = [segment];
-    } else if (claim.length) {
-      claim.push(segment);
-    } else {
-      envelope.push(segment);
+      return;
     }
+    if (claim.length) claim.push(segment);
+    else envelope.push(segment);
   });
-  if (claim.length) lines.push(claim.join(delimiter) + delimiter);
-  else if (envelope.length) lines.push(envelope.join(delimiter) + delimiter);
+  flushClaim();
+  flushEnvelope();
   return lines;
 }
 
@@ -153,7 +177,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
         <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>
         <small>Yellow = Highmark claim · Blue = internal claim</small>
       </div>
-      <div className={`mpl-file-content ${["MIR", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
+      <div className={`mpl-file-content ${["835", "MIR", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
         <div><strong>File content</strong><small>{selected.filename}</small></div>
         {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{viewerLines(content, selected.type).map(renderLine)}</div>}
       </div>
