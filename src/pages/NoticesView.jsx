@@ -71,7 +71,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
         const match = notice.source_matches?.find((item) => item.claim_number === number);
         const issues = match?.reported_issues || [];
         const sources = match?.sources || [];
-        return <div key={number}><strong>{number}</strong><span>{issues.length ? issues.map((issue) => (issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")).filter(Boolean).join(" · ") : "No issue confidently associated"}</span><small>{sources.length ? sources.map((source) => `${source.type}: ${source.filename}`).join(" · ") : "No matching archived source"}</small></div>;
+        return <div key={number}><strong>{number}</strong><div>{issues.length ? issues.map((issue, index) => <span key={`${number}-ai-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>) : <span>No issue confidently associated</span>}</div><small>{sources.length ? sources.map((source) => `${source.type}: ${source.filename}`).join(" · ") : "No matching archived source"}</small></div>;
       })}</div></>}
       {!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}
     </section>}
