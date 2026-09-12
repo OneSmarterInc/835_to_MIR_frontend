@@ -98,26 +98,28 @@ export default function App({ user, onLogout }) {
     if (!isAuthenticated) return;
     loadClients();
     loadRoles();
+    if (activeClientId) {
+      loadClientWorkflow(activeClientId);
+    }
 
-    // Auto-update client status in real-time every 3 seconds
-    const interval = setInterval(() => {
-      loadClients();
-      if (activeClientId) {
-        loadClientWorkflow(activeClientId);
-      }
-    }, 3000);
-
-    const onFocus = () => {
+    const refreshClientState = () => {
+      if (document.visibilityState !== 'visible') return;
       loadClients();
       if (activeClientId) {
         loadClientWorkflow(activeClientId);
       }
     };
-    window.addEventListener('focus', onFocus);
+
+    // Client/workflow state changes much less often than conversion progress.
+    // Keep a slow safety refresh plus immediate refresh when the user returns.
+    const interval = setInterval(refreshClientState, 30000);
+    window.addEventListener('focus', refreshClientState);
+    document.addEventListener('visibilitychange', refreshClientState);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', refreshClientState);
+      document.removeEventListener('visibilitychange', refreshClientState);
     };
   }, [isAuthenticated, activeClientId]);
 
@@ -131,7 +133,7 @@ export default function App({ user, onLogout }) {
     try {
         const token = localStorage.getItem('onesmarter_admin_token');
         const headers = token ? { Authorization: `Token ${token}` } : {};
-        const res = await fetch('/edi835/api/tracked-files/', {
+        const res = await fetch('/edi835/api/tracked-files/?include_conversion_findings=0', {
             credentials: 'include',
             headers,
         });
@@ -154,11 +156,28 @@ export default function App({ user, onLogout }) {
 };
 
   useEffect(() => {
-    if (isAuthenticated && (activeNav === 'conversions' || activeNav === 'checks')) {
-      loadAdminTrackedFiles();
-      const interval = setInterval(loadAdminTrackedFiles, 3000);
-      return () => clearInterval(interval);
+    if (!(isAuthenticated && (activeNav === 'conversions' || activeNav === 'checks'))) {
+      return undefined;
     }
+
+    loadAdminTrackedFiles();
+
+    const refreshTrackedFiles = () => {
+      if (document.visibilityState === 'visible') {
+        loadAdminTrackedFiles();
+      }
+    };
+
+    // Do not poll file history every three seconds. Conversion actions already
+    // call loadAdminTrackedFiles explicitly; focus/visibility handles external
+    // worker changes when the administrator returns to the tab.
+    window.addEventListener('focus', refreshTrackedFiles);
+    document.addEventListener('visibilitychange', refreshTrackedFiles);
+
+    return () => {
+      window.removeEventListener('focus', refreshTrackedFiles);
+      document.removeEventListener('visibilitychange', refreshTrackedFiles);
+    };
   }, [isAuthenticated, activeNav]);
 
   // Sync state to URL for persistence on refresh
