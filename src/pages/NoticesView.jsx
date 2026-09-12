@@ -172,7 +172,6 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
       <td><strong>{notice.program || "—"}</strong></td>
       <td className="mpl-period-cell">{notice.period_start || "—"} – {notice.period_end || "—"}</td>
       <td><span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span></td>
-      <td><button type="button" className="mpl-row-open" onClick={(event) => { event.stopPropagation(); toggleCard(); }} aria-expanded={cardExpanded}>{cardExpanded ? "Close" : "Open"} <b aria-hidden="true">{cardExpanded ? "−" : "+"}</b></button></td>
     </tr>
     {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCardExpanded(false); }}>
       <section className="mpl-detail-modal" role="dialog" aria-modal="true" aria-labelledby={`mpl-notice-${notice.id}-title`}>
@@ -264,7 +263,7 @@ export default function NoticesView() {
   const [modal, setModal] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState({ type: "", subject: "", sender: "", received: "", program: "", period: "", status: "" });
+  const [sort, setSort] = useState({ key: "received", direction: "desc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -276,35 +275,44 @@ export default function NoticesView() {
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) { const message = data.error || "Unable to save the review decision."; setError(message); throw new Error(message); } setError(""); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); return data.notice; };
 
-  const setColumnFilter = (name, value) => {
-    setFilters((current) => ({ ...current, [name]: value }));
-    setPage(1);
-  };
   const loweredQuery = query.trim().toLowerCase();
   const filteredNotices = notices.filter((notice) => {
     const received = notice.received_at || notice.created_at || "";
     const period = `${notice.period_start || ""} ${notice.period_end || ""}`;
     const type = notice.notice_type === "ACKNOWLEDGEMENT" ? "acknowledgement" : "mpl return email";
     const searchable = [
-      type, notice.subject, notice.sender, received, notice.program, period, notice.status,
+      type, notice.subject, notice.sender, received, dateLabel(received), notice.program, period, notice.status,
       ...(notice.extracted_claim_numbers || []),
-      ...(notice.source_matches || []).flatMap((match) => (match.sources || []).map((source) => source.filename)),
-    ].join(" ").toLowerCase();
-    return (!loweredQuery || searchable.includes(loweredQuery))
-      && (!filters.type || type.includes(filters.type.toLowerCase()))
-      && (!filters.subject || String(notice.subject || "").toLowerCase().includes(filters.subject.toLowerCase()))
-      && (!filters.sender || String(notice.sender || "").toLowerCase().includes(filters.sender.toLowerCase()))
-      && (!filters.received || String(received).slice(0, 10) === filters.received)
-      && (!filters.program || String(notice.program || "").toLowerCase().includes(filters.program.toLowerCase()))
-      && (!filters.period || period.toLowerCase().includes(filters.period.toLowerCase()))
-      && (!filters.status || notice.status === filters.status);
+      ...(notice.source_matches || []).flatMap((match) => [
+        match.claim_number,
+        ...(match.reported_issues || []).flatMap((issue) => [...(issue.codes || []), issue.category, issue.description]),
+        ...(match.sources || []).flatMap((source) => [source.type, source.filename, source.status]),
+      ]),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return !loweredQuery || searchable.includes(loweredQuery);
   });
+  const sortValue = (notice, key) => {
+    if (key === "type") return notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL";
+    if (key === "received") return notice.received_at || notice.created_at || "";
+    if (key === "period") return `${notice.period_start || ""} ${notice.period_end || ""}`;
+    return String(notice[key] || "");
+  };
+  const sortedNotices = [...filteredNotices].sort((left, right) => {
+    const result = sortValue(left, sort.key).localeCompare(sortValue(right, sort.key), undefined, { numeric: true, sensitivity: "base" });
+    return sort.direction === "asc" ? result : -result;
+  });
+  const changeSort = (key) => {
+    setSort((current) => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" }));
+    setPage(1);
+  };
+  const SortHeader = ({ column, children }) => {
+    const active = sort.key === column;
+    return <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}><button type="button" className={`mpl-sort-header ${active ? "active" : ""}`} onClick={() => changeSort(column)}>{children}<span aria-hidden="true">{active ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}</span></button></th>;
+  };
   const pageCount = Math.max(1, Math.ceil(filteredNotices.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * pageSize;
-  const visibleNotices = filteredNotices.slice(pageStart, pageStart + pageSize);
-  const statuses = [...new Set(notices.map((notice) => notice.status).filter(Boolean))].sort();
-  const programs = [...new Set(notices.map((notice) => notice.program).filter(Boolean))].sort();
+  const visibleNotices = sortedNotices.slice(pageStart, pageStart + pageSize);
 
   return <section className="view on mpl-view" id="v-notices">
     <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></WorkspaceHeader>
@@ -318,20 +326,16 @@ export default function NoticesView() {
       </div>
       <div className="mpl-table-wrap">
         <table className="mpl-table mpl-notice-table">
-          <thead>
-            <tr><th>TYPE</th><th>SUBJECT</th><th>SENDER</th><th>RECEIVED</th><th>PROGRAM</th><th>PERIOD</th><th>STATUS</th><th>ACTION</th></tr>
-            <tr className="mpl-filter-row">
-              <th><select value={filters.type} onChange={(event) => setColumnFilter("type", event.target.value)} aria-label="Filter by email type"><option value="">All types</option><option value="acknowledgement">Acknowledgement</option><option value="return email">Return email</option></select></th>
-              <th><input value={filters.subject} onChange={(event) => setColumnFilter("subject", event.target.value)} placeholder="Filter subject" aria-label="Filter subject" /></th>
-              <th><input value={filters.sender} onChange={(event) => setColumnFilter("sender", event.target.value)} placeholder="Filter sender" aria-label="Filter sender" /></th>
-              <th><input type="date" value={filters.received} onChange={(event) => setColumnFilter("received", event.target.value)} aria-label="Filter received date" /></th>
-              <th><select value={filters.program} onChange={(event) => setColumnFilter("program", event.target.value)} aria-label="Filter program"><option value="">All</option>{programs.map((program) => <option key={program} value={program}>{program}</option>)}</select></th>
-              <th><input value={filters.period} onChange={(event) => setColumnFilter("period", event.target.value)} placeholder="YYYY-MM" aria-label="Filter period" /></th>
-              <th><select value={filters.status} onChange={(event) => setColumnFilter("status", event.target.value)} aria-label="Filter status"><option value="">All statuses</option>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></th>
-              <th><button type="button" className="mpl-clear-filters" onClick={() => { setQuery(""); setFilters({ type: "", subject: "", sender: "", received: "", program: "", period: "", status: "" }); setPage(1); }}>Clear</button></th>
-            </tr>
-          </thead>
-          <tbody>{visibleNotices.length ? visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} />) : <tr><td colSpan="8" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <thead><tr>
+            <SortHeader column="type">TYPE</SortHeader>
+            <SortHeader column="subject">SUBJECT</SortHeader>
+            <SortHeader column="sender">SENDER</SortHeader>
+            <SortHeader column="received">RECEIVED</SortHeader>
+            <SortHeader column="program">PROGRAM</SortHeader>
+            <SortHeader column="period">PERIOD</SortHeader>
+            <SortHeader column="status">STATUS</SortHeader>
+          </tr></thead>
+          <tbody>{visibleNotices.length ? visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
