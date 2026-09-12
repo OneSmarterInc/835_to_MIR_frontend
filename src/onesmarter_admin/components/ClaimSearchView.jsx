@@ -153,6 +153,7 @@ function Rename837Modal({ initialFilename, renaming, onClose, onConfirm }) {
 
 export default function ClaimSearchView({ clients, activeClientId, onSelectClient }) {
   const [query, setQuery] = useState('');
+  const [searchField, setSearchField] = useState('all');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -172,7 +173,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [fileRefresh, setFileRefresh] = useState(0);
 
   useEffect(() => {
-    setQuery(''); setRows([]); setError(''); setNotice(''); setFileQuery(''); setFilePage(1);
+    setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice(''); setFileQuery(''); setFilePage(1);
     const savedFormat = activeClientId ? localStorage.getItem(namingStorageKey(activeClientId)) : '';
     setActive837Filename(savedFormat || DEFAULT_837_FILENAME_FORMAT);
   }, [activeClientId]);
@@ -180,12 +181,12 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
     const timer = setTimeout(async () => {
       setLoading(true); setError('');
-      try { const data = await search837Claims(activeClientId, query.trim()); setRows(data.results || []); }
+      try { const data = await search837Claims(activeClientId, query.trim(), searchField); setRows(data.results || []); }
       catch (err) { setError(err.message); setRows([]); }
       finally { setLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
-  }, [activeClientId, query]);
+  }, [activeClientId, query, searchField]);
   useEffect(() => {
     if (!activeClientId) { setFileData({ results: [], count: 0, pages: 0, has_previous: false, has_next: false }); return undefined; }
     const timer = setTimeout(async () => {
@@ -252,6 +253,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     <div className="claim-search-actions">
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, member, patient, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
+      <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => setSearchField(event.target.value)}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option><option value="837">837 filename</option></select></label>
       <div className="claim-search-current-name" title="Filename format used for 837 SFTP pushes"><span>Naming format</span><b>{active837Filename}</b></div>
       <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
     </div>
