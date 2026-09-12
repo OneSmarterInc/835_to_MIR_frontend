@@ -6,6 +6,7 @@ import "./NoticesView.css";
 const ACTIVE = new Set(["RECEIVED", "PARSING_EMAIL", "MATCHING_CLAIMS", "COLLECTING_EVIDENCE", "RUNNING_VALIDATIONS", "ANALYZING"]);
 const statusLabel = (value) => String(value || "").replaceAll("_", " ");
 const dateLabel = (value) => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString(); };
+const reportedIssuesFor = (notice, claimNumber) => notice.source_matches?.find((item) => item.claim_number === claimNumber)?.reported_issues || [];
 
 function NoticeModal({ onClose, onCreated }) {
   const [file, setFile] = useState(null);
@@ -63,7 +64,10 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
     <div className="mpl-email-body"><div className="mpl-email-meta"><span>PROGRAM <strong>{notice.program || "—"}</strong></span><span>PERIOD <strong>{notice.period_start || "—"} – {notice.period_end || "—"}</strong></span>{notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download original .msg</a>}</div><button className="mpl-thread-toggle" onClick={toggle}>{expanded ? "Show less" : "Read more"}</button>{expanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}</div>
     {!!notice.extracted_claim_numbers?.length && <section className="mpl-extracted">
       <h3>Extracted Claims</h3>
-      <div className="mpl-claim-chips">{notice.extracted_claim_numbers.map((number) => <span key={number}>{number}</span>)}</div>
+      <div className="mpl-claim-list">{notice.extracted_claim_numbers.map((number) => {
+        const issues = reportedIssuesFor(notice, number);
+        return <div className="mpl-claim-item" key={number}><strong>{number}</strong>{issues.length ? <div>{issues.map((issue, index) => <span key={`${number}-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>)}</div> : <small>No issue text was confidently associated with this claim.</small>}</div>;
+      })}</div>
       {!!notice.source_matches?.length && <div className="mpl-table-wrap mpl-source-results"><table className="mpl-table"><thead><tr><th>CLAIM</th><th>SOURCE</th><th>FILENAME</th><th>STATUS</th><th>INFORMATION</th><th>ACTION</th></tr></thead><tbody>{notice.source_matches.flatMap((match) => (match.sources || []).map((source, index) => <tr key={`${match.claim_number}-${source.type}-${source.filename}-${index}`}><td className="mono">{match.claim_number}</td><td><span className="mpl-state">{source.type}</span></td><td className="mono">{source.filename}</td><td>{statusLabel(source.status)}</td><td>{Object.entries(source.details || {}).map(([key, value]) => <small key={key}><strong>{statusLabel(key)}:</strong> {String(value)}</small>)}</td><td><a className="mpl-file-link" href={source.download_url}>Download</a></td></tr>))}</tbody></table></div>}
     </section>}
     {notice.ai_response && <section className="mpl-ai-response"><span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span><p>{notice.ai_response}</p>{!!notice.ai_suggestions?.length && <><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></>}</section>}
