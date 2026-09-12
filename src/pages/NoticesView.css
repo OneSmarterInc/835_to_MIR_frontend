@@ -127,3 +127,76 @@
 .mpl-notice-detail>.mpl-card-actions{padding:14px 0 0}
 @media(max-width:800px){.mpl-notice-summary,.mpl-email-toolbar{align-items:flex-start}.mpl-summary-side{gap:8px}.mpl-summary-meta{display:grid;gap:2px}.mpl-summary-meta>span+span:before{display:none}.mpl-email-toolbar{flex-direction:column}.mpl-ai-claim-review>div{grid-template-columns:1fr}.mpl-source-row{grid-template-columns:52px 1fr auto}.mpl-source-facts{grid-column:2/-1}}
 @media(max-width:560px){.mpl-notice-summary{align-items:flex-start;padding:13px}.mpl-summary-side{flex-direction:column;align-items:flex-end}.mpl-summary-main>strong{white-space:normal}.mpl-open-label{font-size:0}.mpl-open-label b{font-size:18px}.mpl-notice-detail{padding:10px}.mpl-compact-source-table th:first-child{width:auto}.mpl-compact-source-table,.mpl-compact-source-table tbody,.mpl-compact-source-table tr,.mpl-compact-source-table td{display:block}.mpl-compact-source-table thead{display:none}.mpl-compact-source-table td:first-child{border-bottom:0;background:#f6f9fb}.mpl-source-row{grid-template-columns:52px minmax(0,1fr)}.mpl-source-row .mpl-file-link{grid-column:2}}
+
+
+/* Overall AI claim summary */
+.mpl-overall-claim-summary{margin:14px -2px 0;padding-top:14px;border-top:1px solid var(--mpl-line)}
+.mpl-overall-claim-summary>h4{margin:0 0 9px}
+.mpl-overall-claim-summary>div{display:grid;gap:6px}
+.mpl-overall-claim-summary article{display:grid;grid-template-columns:175px minmax(280px,1fr) 130px;gap:12px;align-items:start;padding:9px 11px;border:1px solid #d4dee7;border-radius:3px;background:#f8fafc}
+.mpl-overall-claim-summary article>strong{font:700 12px ui-monospace,monospace}
+.mpl-overall-claim-summary article>div{display:grid;gap:4px}
+.mpl-overall-claim-summary article p{margin:0;color:#52657c;font-size:12px;line-height:1.4}
+.mpl-overall-claim-summary article p b{color:#8d5411;font-family:ui-monospace,monospace}
+.mpl-overall-claim-summary article>small{color:var(--mpl-teal);font:700 10px ui-monospace,monospace;text-align:right}
+
+/* Compact individual claim analysis */
+.mpl-claim-waiting{display:flex;justify-content:space-between;gap:16px;margin-top:10px;padding:13px 15px;border:1px solid var(--mpl-line);background:#fff}
+.mpl-claim-waiting strong{font-family:ui-monospace,monospace}
+.mpl-claim-waiting span{color:#718197}
+.mpl-claim-analysis{margin-top:10px;overflow:hidden;border:1px solid #bdcbd9;border-left:4px solid #75869a;border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(17,28,45,.05)}
+.mpl-claim-analysis.approved{border-left-color:#0b806d}
+.mpl-claim-analysis.changes_required{border-left-color:#b47716}
+.mpl-claim-analysis-header{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;padding:13px 15px;border:0;background:#fff;color:var(--mpl-navy);text-align:left;cursor:pointer}
+.mpl-claim-analysis-header:hover{background:#f7fafb}
+.mpl-claim-analysis-header>span:first-child{display:grid;min-width:0;grid-template-columns:auto auto;gap:3px 12px;align-items:center}
+.mpl-claim-analysis-header>span:first-child>small{grid-column:1/-1;color:#70839b;font:700 9px ui-monospace,monospace;letter-spacing:.14em}
+.mpl-claim-analysis-header>span:first-child>strong{font:700 15px ui-monospace,monospace}
+.mpl-claim-analysis-header>span:first-child>em{overflow:hidden;color:#52657c;font:normal 11px ui-monospace,monospace;text-overflow:ellipsis;white-space:nowrap}
+.mpl-claim-header-side{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.mpl-claim-header-side>b{color:var(--mpl-teal);font:700 14px ui-monospace,monospace}
+.mpl-claim-header-side>b small{font-size:9px}
+.mpl-review-state{padding:5px 8px;background:#edf1f5;color:#52657c;font:normal 700 9px ui-monospace,monospace;text-transform:uppercase}
+.mpl-review-state.approved{background:#e4f3ef;color:#087363}
+.mpl-review-state.changes_required{background:#fff0d7;color:#8b5900}
+.mpl-claim-expand{display:flex;align-items:center;gap:6px;color:var(--mpl-teal);font-size:11px;font-weight:700}
+.mpl-claim-expand>b{display:grid;place-items:center;width:24px;height:24px;border:1px solid #9db5c8;background:#fff;font:700 17px/1 ui-monospace,monospace}
+.mpl-claim-analysis-body{display:grid;gap:9px;padding:12px 14px 14px;border-top:1px solid var(--mpl-line);background:#f5f8fa}
+.mpl-claim-ai-output{padding:14px 16px;border:1px solid #b8d4cf;border-left:4px solid var(--mpl-teal);border-radius:3px;background:#fff;box-shadow:0 1px 2px rgba(11,128,109,.05)}
+.mpl-claim-ai-output>span{color:var(--mpl-teal);font:700 10px ui-monospace,monospace;letter-spacing:.13em}
+.mpl-claim-ai-output>p{margin:7px 0 0;font-size:14px;line-height:1.55}
+.mpl-claim-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.mpl-claim-metrics>span{padding:8px 10px;border:1px solid #d2dce5;background:#fff;color:#667b96;font-size:10px}
+.mpl-claim-metrics b{display:block;margin-bottom:2px;color:var(--mpl-navy);font:700 15px ui-monospace,monospace}
+.mpl-claim-detail-panel{border:1px solid #d0dae4;border-radius:3px;background:#fff}
+.mpl-claim-detail-panel>summary{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;color:var(--mpl-navy);font-size:12px;font-weight:700;cursor:pointer;list-style:none}
+.mpl-claim-detail-panel>summary::-webkit-details-marker{display:none}
+.mpl-claim-detail-panel>summary:after{content:"+";color:var(--mpl-teal);font:700 18px/1 ui-monospace,monospace}
+.mpl-claim-detail-panel[open]>summary:after{content:"−"}
+.mpl-claim-detail-panel>summary>span{margin-left:auto;margin-right:10px;padding:2px 6px;border-radius:9px;background:#edf2f6;color:#52657c;font:700 9px ui-monospace,monospace}
+.mpl-claim-detail-panel>div{padding:0 11px 11px;border-top:1px solid #e0e7ed}
+.mpl-claim-detail-panel .mpl-table{margin-top:10px}
+.mpl-claim-detail-panel .mpl-actions{margin-top:10px;background:#f8fafc}
+.mpl-claim-detail-panel .mpl-caution{margin:8px 2px 0}
+.mpl-claim-detail-panel .mpl-timeline{margin-top:10px}
+.mpl-findings-table th,.mpl-findings-table td{padding:8px 10px}
+.mpl-findings-table td:nth-child(1){width:85px}
+.mpl-findings-table td:nth-child(3){width:28%}
+.mpl-needs-clarification{border-color:#e4c68f}
+.mpl-review-decision{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:16px;align-items:center;margin-top:3px;padding:13px 14px;border:1px solid #cbd6df;border-radius:3px;background:#fff}
+.mpl-review-decision.approved{border-color:#82bbae;background:#edf8f5}
+.mpl-review-decision.changes_required{border-color:#d8ae64;background:#fff8eb}
+.mpl-review-decision>div:first-child{display:grid;gap:2px}
+.mpl-review-decision small{color:#70839b;font:700 9px ui-monospace,monospace;letter-spacing:.12em}
+.mpl-review-decision strong{font-size:14px}
+.mpl-review-decision>div:first-child>span{color:#60738c;font-size:11px}
+.mpl-review-actions{display:flex;gap:7px}
+.mpl-decision-btn{min-height:38px;padding:8px 13px;border:1px solid #aebdca;border-radius:3px;background:#fff;color:#243348;font-weight:700;cursor:pointer}
+.mpl-decision-btn.approve{border-color:#0b806d;color:#087363}
+.mpl-decision-btn.approve.selected{background:#0b806d;color:#fff}
+.mpl-decision-btn.changes{border-color:#b47716;color:#8b5900}
+.mpl-decision-btn.changes.selected{background:#a66d0d;color:#fff}
+.mpl-decision-btn:disabled{opacity:.65;cursor:wait}
+.mpl-decision-error{grid-column:1/-1;margin:0;color:#92291f;font-size:11px}
+@media(max-width:900px){.mpl-overall-claim-summary article{grid-template-columns:155px 1fr}.mpl-overall-claim-summary article>small{grid-column:2;text-align:left}.mpl-claim-metrics{grid-template-columns:repeat(2,1fr)}.mpl-review-decision{grid-template-columns:1fr}.mpl-review-actions{justify-content:flex-start}}
+@media(max-width:620px){.mpl-overall-claim-summary article{grid-template-columns:1fr}.mpl-overall-claim-summary article>small{grid-column:1}.mpl-claim-analysis-header{align-items:flex-start}.mpl-claim-analysis-header>span:first-child{grid-template-columns:1fr}.mpl-claim-header-side{flex-direction:column;align-items:flex-end}.mpl-claim-expand{font-size:0}.mpl-claim-expand>b{font-size:17px}.mpl-claim-metrics{grid-template-columns:1fr 1fr}.mpl-review-actions{display:grid}.mpl-findings-table td:nth-child(3){width:auto}}
