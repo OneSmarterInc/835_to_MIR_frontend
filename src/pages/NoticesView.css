@@ -75,3 +75,5 @@
 
 
 .mpl-claim-list{display:grid;gap:8px}.mpl-claim-item{display:grid;grid-template-columns:minmax(180px,auto) 1fr;gap:12px;align-items:start;padding:10px 12px;border:1px solid #b7c7d7;background:#fff}.mpl-claim-item>strong{font-family:ui-monospace,monospace}.mpl-claim-item>div{display:grid;gap:5px}.mpl-claim-item>div>span,.mpl-claim-item>small{color:#52657c;font-size:12px;line-height:1.4}.mpl-claim-item b{color:#8d5411;font-family:ui-monospace,monospace}@media(max-width:650px){.mpl-claim-item{grid-template-columns:1fr}}
+
+.mpl-uncertainty{margin:0;padding:14px 14px 14px 34px;border-left:3px solid #b47716;background:#fff7e6;color:#68480f}.mpl-uncertainty li+li{margin-top:7px}
