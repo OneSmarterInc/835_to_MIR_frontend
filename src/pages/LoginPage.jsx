@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { safeFetchJson } from "../utils/api";
+import { startAuthentication } from '@simplewebauthn/browser';
 
 export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute }) {
   const [email, setEmail] = useState("");
@@ -32,6 +33,60 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
       onLoginSuccess(data);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWebAuthnLogin = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email to sign in with a Security Key.');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      setError('');
+      const { res: optionsRes, data: options } = await safeFetchJson('/accounts/api/webauthn/login/options/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      
+      if (options?.offboarded || options?.code === "CLIENT_OFFBOARDED") {
+        onAccessDenied?.(options);
+        return;
+      }
+      
+      if (!optionsRes.ok) throw new Error(options.error || 'Failed to get options');
+      
+      let assertion;
+      try {
+        assertion = await startAuthentication(options);
+      } catch (err) {
+        setError(err.message);
+        return;
+      }
+      
+      const { res: verificationRes, data: verificationData } = await safeFetchJson('/accounts/api/webauthn/login/verify/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, ...assertion })
+      });
+      
+      if (verificationData?.offboarded || verificationData?.code === "CLIENT_OFFBOARDED") {
+        onAccessDenied?.(verificationData);
+        return;
+      }
+      
+      if (!verificationRes.ok) throw new Error(verificationData.error || 'Security Key login failed');
+      
+      onLoginSuccess(verificationData);
+      
+    } catch (err) {
+      setError(err.message || 'Security Key login failed');
     } finally {
       setLoading(false);
     }
@@ -88,6 +143,23 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
             {loading ? "Continuing..." : "Continue"}
           </button>
         </form>
+
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", margin: "24px 0" }}>
+          <div style={{ position: "absolute", width: "100%", borderTop: "1px solid #e2e8f0" }}></div>
+          <span style={{ background: "#fff", padding: "0 8px", fontSize: "12px", color: "#94a3b8", position: "relative" }}>OR</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleWebAuthnLogin}
+          disabled={loading}
+          style={{ width: "100%", backgroundColor: "#fff", border: "1px solid #e2e8f0", color: "#334155", fontWeight: "500", fontSize: "14px", padding: "8px 16px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+        >
+          <svg style={{ width: "16px", height: "16px", color: "#64748b" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          Continue with Security Key
+        </button>
 
         <div className="auth-footer" style={{ textAlign: "center" }}>
           {isAdminRoute ? (
