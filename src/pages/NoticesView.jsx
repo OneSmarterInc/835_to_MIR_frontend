@@ -142,6 +142,17 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
   const sourceMatches = notice.source_matches || [];
   const matchedClaims = sourceMatches.filter((match) => match.sources?.length);
   const totalSources = matchedClaims.reduce((total, match) => total + match.sources.length, 0);
+  useEffect(() => {
+    if (!cardExpanded) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => { if (event.key === "Escape") setCardExpanded(false); };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [cardExpanded]);
 
   const toggleCard = async () => {
     if (!cardExpanded && !detail) await loadDetail(notice.id);
@@ -153,15 +164,15 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }
   };
 
   return <>
-    <tr className={`mpl-notice-row ${cardExpanded ? "is-open" : ""}`}>
+    <tr className={`mpl-notice-row ${cardExpanded ? "is-open" : ""}`} onClick={toggleCard}>
       <td><span className="mpl-email-type">{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "RETURN EMAIL"}</span></td>
-      <td><button type="button" className="mpl-subject-button" onClick={toggleCard} aria-expanded={cardExpanded}>{notice.subject}</button></td>
+      <td><button type="button" className="mpl-subject-button" onClick={(event) => { event.stopPropagation(); toggleCard(); }} aria-expanded={cardExpanded}>{notice.subject}</button></td>
       <td className="mpl-sender-cell">{notice.sender || "Sender unavailable"}</td>
       <td>{dateLabel(notice.received_at || notice.created_at)}</td>
       <td><strong>{notice.program || "—"}</strong></td>
       <td className="mpl-period-cell">{notice.period_start || "—"} – {notice.period_end || "—"}</td>
       <td><span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span></td>
-      <td><button type="button" className="mpl-row-open" onClick={toggleCard} aria-expanded={cardExpanded}>{cardExpanded ? "Close" : "Open"} <b aria-hidden="true">{cardExpanded ? "−" : "+"}</b></button></td>
+      <td><button type="button" className="mpl-row-open" onClick={(event) => { event.stopPropagation(); toggleCard(); }} aria-expanded={cardExpanded}>{cardExpanded ? "Close" : "Open"} <b aria-hidden="true">{cardExpanded ? "−" : "+"}</b></button></td>
     </tr>
     {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCardExpanded(false); }}>
       <section className="mpl-detail-modal" role="dialog" aria-modal="true" aria-labelledby={`mpl-notice-${notice.id}-title`}>
