@@ -162,7 +162,10 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const terms = [...new Set([claimNumber, ...internalNumbers].filter(Boolean))].sort((left, right) => right.length - left.length);
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join("|")})`, "gi") : null;
   const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
-    .flatMap((row) => String(row || "").replace(/\r\n?/g, "\n").split(/~|\n/))
+    .flatMap((row) => String(row || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[~∼˜]/g, "\n")
+      .split("\n"))
     .map((row) => row.trim())
     .filter((row) => row.length);
   let firstMatchAssigned = false;
