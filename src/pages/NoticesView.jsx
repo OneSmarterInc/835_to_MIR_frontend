@@ -43,12 +43,11 @@ function RelatedFiles({ files = [] }) {
 }
 
 function ClaimAnalysis({ claim, noticeId, onReview }) {
-  const [expanded, setExpanded] = useState(false);
   const [savingDecision, setSavingDecision] = useState("");
   const [decisionError, setDecisionError] = useState("");
   const analysis = claim.analysis;
   const claimNumber = claim.claim_number || claim.internal_claim_number;
-  if (!analysis) return <div className="mpl-claim-waiting"><strong>{claimNumber}</strong><span>Evidence analysis is waiting to run.</span></div>;
+  if (!analysis) return <div className="mpl-empty">Evidence analysis is waiting to run for <strong>{claimNumber}</strong>.</div>;
 
   const reviewStatus = analysis.review_status || "PENDING";
   const submitDecision = async (decision) => {
@@ -63,79 +62,49 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
     }
   };
 
-  return <section className={`mpl-claim-analysis ${reviewStatus.toLowerCase()}`}>
-    <button type="button" className="mpl-claim-analysis-header" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
-      <span>
-        <small>INDIVIDUAL CLAIM REVIEW</small>
-        <strong>{claimNumber}</strong>
-        <em>{analysis.primary_issue_code ? statusLabel(analysis.primary_issue_code) : `${analysis.findings.length} verified finding${analysis.findings.length === 1 ? "" : "s"}`}</em>
-      </span>
-      <span className="mpl-claim-header-side">
-        <b>{Math.round(analysis.confidence * 100)}% <small>confidence</small></b>
-        <i className={`mpl-review-state ${reviewStatus.toLowerCase()}`}>{statusLabel(reviewStatus)}</i>
-        <span className="mpl-claim-expand">{expanded ? "Collapse" : "Review"} <b aria-hidden="true">{expanded ? "−" : "+"}</b></span>
-      </span>
-    </button>
+  return <section className={`mpl-analysis ${reviewStatus.toLowerCase()}`}>
+    <div className="mpl-analysis-heading">
+      <div><span>AI-ASSISTED, EVIDENCE-BOUND REVIEW</span><h3>{claimNumber}</h3></div>
+      <div className="mpl-confidence">{Math.round(analysis.confidence * 100)}% confidence<br/><small>Human review required</small></div>
+    </div>
 
-    {expanded && <div className="mpl-claim-analysis-body">
-      <div className="mpl-claim-ai-output">
-        <span>AI ANALYSIS</span>
-        <p>{analysis.summary}</p>
+    <div className="mpl-claim-ai-output"><span>AI ANALYSIS</span><p>{analysis.summary}</p></div>
+
+    <h4>Claim timeline</h4>
+    <div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div>
+
+    <h4>Verified issues</h4>
+    {analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table mpl-findings-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}
+
+    {!![...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length && <><h4>Unclear or not understood</h4><ul className="mpl-uncertainty">{(analysis.unknown_codes || []).map((item) => <li key={`code-${item}`}><strong>Unknown code:</strong> {item}</li>)}{(analysis.unclear_items || []).map((item, index) => <li key={`unclear-${index}`}>{item}</li>)}{(analysis.missing_evidence || []).map((item, index) => <li key={`missing-${index}`}><strong>Missing evidence:</strong> {item}</li>)}</ul></>}
+
+    <h4>Recommended resolution</h4>
+    <ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol>
+    <p className="mpl-caution">Recommendations require claims/EDI review. They may improve acceptance but do not guarantee payer approval.</p>
+
+    <h4>Related archived files</h4>
+    <RelatedFiles files={analysis.related_files} />
+
+    <div className={`mpl-review-decision ${reviewStatus.toLowerCase()}`}>
+      <div>
+        <small>HUMAN REVIEW DECISION</small>
+        <strong>{reviewStatus === "APPROVED" ? "Analysis approved" : reviewStatus === "CHANGES_REQUIRED" ? "Changes requested" : "Review required"}</strong>
+        <span>{reviewStatus === "APPROVED" ? "This analysis has been accepted for the operational workflow." : reviewStatus === "CHANGES_REQUIRED" ? "This analysis is flagged for correction and re-review." : "Confirm whether this analysis is acceptable or needs correction."}</span>
       </div>
-
-      <div className="mpl-claim-metrics">
-        <span><b>{analysis.findings.length}</b> verified findings</span>
-        <span><b>{analysis.timeline.length}</b> timeline events</span>
-        <span><b>{analysis.related_files.length}</b> related files</span>
-        <span><b>{analysis.recommended_actions.length}</b> recommended actions</span>
+      <div className="mpl-review-actions">
+        <button type="button" className={`mpl-decision-btn approve ${reviewStatus === "APPROVED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("APPROVED")}>{savingDecision === "APPROVED" ? "Saving…" : reviewStatus === "APPROVED" ? "✓ Approved" : "✓ Approve analysis"}</button>
+        <button type="button" className={`mpl-decision-btn changes ${reviewStatus === "CHANGES_REQUIRED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("CHANGES_REQUIRED")}>{savingDecision === "CHANGES_REQUIRED" ? "Saving…" : reviewStatus === "CHANGES_REQUIRED" ? "! Changes requested" : "Request changes"}</button>
       </div>
-
-      <details className="mpl-claim-detail-panel">
-        <summary>Verified issues <span>{analysis.findings.length}</span></summary>
-        <div>{analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table mpl-findings-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}</div>
-      </details>
-
-      <details className="mpl-claim-detail-panel">
-        <summary>Recommended resolution <span>{analysis.recommended_actions.length}</span></summary>
-        <div><ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol><p className="mpl-caution">Recommendations require claims/EDI review and do not guarantee payer approval.</p></div>
-      </details>
-
-      {!![...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length && <details className="mpl-claim-detail-panel mpl-needs-clarification">
-        <summary>Unclear or not understood <span>{[...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length}</span></summary>
-        <div><ul className="mpl-uncertainty">{(analysis.unknown_codes || []).map((item) => <li key={`code-${item}`}><strong>Unknown code:</strong> {item}</li>)}{(analysis.unclear_items || []).map((item, index) => <li key={`unclear-${index}`}>{item}</li>)}{(analysis.missing_evidence || []).map((item, index) => <li key={`missing-${index}`}><strong>Missing evidence:</strong> {item}</li>)}</ul></div>
-      </details>}
-
-      <details className="mpl-claim-detail-panel">
-        <summary>Claim timeline <span>{analysis.timeline.length}</span></summary>
-        <div><div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div></div>
-      </details>
-
-      <details className="mpl-claim-detail-panel">
-        <summary>Related archived files <span>{analysis.related_files.length}</span></summary>
-        <div><RelatedFiles files={analysis.related_files} /></div>
-      </details>
-
-      <div className={`mpl-review-decision ${reviewStatus.toLowerCase()}`}>
-        <div>
-          <small>HUMAN REVIEW DECISION</small>
-          <strong>{reviewStatus === "APPROVED" ? "Analysis approved" : reviewStatus === "CHANGES_REQUIRED" ? "Changes requested" : "Review required"}</strong>
-          <span>{reviewStatus === "APPROVED" ? "This analysis has been accepted for the operational workflow." : reviewStatus === "CHANGES_REQUIRED" ? "This analysis is flagged for correction and re-review." : "Confirm whether this analysis is acceptable or needs correction."}</span>
-        </div>
-        <div className="mpl-review-actions">
-          <button type="button" className={`mpl-decision-btn approve ${reviewStatus === "APPROVED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("APPROVED")}>{savingDecision === "APPROVED" ? "Saving…" : reviewStatus === "APPROVED" ? "✓ Approved" : "✓ Approve analysis"}</button>
-          <button type="button" className={`mpl-decision-btn changes ${reviewStatus === "CHANGES_REQUIRED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("CHANGES_REQUIRED")}>{savingDecision === "CHANGES_REQUIRED" ? "Saving…" : reviewStatus === "CHANGES_REQUIRED" ? "! Changes requested" : "Request changes"}</button>
-        </div>
-        {decisionError && <p className="mpl-decision-error">{decisionError}</p>}
-      </div>
-    </div>}
+      {decisionError && <p className="mpl-decision-error">{decisionError}</p>}
+    </div>
   </section>;
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview }) {
   const [cardExpanded, setCardExpanded] = useState(false);
   const [emailExpanded, setEmailExpanded] = useState(false);
-  const [claimsExpanded, setClaimsExpanded] = useState(false);
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [claimsExpanded, setClaimsExpanded] = useState(true);
+  const [sourcesExpanded, setSourcesExpanded] = useState(true);
   const detail = notice.email_body !== undefined;
   const isActive = ACTIVE.has(notice.status);
   const analysisReady = !isActive && Boolean(notice.ai_response || notice.status === "COMPLETED" || notice.status === "REVIEW_REQUIRED");
