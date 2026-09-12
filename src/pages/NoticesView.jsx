@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 import { portalFetch, safeFetchJson } from "../utils/api";
@@ -43,11 +43,47 @@ function RelatedFiles({ files = [] }) {
   return <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>TYPE</th><th>FILENAME</th><th>DATE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{files.map((file) => <tr key={`${file.type}-${file.id}`}><td>{file.type}</td><td className="mono">{file.filename}</td><td>{dateLabel(file.date)}</td><td><span className="mpl-state">{statusLabel(file.status)}</span></td><td><a className="mpl-file-link" href={file.download_url}>Download</a></td></tr>)}</tbody></table></div>;
 }
 
+function viewerLines(rawContent, fileType) {
+  const content = String(rawContent || "").replace(/\r\n?/g, "\n");
+  if (String(fileType).toUpperCase() !== "837") return content.split("\n");
+
+  const delimiter = content.startsWith("ISA") && content.length > 105 ? content[105] : "~";
+  const segments = content.split(delimiter).map((segment) => segment.trim()).filter(Boolean);
+  const lines = [];
+  let envelope = [];
+  let claim = [];
+  segments.forEach((segment) => {
+    const tag = segment.split("*", 1)[0].toUpperCase();
+    if (tag === "CLM") {
+      if (claim.length) lines.push(claim.join(delimiter) + delimiter);
+      else if (envelope.length) lines.push(envelope.join(delimiter) + delimiter);
+      envelope = [];
+      claim = [segment];
+    } else if (claim.length) {
+      claim.push(segment);
+    } else {
+      envelope.push(segment);
+    }
+  });
+  if (claim.length) lines.push(claim.join(delimiter) + delimiter);
+  else if (envelope.length) lines.push(envelope.join(delimiter) + delimiter);
+  return lines;
+}
+
+const countOccurrences = (content, value) => {
+  const term = String(value || "").trim();
+  if (!term) return 0;
+  return String(content || "").toUpperCase().split(term.toUpperCase()).length - 1;
+};
+
+const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const firstMatchRef = useRef(null);
   const selected = sources[selectedIndex];
 
   useEffect(() => {
@@ -67,10 +103,35 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   }, [selected]);
 
   useEffect(() => {
+    if (!loading && content && firstMatchRef.current) {
+      firstMatchRef.current.scrollIntoView({ block: "center", inline: "center" });
+    }
+  }, [content, loading, selectedIndex]);
+
+  useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
+
+  const internalNumbers = String(selected.internal_claim_number || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const highmarkCount = countOccurrences(content, claimNumber);
+  const internalCount = internalNumbers.reduce((total, number) => total + countOccurrences(content, number), 0);
+  const terms = [...new Set([claimNumber, ...internalNumbers].filter(Boolean))].sort((left, right) => right.length - left.length);
+  const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join("|")})`, "gi") : null;
+  let firstMatchAssigned = false;
+  const renderLine = (line, lineIndex) => {
+    if (!pattern) return <div className="mpl-source-code-line" key={lineIndex}>{line || " "}</div>;
+    const parts = line.split(pattern);
+    return <div className="mpl-source-code-line" key={lineIndex}>{parts.map((part, partIndex) => {
+      const isMatch = terms.some((term) => term.toUpperCase() === part.toUpperCase());
+      if (!isMatch) return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+      const isHighmark = part.toUpperCase() === String(claimNumber).toUpperCase();
+      const takeRef = !firstMatchAssigned;
+      if (takeRef) firstMatchAssigned = true;
+      return <mark ref={takeRef ? firstMatchRef : undefined} className={isHighmark ? "highmark" : "internal"} key={partIndex}>{part}</mark>;
+    })}</div>;
+  };
 
   return createPortal(<div className="mpl-file-viewer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="mpl-file-viewer" role="dialog" aria-modal="true" aria-labelledby="mpl-file-viewer-title">
@@ -81,15 +142,20 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       <div className="mpl-file-viewer-toolbar">
         <label><span>FILE</span><select value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>{sources.map((source, index) => <option value={index} key={`${source.type}-${source.filename}-${index}`}>{source.filename}</option>)}</select></label>
         <dl>
-          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || "Not found in the 837 database"}</dd></div>
+          <div><dt>Internal claim number</dt><dd>{selected.internal_claim_number || "Not found"}</dd></div>
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
         <a className="mpl-btn primary" href={selected.download_url}>Download file</a>
       </div>
-      <div className="mpl-file-content">
+      <div className="mpl-file-match-summary">
+        <span><b>{highmarkCount}</b> Highmark claim occurrence{highmarkCount === 1 ? "" : "s"}</span>
+        <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>
+        <small>Yellow = Highmark claim · Blue = internal claim</small>
+      </div>
+      <div className={`mpl-file-content ${["MIR", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
         <div><strong>File content</strong><small>{selected.filename}</small></div>
-        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <pre>{content || "This archived file has no stored text content."}</pre>}
+        {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{viewerLines(content, selected.type).map(renderLine)}</div>}
       </div>
     </section>
   </div>, document.body);
