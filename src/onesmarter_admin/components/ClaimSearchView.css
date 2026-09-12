@@ -12,7 +12,7 @@
 
 
 /* Full-viewport 837 claim summary. Rename dialog keeps its existing size. */
-.claim837-backdrop:has(>.claim837-modal){
+.claim837-summary-backdrop{
   align-items:stretch;
   justify-content:stretch;
   padding:0;
