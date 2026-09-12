@@ -334,5 +334,34 @@
 .mpl-file-content.one-claim-per-line .mpl-source-code-line{padding:3px 0;border-bottom:1px solid #edf1f4}
 @media(max-width:760px){.mpl-file-match-summary{align-items:flex-start;flex-wrap:wrap;gap:7px 14px}.mpl-file-match-summary small{width:100%;margin-left:0}}
 
-.mpl-file-content>.mpl-source-code{display:block;align-items:initial;justify-content:initial;gap:0;margin-bottom:0}
-.mpl-source-code>.mpl-source-code-line{display:block;position:static;float:none;clear:both;min-height:25px;box-sizing:border-box;line-height:18px}
+/* Plain source-file rendering with independent horizontal and vertical scrolling. */
+.mpl-file-content>.mpl-source-code{
+  display:grid;
+  grid-auto-flow:row;
+  grid-auto-rows:max-content;
+  align-content:start;
+  width:100%;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:auto;
+  white-space:pre;
+  overflow-wrap:normal;
+  scrollbar-gutter:stable both-edges;
+}
+.mpl-source-code>.mpl-source-code-line,
+.mpl-file-content.one-claim-per-line .mpl-source-code-line{
+  display:block;
+  position:static;
+  float:none;
+  clear:both;
+  width:max-content;
+  min-width:100%;
+  min-height:0;
+  margin:0;
+  padding:0;
+  border:0;
+  box-sizing:border-box;
+  line-height:1.55;
+  white-space:pre;
+  overflow-wrap:normal;
+}
