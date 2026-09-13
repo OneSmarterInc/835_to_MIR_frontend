@@ -25,13 +25,14 @@ import FileViewerModal from '../components/FileViewerModal';
 import ResultView from '../pages/ResultView';
 import SftpAutomationView from './components/SftpAutomationView';
 import ClaimSearchView from './components/ClaimSearchView';
+import NoticesView from '../pages/NoticesView';
 import ClientSelectDropdown from './components/ClientSelectDropdown';
 import OffboardedClientBanner from './components/OffboardedClientBanner';
 import { clearSessionExpiry, scheduleSessionExpiry } from '../utils/sessionExpiry';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
-const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'files', 'promote', 'trust', 'ops'];
+const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'notices', 'files', 'promote', 'trust', 'ops'];
 
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
@@ -424,6 +425,9 @@ export default function App({ user, onLogout }) {
           {canView('search') && <button className={`navitem ${activeNav === 'search' ? 'on' : ''}`} onClick={() => setActiveNav('search')}>
             <span>Search</span>
           </button>}
+          {(canView('notices') || canView('ops')) && <button className={`navitem ${activeNav === 'notices' ? 'on' : ''}`} onClick={() => setActiveNav('notices')}>
+            <span>MPL Notices</span>
+          </button>}
           {canView('checks') && <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
             <span>Checks</span>
           </button>}
@@ -529,6 +533,14 @@ export default function App({ user, onLogout }) {
 
           {activeNav === 'search' && (
             <ClaimSearchView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+            />
+          )}
+
+          {activeNav === 'notices' && (
+            <NoticesView
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
