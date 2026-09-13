@@ -372,3 +372,13 @@
 .mpl-claim-response{padding:14px 16px;border:1px solid #c8d5df;border-left:4px solid #008b78;background:#fff}
 .mpl-claim-response>strong{display:block;margin-bottom:7px;color:#102033;font:800 14px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace}
 .mpl-claim-response p{margin:0;color:#263b52;line-height:1.65}
+
+
+/* Persistent per-claim operational workflow state. */
+.mpl-workflow-cell{min-width:142px;text-align:center}
+.mpl-workflow-select{width:128px;padding:8px 24px 8px 10px;border:1px solid;border-radius:4px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;cursor:pointer}
+.mpl-workflow-select.yet_to_start{border-color:#aebdca;background:#edf2f6;color:#40536a}
+.mpl-workflow-select.hold{border-color:#d5a42b;background:#fff3cf;color:#805800}
+.mpl-workflow-select.in_progress{border-color:#4d91c8;background:#e3f2ff;color:#135b91}
+.mpl-workflow-select.resolved{border-color:#36a584;background:#e2f5ef;color:#08745f}
+.mpl-workflow-select:disabled{cursor:not-allowed;opacity:.62}
