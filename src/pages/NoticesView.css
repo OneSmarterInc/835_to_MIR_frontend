@@ -287,7 +287,7 @@
 .mpl-source-matrix thead tr:first-child th:first-child{text-align:left;width:180px}
 .mpl-source-matrix thead tr:nth-child(2) th{padding:7px 8px;font-size:9px;line-height:1.25;text-align:left}
 .mpl-source-matrix th.mpl-matrix-action-heading{width:54px;text-align:center}
-.mpl-source-matrix td{padding:10px 8px;vertical-align:middle}
+.mpl-source-matrix td{padding:7px 8px;vertical-align:middle}
 .mpl-source-matrix td.mpl-matrix-claim{font-weight:800;color:#111c2d;white-space:nowrap}
 .mpl-matrix-number span{display:block;overflow-wrap:anywhere;font-size:11px}
 .mpl-matrix-number span+span{margin-top:4px;padding-top:4px;border-top:1px solid #e2e8ee}
@@ -375,8 +375,10 @@
 
 
 /* Persistent per-claim operational workflow state. */
-.mpl-workflow-cell{min-width:142px;text-align:center}
-.mpl-workflow-select{width:128px;padding:8px 24px 8px 10px;border:1px solid;border-radius:4px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;cursor:pointer}
+.mpl-workflow-cell{width:132px;min-width:132px;padding:6px!important;text-align:center}
+.mpl-workflow-select{display:block;width:118px;height:32px;margin:0 auto;padding:0 26px 0 9px;border:1px solid;border-radius:5px;box-shadow:0 1px 2px rgba(16,32,51,.06);font:700 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.025em;text-transform:uppercase;cursor:pointer;transition:border-color .15s,box-shadow .15s,background-color .15s}
+.mpl-workflow-select:hover{box-shadow:0 2px 5px rgba(16,32,51,.12)}
+.mpl-workflow-select:focus-visible{outline:2px solid rgba(11,128,109,.28);outline-offset:1px}
 .mpl-workflow-select.yet_to_start{border-color:#aebdca;background:#edf2f6;color:#40536a}
 .mpl-workflow-select.hold{border-color:#d5a42b;background:#fff3cf;color:#805800}
 .mpl-workflow-select.in_progress{border-color:#4d91c8;background:#e3f2ff;color:#135b91}
