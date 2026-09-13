@@ -233,7 +233,22 @@ function ClaimAnalysis({ claim }) {
   </article>;
 }
 
-function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, cardExpanded, onOpen, onClose }) {
+function WorkflowStatusSelect({ value = "YET_TO_START", disabled, onChange }) {
+  const [saving, setSaving] = useState(false);
+  const change = async (event) => {
+    const next = event.target.value;
+    setSaving(true);
+    try { await onChange(next); } finally { setSaving(false); }
+  };
+  return <select className={`mpl-workflow-select ${String(value).toLowerCase()}`} value={value} disabled={disabled || saving} onChange={change} aria-label="Claim workflow status">
+    <option value="YET_TO_START">Yet to start</option>
+    <option value="HOLD">Hold</option>
+    <option value="IN_PROGRESS">In progress</option>
+    <option value="RESOLVED">Resolved</option>
+  </select>;
+}
+
+function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflowStatus, cardExpanded, onOpen, onClose }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
@@ -344,7 +359,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, cardExpand
         {sourcesExpanded && <div className="mpl-disclosure-content mpl-source-matrix-wrap">
           <table className="mpl-table mpl-source-matrix">
             <thead>
-              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th></tr>
+              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th><th rowSpan="2">WORKFLOW STATUS</th></tr>
               <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
             </thead>
             <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
@@ -357,6 +372,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, cardExpand
                   <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
                 ];
               })}
+              {(() => { const linked = (notice.claims || []).find((claim) => String(claim.claim_number) === String(match.claim_number) || String(claim.highmark_claim_number) === String(match.claim_number)); return <td className="mpl-workflow-cell"><WorkflowStatusSelect value={linked?.workflow_status} disabled={!linked} onChange={(status) => onWorkflowStatus(notice.id, linked.claim_id, status)} /></td>; })()}
             </tr>)}</tbody>
           </table>
         </div>}
@@ -386,6 +402,20 @@ export default function NoticesView() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
+  const updateWorkflowStatus = async (id, claimId, workflowStatus) => {
+    const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/workflow-status/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow_status: workflowStatus }),
+    });
+    if (!res.ok || !data.success) {
+      const message = data.error || "Unable to update claim workflow status.";
+      setError(message);
+      throw new Error(message);
+    }
+    setError("");
+    setNotices((items) => items.map((item) => item.id === id ? data.notice : item));
+  };
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
 
   const loweredQuery = query.trim().toLowerCase();
@@ -452,7 +482,7 @@ export default function NoticesView() {
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onWorkflowStatus={updateWorkflowStatus} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
