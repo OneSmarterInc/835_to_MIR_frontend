@@ -270,8 +270,12 @@ function ClaimAnalysis({ claim, noticeId, onReview }) {
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, cardExpanded, onOpen, onClose }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
-  const [claimsExpanded, setClaimsExpanded] = useState(true);
-  const [sourcesExpanded, setSourcesExpanded] = useState(true);
+  const [claimsExpanded, setClaimsExpanded] = useState(false);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(false);
+  const [analysesExpanded, setAnalysesExpanded] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
   const [sourcePreview, setSourcePreview] = useState(null);
   const detail = notice.email_body !== undefined;
   const isActive = ACTIVE.has(notice.status);
@@ -296,8 +300,14 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
       onClose();
       return;
     }
-    if (!detail) await loadDetail(notice.id);
     onOpen(notice.id);
+    if (!detail) {
+      setDetailLoading(true);
+      setDetailError("");
+      loadDetail(notice.id)
+        .catch((error) => setDetailError(error.message || "Unable to load this email."))
+        .finally(() => setDetailLoading(false));
+    }
   };
   const toggleEmail = async () => {
     if (!detail) await loadDetail(notice.id);
@@ -333,9 +343,16 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
       </div>
       {emailExpanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}
 
+      {detailLoading && <div className="mpl-processing"><span></span>Loading email details…</div>}
+      {detailError && <div className="mpl-error">{detailError}</div>}
       {isActive && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
 
-      {analysisReady && notice.ai_response && <section className="mpl-ai-response">
+      {analysisReady && notice.ai_response && <section className="mpl-disclosure">
+        <button type="button" className="mpl-section-toggle" aria-expanded={aiExpanded} onClick={() => setAiExpanded((value) => !value)}>
+          <span><strong>AI response and overall summary</strong><small>Analysis summary, reported issues, and suggested next steps</small></span>
+          <b>{aiExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{aiExpanded ? "−" : "+"}</i></b>
+        </button>
+        {aiExpanded && <div className="mpl-disclosure-content"><section className="mpl-ai-response">
         <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
         <p>{notice.ai_response}</p>
         {!!sourceMatches.length && <div className="mpl-overall-claim-summary">
@@ -351,7 +368,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
           })}</div>
         </div>}
         {!!notice.ai_suggestions?.length && <div className="mpl-ai-next-steps"><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></div>}
-      </section>}
+      </section></div>}</section>}
 
       {analysisReady && !!notice.extracted_claim_numbers?.length && <section className="mpl-disclosure">
         <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
@@ -400,7 +417,13 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
 
       {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
       {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
-      {detail && notice.claims?.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}
+      {detail && !!notice.claims?.length && <section className="mpl-disclosure">
+        <button type="button" className="mpl-section-toggle" aria-expanded={analysesExpanded} onClick={() => setAnalysesExpanded((value) => !value)}>
+          <span><strong>Claim history and analysis</strong><small>{notice.claims.length} linked claim{notice.claims.length === 1 ? "" : "s"} · timelines, findings, and review status</small></span>
+          <b>{analysesExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{analysesExpanded ? "−" : "+"}</i></b>
+        </button>
+        {analysesExpanded && <div className="mpl-disclosure-content">{notice.claims.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}</div>}
+      </section>}
       {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
     </div></div></section></div>, document.body)}
   </>;
