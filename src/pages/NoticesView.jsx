@@ -249,7 +249,7 @@ function WorkflowStatusSelect({ value = "YET_TO_START", disabled, onChange }) {
   </select>;
 }
 
-function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflowStatus, cardExpanded, onOpen, onClose }) {
+function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflowStatus, isAdmin, cardExpanded, onOpen, onClose }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
@@ -360,7 +360,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
         {sourcesExpanded && <div className="mpl-disclosure-content mpl-source-matrix-wrap">
           <table className="mpl-table mpl-source-matrix">
             <thead>
-              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th><th rowSpan="2">WORKFLOW STATUS</th></tr>
+              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
               <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
             </thead>
             <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
@@ -373,7 +373,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
                   <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
                 ];
               })}
-              {(() => { const linked = (notice.claims || []).find((claim) => String(claim.claim_number) === String(match.claim_number) || String(claim.highmark_claim_number) === String(match.claim_number)); const value = notice.claim_workflow_statuses?.[match.claim_number] || linked?.workflow_status || "YET_TO_START"; return <td className="mpl-workflow-cell"><WorkflowStatusSelect value={value} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, linked?.claim_id, status)} /></td>; })()}
+              {isAdmin && <td className="mpl-workflow-cell"><WorkflowStatusSelect value={notice.claim_workflow_statuses?.[match.claim_number] || "YET_TO_START"} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, status)} /></td>}
             </tr>)}</tbody>
           </table>
         </div>}
@@ -388,7 +388,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
   </>;
 }
 
-export default function NoticesView({ clients = [], activeClientId = "", onSelectClient = null }) {
+export default function NoticesView({ clients = [], activeClientId = "", onSelectClient = null, isAdmin = false }) {
   const [notices, setNotices] = useState([]);
   const [modal, setModal] = useState(false);
   const [error, setError] = useState("");
@@ -403,22 +403,33 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
-  const updateWorkflowStatus = async (id, claimNumber, claimId, workflowStatus) => {
-    const endpoint = claimId
-      ? `/edi835/api/mpl-notices/${id}/claims/${claimId}/workflow-status/`
-      : `/edi835/api/mpl-notices/${id}/claims/workflow-status/`;
-    const { res, data } = await safeFetchJson(endpoint, {
+  const updateWorkflowStatus = async (id, claimNumber, workflowStatus) => {
+    const previous = notices.find((item) => item.id === id);
+    const nextStatuses = { ...(previous?.claim_workflow_statuses || {}), [claimNumber]: workflowStatus };
+    const claimNumbers = previous?.extracted_claim_numbers || Object.keys(nextStatuses);
+    const values = claimNumbers.map((number) => nextStatuses[number] || "YET_TO_START");
+    const rolledUp = values.length && values.every((value) => value === "RESOLVED")
+      ? "RESOLVED"
+      : values.every((value) => value === "YET_TO_START") ? "YET_TO_START" : "IN_PROGRESS";
+    setNotices((items) => items.map((item) => item.id === id ? {
+      ...item, claim_workflow_statuses: nextStatuses, workflow_status: rolledUp,
+    } : item));
+
+    const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/workflow-status/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ claim_number: claimNumber, workflow_status: workflowStatus }),
     });
     if (!res.ok || !data.success) {
+      if (previous) setNotices((items) => items.map((item) => item.id === id ? previous : item));
       const message = data.error || "Unable to update claim workflow status.";
       setError(message);
       throw new Error(message);
     }
+    setNotices((items) => items.map((item) => item.id === id ? {
+      ...item, workflow_status: data.notice_workflow_status || rolledUp,
+    } : item));
     setError("");
-    setNotices((items) => items.map((item) => item.id === id ? data.notice : item));
   };
 
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
@@ -488,7 +499,7 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onWorkflowStatus={updateWorkflowStatus} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onWorkflowStatus={updateWorkflowStatus} isAdmin={isAdmin} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
