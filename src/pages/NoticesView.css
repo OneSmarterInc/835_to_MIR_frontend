@@ -388,3 +388,11 @@
 .mpl-status.yet_to_start{background:#edf2f6;color:#40536a}
 .mpl-status.in_progress{background:#fff0bf;color:#7b5600}
 .mpl-status.resolved{background:#dff3ec;color:#08745f}
+
+
+/* Admin client scope controls. */
+.mpl-header-actions{display:flex;align-items:flex-end;gap:10px}
+.mpl-admin-client{display:grid;gap:4px}
+.mpl-admin-client span{color:#a9c4dc;font:700 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em}
+.mpl-admin-client select{min-width:220px;padding:9px 30px 9px 10px;border:1px solid #7690a8;background:#fff;color:#102033;font-weight:700}
+@media(max-width:760px){.mpl-header-actions{width:100%;align-items:stretch;flex-direction:column}.mpl-admin-client select{width:100%;min-width:0}}
