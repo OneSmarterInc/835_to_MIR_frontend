@@ -233,122 +233,84 @@ export default function App() {
   // ===========================
 
 
-  const refreshDashboardData = useCallback(async()=>{
-
-
+  const refreshOperationalData = useCallback(async()=>{
     try{
-
-
-      const [
-        metricsResponse,
-        filesResponse,
-        sftpResponse
-
-      ] = await Promise.all([
-
-
+      const [metricsResponse, sftpResponse] = await Promise.all([
         safeFetchJson(
           "/edi835/api/metrics/",
-          {
-            credentials:"include"
-          }
+          { credentials:"include" }
         ).catch(()=>null),
-
-
-
-        safeFetchJson(
-          "/edi835/api/tracked-files/",
-          {
-            credentials:"include"
-          }
-        ).catch(()=>null),
-
-
-
         safeFetchJson(
           "/edi835/api/sftp/get/",
-          {
-            credentials:"include"
-          }
+          { credentials:"include" }
         ).catch(()=>null)
-
-
-
       ]);
 
-
-
       if(metricsResponse?.res.ok){
-
-        setMetrics(
-          metricsResponse.data
-        );
-
+        setMetrics(metricsResponse.data);
       }
-
-
-
-      if(filesResponse?.res.ok){
-
-        setTrackedFiles(
-          filesResponse.data.files || []
-        );
-
-      }
-
-
-
 
       if(sftpResponse?.res.ok){
-
-        setSftpConfigs(
-          sftpResponse.data.configurations || []
-        );
-
-
-        setActiveSftpConfig(
-          sftpResponse.data.active_config || null
-        );
-
+        setSftpConfigs(sftpResponse.data.configurations || []);
+        setActiveSftpConfig(sftpResponse.data.active_config || null);
       }
-
-
-
     }catch(error){
-
-
-      console.warn(
-        "Dashboard refresh failed",
-        error
-      );
-
-
+      console.warn("Operational dashboard refresh failed", error);
     }
-
-
   },[]);
 
 
+  const loadTrackedFiles = useCallback(async()=>{
+    try{
+      const {res, data} = await safeFetchJson(
+        "/edi835/api/tracked-files/?include_conversion_findings=0",
+        { credentials:"include" }
+      );
 
+      if(res.ok){
+        setTrackedFiles(data.files || []);
+      }
+    }catch(error){
+      console.warn("Tracked files refresh failed", error);
+    }
+  },[]);
+
+
+  const refreshDashboardData = useCallback(async()=>{
+    await Promise.all([
+      refreshOperationalData(),
+      loadTrackedFiles()
+    ]);
+  },[refreshOperationalData, loadTrackedFiles]);
 
 
   useEffect(()=>{
-
-
     refreshDashboardData();
 
+    // Lightweight metrics/SFTP state can age a little while the user is idle.
+    // Heavy tracked-file history is not polled; it refreshes on focus or after
+    // an action that explicitly calls refreshDashboardData.
+    const timer=setInterval(()=>{
+      if(document.visibilityState === "visible"){
+        refreshOperationalData();
+      }
+    },30000);
 
-    const timer=setInterval(
-      refreshDashboardData,
-      3000
-    );
+    const refreshWhenActive=()=>{
+      if(document.visibilityState === "visible"){
+        refreshDashboardData();
+      }
+    };
 
+    window.addEventListener("focus",refreshWhenActive);
+    document.addEventListener("visibilitychange",refreshWhenActive);
 
-    return ()=>clearInterval(timer);
-
-
-  },[refreshDashboardData]);
-
+    return ()=>{
+      clearInterval(timer);
+      window.removeEventListener("focus",refreshWhenActive);
+      document.removeEventListener("visibilitychange",refreshWhenActive);
+    };
+  },[refreshDashboardData, refreshOperationalData]);
 
 
 
@@ -561,7 +523,6 @@ export default function App() {
 
       );
 
-
     }
 
 
@@ -591,7 +552,6 @@ export default function App() {
 
       );
 
-
     }
 
 
@@ -612,7 +572,6 @@ export default function App() {
         />
 
       );
-
 
     }
 
@@ -658,6 +617,7 @@ export default function App() {
         onLogout={handleLogout}
 
       />
+
 
     );
 

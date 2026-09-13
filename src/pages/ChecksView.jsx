@@ -69,12 +69,89 @@ function isDuplicateFinding(finding) {
   return code.startsWith("DUPLICATE");
 }
 
+function buildHeldClaims(findings, recordedHeldCount = 0) {
+  const blocking = (Array.isArray(findings) ? findings : []).filter(isBlockingConversionFinding);
+  const groupedClaims = new Map();
+
+  blocking.forEach((finding, index) => {
+    const claimNumber = finding.claim_number || finding.claim_control_number || `Held claim ${index + 1}`;
+    const groupKey = finding.claim_index ? `${claimNumber}:claim-index:${finding.claim_index}` : claimNumber;
+    const existing = groupedClaims.get(groupKey) || {
+      claimNumber,
+      reasons: [],
+      previousMirFilename: null,
+      previousSentAt: null,
+      eligibleSendAt: null,
+      resolvedMirFilename: null,
+      resolvedAt: null,
+      resolvedSource835Filename: null,
+      alertCount: 0,
+      lastAlertSentAt: null,
+      hasResolvedNonDuplicate: false,
+      hasUnresolvedNonDuplicate: false,
+    };
+
+    const code = finding.rule_code || finding.rule_name || "Conversion hold";
+    const reason = finding.reason || finding.message || "Claim requires conversion review.";
+    existing.reasons.push(`${code}: ${reason}`);
+    if (finding.previous_mir_filename) existing.previousMirFilename = finding.previous_mir_filename;
+    if (finding.previous_sent_at) existing.previousSentAt = finding.previous_sent_at;
+    if (finding.eligible_send_at) existing.eligibleSendAt = finding.eligible_send_at;
+    if (finding.hold_resolved_mir_filename) existing.resolvedMirFilename = finding.hold_resolved_mir_filename;
+    if (finding.hold_resolved_at) existing.resolvedAt = finding.hold_resolved_at;
+    if (finding.hold_resolved_source_835_filename) existing.resolvedSource835Filename = finding.hold_resolved_source_835_filename;
+    existing.alertCount = Math.max(existing.alertCount, Number(finding.seven_day_hold_alert_count || 0));
+    if (finding.seven_day_hold_last_alert_sent_at) existing.lastAlertSentAt = finding.seven_day_hold_last_alert_sent_at;
+
+    if (!isDuplicateFinding(finding)) {
+      if (String(finding.hold_resolution_status || "").toUpperCase() === "RESOLVED") {
+        existing.hasResolvedNonDuplicate = true;
+      } else {
+        existing.hasUnresolvedNonDuplicate = true;
+      }
+    }
+    groupedClaims.set(groupKey, existing);
+  });
+
+  if (!blocking.length && Number(recordedHeldCount || 0) > 0) {
+    for (let index = 0; index < Number(recordedHeldCount || 0); index += 1) {
+      groupedClaims.set(`unknown-${index}`, {
+        claimNumber: "Claim number unavailable",
+        reasons: ["Conversion hold details were not recorded for this historical run."],
+        previousMirFilename: null,
+        previousSentAt: null,
+        eligibleSendAt: null,
+        resolvedMirFilename: null,
+        resolvedAt: null,
+        resolvedSource835Filename: null,
+        alertCount: 0,
+        lastAlertSentAt: null,
+        hasResolvedNonDuplicate: false,
+        hasUnresolvedNonDuplicate: true,
+      });
+    }
+  }
+
+  return [...groupedClaims.values()].map((claim) => ({
+    ...claim,
+    resolutionStatus: claim.hasResolvedNonDuplicate && !claim.hasUnresolvedNonDuplicate
+      ? "RESOLVED"
+      : "UNRESOLVED",
+  }));
+}
+
 export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [activeChecksTab, setActiveChecksTab] = useState("validations");
+  const [conversionFiles, setConversionFiles] = useState([]);
+  const [conversionFilesLoading, setConversionFilesLoading] = useState(false);
+  const [conversionFilesError, setConversionFilesError] = useState("");
   const [selectedConversionFileId, setSelectedConversionFileId] = useState("");
+  const [selectedConversionFile, setSelectedConversionFile] = useState(null);
+  const [selectedConversionLoading, setSelectedConversionLoading] = useState(false);
+  const [selectedConversionError, setSelectedConversionError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -94,6 +171,33 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       });
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    if (activeChecksTab !== "conversion") return undefined;
+
+    let alive = true;
+    setConversionFilesLoading(true);
+    setConversionFilesError("");
+
+    safeFetchJson("/edi835/api/checks/conversion-holds/", { credentials: "include" })
+      .then(({ res, data }) => {
+        if (!alive) return;
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || "Unable to load conversion hold history.");
+        }
+        setConversionFiles(Array.isArray(data.files) ? data.files : []);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setConversionFiles([]);
+        setConversionFilesError(err?.message || "Unable to load conversion hold history.");
+      })
+      .finally(() => {
+        if (alive) setConversionFilesLoading(false);
+      });
+
+    return () => { alive = false; };
+  }, [activeChecksTab, trackedFiles]);
 
   const allFiles = useMemo(
     () => [...(trackedFiles || [])].sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0)),
@@ -129,96 +233,47 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
     }));
   }), [validationErrorFiles]);
 
-  const conversionFiles = useMemo(() => {
-    return allFiles.map((file) => {
-      const findings = Array.isArray(file.conversion_findings) ? file.conversion_findings : [];
-      const blocking = findings.filter(isBlockingConversionFinding);
-      const groupedClaims = new Map();
+  const conversionHeldClaimsCount = useMemo(
+    () => allFiles.reduce((sum, file) => sum + Number(file.held_claims_count || 0), 0),
+    [allFiles]
+  );
 
-      blocking.forEach((finding, index) => {
-        const claimNumber = finding.claim_number || finding.claim_control_number || `Held claim ${index + 1}`;
-        const groupKey = finding.claim_index ? `${claimNumber}:claim-index:${finding.claim_index}` : claimNumber;
-        const existing = groupedClaims.get(groupKey) || {
-          claimNumber,
-          reasons: [],
-          previousMirFilename: null,
-          previousSentAt: null,
-          eligibleSendAt: null,
-          resolvedMirFilename: null,
-          resolvedAt: null,
-          resolvedSource835Filename: null,
-          alertCount: 0,
-          lastAlertSentAt: null,
-          hasResolvedNonDuplicate: false,
-          hasUnresolvedNonDuplicate: false,
-        };
-        const code = finding.rule_code || finding.rule_name || "Conversion hold";
-        const reason = finding.reason || finding.message || "Claim requires conversion review.";
-        existing.reasons.push(`${code}: ${reason}`);
-        if (finding.previous_mir_filename) existing.previousMirFilename = finding.previous_mir_filename;
-        if (finding.previous_sent_at) existing.previousSentAt = finding.previous_sent_at;
-        if (finding.eligible_send_at) existing.eligibleSendAt = finding.eligible_send_at;
-        if (finding.hold_resolved_mir_filename) existing.resolvedMirFilename = finding.hold_resolved_mir_filename;
-        if (finding.hold_resolved_at) existing.resolvedAt = finding.hold_resolved_at;
-        if (finding.hold_resolved_source_835_filename) existing.resolvedSource835Filename = finding.hold_resolved_source_835_filename;
-        existing.alertCount = Math.max(existing.alertCount, Number(finding.seven_day_hold_alert_count || 0));
-        if (finding.seven_day_hold_last_alert_sent_at) existing.lastAlertSentAt = finding.seven_day_hold_last_alert_sent_at;
+  const openConversionFindings = async (file) => {
+    const fileId = String(file.id);
+    setSelectedConversionFileId(fileId);
+    setSelectedConversionFile({ ...file, _heldClaims: [] });
+    setSelectedConversionLoading(true);
+    setSelectedConversionError("");
 
-        if (!isDuplicateFinding(finding)) {
-          if (String(finding.hold_resolution_status || "").toUpperCase() === "RESOLVED") {
-            existing.hasResolvedNonDuplicate = true;
-          } else {
-            existing.hasUnresolvedNonDuplicate = true;
-          }
-        }
-        groupedClaims.set(groupKey, existing);
-      });
-
-      const recordedHeldCount = Number(file.held_claims_count || 0);
-      if (!blocking.length && recordedHeldCount > 0) {
-        for (let index = 0; index < recordedHeldCount; index += 1) {
-          groupedClaims.set(`unknown-${index}`, {
-            claimNumber: "Claim number unavailable",
-            reasons: ["Conversion hold details were not recorded for this historical run."],
-            previousMirFilename: null,
-            previousSentAt: null,
-            eligibleSendAt: null,
-            resolvedMirFilename: null,
-            resolvedAt: null,
-            resolvedSource835Filename: null,
-            alertCount: 0,
-            lastAlertSentAt: null,
-            hasResolvedNonDuplicate: false,
-            hasUnresolvedNonDuplicate: true,
-          });
-        }
+    try {
+      const { res, data } = await safeFetchJson(
+        `/edi835/api/tracked-files/${encodeURIComponent(fileId)}/details/`,
+        { credentials: "include" }
+      );
+      if (!res.ok || !data?.success || !data?.file) {
+        throw new Error(data?.error || "Unable to load conversion findings.");
       }
 
-      const heldClaims = [...groupedClaims.values()].map((claim) => ({
-        ...claim,
-        resolutionStatus: claim.hasResolvedNonDuplicate && !claim.hasUnresolvedNonDuplicate
-          ? "RESOLVED"
-          : "UNRESOLVED",
-      }));
-      const unresolvedCount = heldClaims.filter((claim) => claim.resolutionStatus !== "RESOLVED").length;
-
-      return {
+      const detail = data.file;
+      const heldClaims = buildHeldClaims(detail.conversion_findings, detail.held_claims_count);
+      setSelectedConversionFile({
         ...file,
+        ...detail,
         _heldClaims: heldClaims,
-        _issueCount: heldClaims.length,
-        _heldCount: recordedHeldCount || unresolvedCount,
-        _unresolvedCount: unresolvedCount,
-      };
-    })
-      .filter((file) => file._issueCount > 0 || file._heldCount > 0)
-      .sort((a, b) => new Date(b.processing_completed_at || b.uploaded_at || 0) - new Date(a.processing_completed_at || a.uploaded_at || 0));
-  }, [allFiles]);
+      });
+    } catch (err) {
+      setSelectedConversionError(err?.message || "Unable to load conversion findings.");
+    } finally {
+      setSelectedConversionLoading(false);
+    }
+  };
 
-  const selectedConversionFile = conversionFiles.find(
-    (file) => String(file.id) === String(selectedConversionFileId)
-  ) || null;
-
-  const conversionHeldClaimsCount = conversionFiles.reduce((sum, file) => sum + Number(file._heldCount || 0), 0);
+  const closeConversionFindings = () => {
+    setSelectedConversionFileId("");
+    setSelectedConversionFile(null);
+    setSelectedConversionLoading(false);
+    setSelectedConversionError("");
+  };
 
   const openMetric = (title, gate, value, description) => {
     setSelectedGroup({ title, gate, count: value, unit: "", description, source: "Current run", rules: [], findings: [] });
@@ -264,9 +319,9 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       </div>
 
       <div style={{ display: "flex", gap: "8px", marginTop: "18px", marginBottom: "10px", flexWrap: "wrap" }}>
-        <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); setSelectedConversionFileId(""); }}>Validations</button>
+        <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); closeConversionFindings(); }}>Validations</button>
         <button type="button" className={activeChecksTab === "conversion" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("conversion"); setSelectedGroup(null); }}>Conversion</button>
-        <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); setSelectedConversionFileId(""); }}>Held SFTP Releases</button>
+        <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); closeConversionFindings(); }}>Held SFTP Releases</button>
       </div>
 
       {activeChecksTab === "validations" ? (
@@ -277,59 +332,69 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr><th>835 FILE</th><th>STATUS</th><th>IMPORT MODE</th><th>HELD CLAIMS</th><th>PROCESSED</th><th>ACTION</th></tr></thead>
               <tbody>
-                {conversionFiles.length === 0 ? (
+                {conversionFilesLoading ? (
+                  <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading conversion hold history…</td></tr>
+                ) : conversionFilesError ? (
+                  <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-2)" }}>{conversionFilesError}</td></tr>
+                ) : conversionFiles.length === 0 ? (
                   <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No files with conversion-held claims are currently recorded.</td></tr>
                 ) : conversionFiles.map((file) => (
                   <tr key={file.id}>
                     <td style={{ fontWeight: 600 }}>{file.original_filename || file.stored_filename || "—"}</td>
                     <td><span className="badge">{String(file.status || "ARCHIVED").toUpperCase()}</span></td>
                     <td><span className="badge">{String(file.ingestion_source || "MANUAL").toUpperCase()}</span></td>
-                    <td className="num">{Number(file._heldCount || 0).toLocaleString()}</td>
+                    <td className="num">{Number(file.conversion_issue_count || file.held_claims_count || 0).toLocaleString()}</td>
                     <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(file.processing_completed_at || file.uploaded_at)}</td>
-                    <td><button type="button" className="btn" onClick={() => setSelectedConversionFileId(String(file.id))} style={{ whiteSpace: "nowrap" }}>View findings</button></td>
+                    <td><button type="button" className="btn" onClick={() => openConversionFindings(file)} style={{ whiteSpace: "nowrap" }}>View findings</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {selectedConversionFile && (
+          {selectedConversionFileId && selectedConversionFile && (
             <div className="card" style={{ marginTop: "14px", padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                 <div><div className="eyebrow">HELD CLAIMS FOR</div><h3 style={{ margin: "4px 0 0", fontSize: "16px" }}>{selectedConversionFile.original_filename || selectedConversionFile.stored_filename || "Conversion file"}</h3></div>
-                <button type="button" className="btn" onClick={() => setSelectedConversionFileId("")}>Close findings</button>
+                <button type="button" className="btn" onClick={closeConversionFindings}>Close findings</button>
               </div>
-              <div style={{ overflowX: "auto" }}>
-                <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr><th>CLAIM</th><th>RESOLUTION</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
-                  <tbody>
-                    {selectedConversionFile._heldClaims.length === 0 ? (
-                      <tr><td colSpan="6" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
-                    ) : selectedConversionFile._heldClaims.map((claim, index) => (
-                      <tr key={`${claim.claimNumber}-${index}`}>
-                        <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
-                        <td style={{ minWidth: "210px" }}>
-                          <span className="badge">{claim.resolutionStatus}</span>
-                          {claim.resolutionStatus === "RESOLVED" ? (
-                            <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)", lineHeight: 1.45 }}>
-                              {claim.resolvedMirFilename && <div>Resolved in: {claim.resolvedMirFilename}</div>}
-                              {claim.resolvedAt && <div>{formatTimestamp(claim.resolvedAt)}</div>}
-                            </div>
-                          ) : claim.alertCount > 0 ? (
-                            <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)" }}>
-                              Daily alerts: {claim.alertCount}/7
-                            </div>
-                          ) : null}
-                        </td>
-                        <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
-                        <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>{formatDuplicateEligibleTimestamp(claim.previousSentAt, claim.eligibleSendAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {selectedConversionLoading ? (
+                <div style={{ padding: "24px", color: "var(--ink-3)" }}>Loading claim-level findings…</div>
+              ) : selectedConversionError ? (
+                <div style={{ padding: "24px", color: "var(--ink-2)" }}>{selectedConversionError}</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr><th>CLAIM</th><th>RESOLUTION</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
+                    <tbody>
+                      {selectedConversionFile._heldClaims.length === 0 ? (
+                        <tr><td colSpan="6" style={{ padding: "22px", textAlign: "center", color: "var(--ink-3)" }}>Held claim details are not available for this historical file.</td></tr>
+                      ) : selectedConversionFile._heldClaims.map((claim, index) => (
+                        <tr key={`${claim.claimNumber}-${index}`}>
+                          <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claimNumber}</td>
+                          <td style={{ minWidth: "210px" }}>
+                            <span className="badge">{claim.resolutionStatus}</span>
+                            {claim.resolutionStatus === "RESOLVED" ? (
+                              <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)", lineHeight: 1.45 }}>
+                                {claim.resolvedMirFilename && <div>Resolved in: {claim.resolvedMirFilename}</div>}
+                                {claim.resolvedAt && <div>{formatTimestamp(claim.resolvedAt)}</div>}
+                              </div>
+                            ) : claim.alertCount > 0 ? (
+                              <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--ink-3)" }}>
+                                Daily alerts: {claim.alertCount}/7
+                              </div>
+                            ) : null}
+                          </td>
+                          <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
+                          <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatDuplicateEligibleTimestamp(claim.previousSentAt, claim.eligibleSendAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </section>

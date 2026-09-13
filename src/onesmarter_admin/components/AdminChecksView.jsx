@@ -30,7 +30,7 @@ export default function AdminChecksView({ trackedFiles = [], clients = [], activ
       {!activeClientId ? (
         <div className="card" style={{ padding: '30px 20px', color: 'var(--ink-3)' }}>Select a client to view their checks.</div>
       ) : (
-        <ChecksView trackedFiles={clientFiles} showHeading={false} />
+        <ChecksView trackedFiles={clientFiles} showHeading={false} clientId={activeClientId} />
       )}
     </section>
   );
