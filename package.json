@@ -17,6 +17,7 @@
     "test:client-session": "node scripts/test-client-session-requests.js",
     "test:phone-validation": "node scripts/test-phone-validation.js",
     "test:file-viewer-auth": "node scripts/test-file-viewer-auth.js",
+    "test:checks-resolved": "node scripts/test-checks-resolved-status.js",
     "preview": "vite preview"
   },
   "dependencies": {
