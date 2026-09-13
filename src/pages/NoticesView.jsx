@@ -209,28 +209,15 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
 function ClaimAnalysis({ claim }) {
   const analysis = claim.analysis;
   const claimNumber = claim.claim_number || claim.internal_claim_number;
-  if (!analysis) return <article className="mpl-claim-response"><strong>{claimNumber}</strong><p>Evidence analysis is still being prepared for this claim.</p></article>;
+  if (!analysis) return <article className="mpl-claim-response"><strong>{claimNumber}</strong><p>AI analysis is still being prepared for this claim.</p></article>;
 
-  const findings = analysis.findings || [];
-  const timeline = analysis.timeline || [];
-  const duplicateFinding = findings.find((item) => String(item.code || "").toUpperCase().includes("DUPLICATE"));
-  const holdFinding = findings.find((item) => {
-    const value = `${item.code || ""} ${item.description || ""}`.toUpperCase();
-    return value.includes("HOLD") || value.includes("HELD");
-  });
-  const history = timeline.length
-    ? timeline.map((item) => `${item.event || item.status || "File event"} in ${item.file || "an archived file"} on ${dateLabel(item.date)}`).join("; ")
-    : "No archived file history was found.";
-  const response = [
-    analysis.summary,
-    `History: ${history}`,
-    `Duplicate: ${duplicateFinding ? duplicateFinding.description || statusLabel(duplicateFinding.code) : "no stored duplicate indicator found"}.`,
-    `Hold: ${holdFinding ? holdFinding.description || statusLabel(holdFinding.code) : "no stored hold indicator found"}.`,
-  ].filter(Boolean).join(" ");
-
+  const isAiResponse = analysis.model_id && analysis.model_id !== "deterministic-fallback";
   return <article className="mpl-claim-response">
-    <strong>{claimNumber}</strong>
-    <p>{response}</p>
+    <div className="mpl-claim-response-heading">
+      <strong>{claimNumber}</strong>
+      <small>{isAiResponse ? `AI · ${analysis.model_id}` : "AI response unavailable · reanalyze after the local model is enabled"}</small>
+    </div>
+    <p>{analysis.summary}</p>
   </article>;
 }
 
