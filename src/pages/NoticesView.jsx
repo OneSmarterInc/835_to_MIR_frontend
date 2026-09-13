@@ -300,6 +300,12 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
       onClose();
       return;
     }
+    setEmailExpanded(false);
+    setAiExpanded(false);
+    setClaimsExpanded(false);
+    setSourcesExpanded(false);
+    setAnalysesExpanded(false);
+    setDetailError("");
     onOpen(notice.id);
     if (!detail) {
       setDetailLoading(true);
