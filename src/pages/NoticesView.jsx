@@ -323,27 +323,17 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
           <b>{aiExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{aiExpanded ? "−" : "+"}</i></b>
         </button>
         {aiExpanded && <div className="mpl-disclosure-content mpl-claim-responses">
-          {notice.ai_response
+          {notice.ai_response && notice.ai_response_source && notice.ai_response_source !== "deterministic-fallback"
             ? <article className="mpl-claim-response mpl-notice-ai-response">
                 <div className="mpl-claim-response-heading">
                   <strong>All claims in this email</strong>
-                  <small>{notice.ai_response_source && notice.ai_response_source !== "deterministic-fallback" ? `AI · ${notice.ai_response_source}` : "Stored analysis"}</small>
+                  <small>{`Qwen · ${notice.ai_response_source}`}</small>
                 </div>
                 <p>{notice.ai_response}</p>
               </article>
-            : !!notice.claims?.length
-              ? notice.claims.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} />)
-              : sourceMatches.map((match) => {
-                  const issues = match.reported_issues || [];
-                  const history = match.sources || [];
-                  const response = [
-                    issues.length ? issues.map((issue) => issue.description || (issue.codes || []).join(", ")).filter(Boolean).join("; ") : "No issue was confidently associated from the email.",
-                    history.length ? `History: ${history.map((source) => `${source.type} ${source.filename} received ${dateLabel(source.date)} (${statusLabel(source.status)})`).join("; ")}.` : "No archived file history was found.",
-                    "Duplicate: no stored duplicate indicator found.",
-                    "Hold: no stored hold indicator found.",
-                  ].join(" ");
-                  return <article className="mpl-claim-response" key={match.claim_number}><strong>{match.claim_number}</strong><p>{response}</p></article>;
-                })}
+            : <div className="mpl-error">
+                Qwen response is unavailable. Confirm the Qwen model service is running, then select Analyze Again.
+              </div>}
         </div>}
       </section>}
 
