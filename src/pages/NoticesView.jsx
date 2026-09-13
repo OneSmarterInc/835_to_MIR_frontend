@@ -304,7 +304,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
       <td>{dateLabel(notice.received_at || notice.created_at)}</td>
       <td><strong>{notice.program || "—"}</strong></td>
       <td className="mpl-period-cell">{notice.period_start || "—"} – {notice.period_end || "—"}</td>
-      <td><span className={`mpl-status ${notice.status?.toLowerCase()}`}>{statusLabel(notice.status)}</span></td>
+      <td><span className={`mpl-status ${(notice.workflow_status || notice.status)?.toLowerCase()}`}>{statusLabel(notice.workflow_status || notice.status)}</span></td>
     </tr>
     {cardExpanded && createPortal(<div className="mpl-detail-modal-backdrop" role="presentation">
       <section className="mpl-detail-modal" role="dialog" aria-modal="true" aria-labelledby={`mpl-notice-${notice.id}-title`}>
@@ -424,7 +424,7 @@ export default function NoticesView() {
     const period = `${notice.period_start || ""} ${notice.period_end || ""}`;
     const type = notice.notice_type === "ACKNOWLEDGEMENT" ? "acknowledgement" : "mpl return email";
     const searchable = [
-      type, notice.subject, notice.sender, received, dateLabel(received), notice.program, period, notice.status,
+      type, notice.subject, notice.sender, received, dateLabel(received), notice.program, period, notice.status, notice.workflow_status,
       ...(notice.extracted_claim_numbers || []),
       ...(notice.source_matches || []).flatMap((match) => [
         match.claim_number,
@@ -438,6 +438,7 @@ export default function NoticesView() {
     if (key === "type") return notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL";
     if (key === "received") return notice.received_at || notice.created_at || "";
     if (key === "period") return `${notice.period_start || ""} ${notice.period_end || ""}`;
+    if (key === "status") return String(notice.workflow_status || notice.status || "");
     return String(notice[key] || "");
   };
   const sortedNotices = [...filteredNotices].sort((left, right) => {
