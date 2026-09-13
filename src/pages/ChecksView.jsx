@@ -140,6 +140,108 @@ function buildHeldClaims(findings, recordedHeldCount = 0) {
   }));
 }
 
+function AlertEmailHistory() {
+  const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    setError("");
+    safeFetchJson("/edi835/api/checks/alert-emails/", { credentials: "include" })
+      .then(({ res, data }) => {
+        if (!res.ok || !data?.success) throw new Error(data?.error || "Unable to load alert email history.");
+        setEmails(Array.isArray(data.emails) ? data.emails : []);
+      })
+      .catch((err) => {
+        setEmails([]);
+        setError(err?.message || "Unable to load alert email history.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const selected = emails.find((email) => String(email.id) === String(selectedId)) || null;
+  const label = (email) => email?.category_label || (email?.category === "MISSING_REFERENCE" ? "Missing 837 / RECON" : "Conversion hold");
+
+  return (
+    <section style={{ marginTop: "10px" }}>
+      <div className="card" style={{ padding: "14px 16px", marginBottom: "12px", display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div>
+          <div className="eyebrow">ALERT EMAIL AUDIT</div>
+          <h3 style={{ margin: "4px 0", fontSize: "17px" }}>Sent claim alert emails</h3>
+          <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>Missing 837/RECON alerts and existing conversion-issue alerts.</div>
+        </div>
+        <button type="button" className="btn" onClick={load} disabled={loading}>Refresh</button>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead><tr><th>SENT</th><th>TYPE</th><th>SUBJECT</th><th>CLAIMS</th><th>RECIPIENTS</th><th>ACTION</th></tr></thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading alert email history…</td></tr>
+            ) : error ? (
+              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-2)" }}>{error}</td></tr>
+            ) : emails.length === 0 ? (
+              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No claim alert emails have been recorded yet.</td></tr>
+            ) : emails.map((email) => (
+              <tr key={email.id}>
+                <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(email.sent_at)}</td>
+                <td><span className="badge">{label(email)}</span></td>
+                <td style={{ minWidth: "320px" }}>{email.subject || "—"}</td>
+                <td className="num">{Number(email.claims?.length || 0).toLocaleString()}</td>
+                <td style={{ minWidth: "220px" }}>{Array.isArray(email.recipients) && email.recipients.length ? email.recipients.join(", ") : "—"}</td>
+                <td><button type="button" className="btn" onClick={() => setSelectedId(String(selectedId) === String(email.id) ? "" : String(email.id))}>{String(selectedId) === String(email.id) ? "Close" : "View email"}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <div className="card" style={{ marginTop: "14px", padding: 0, overflowX: "auto" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)" }}>
+            <div className="eyebrow">{label(selected)}</div>
+            <h3 style={{ margin: "4px 0", fontSize: "16px" }}>{selected.subject || "Alert email"}</h3>
+            <div style={{ fontSize: "12px", color: "var(--ink-3)" }}>Sent {formatTimestamp(selected.sent_at)} · {selected.client_name || "Client"}</div>
+            <div style={{ marginTop: "5px", fontSize: "12px", color: "var(--ink-2)" }}><strong>Recipients:</strong> {selected.recipients?.length ? selected.recipients.join(", ") : "—"}</div>
+          </div>
+          {selected.category === "MISSING_REFERENCE" ? (
+            <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr><th>CLAIM</th><th>MISSING IN</th><th>MIR SENT</th><th>MIR FILE</th><th>7-DAY ELIGIBLE</th></tr></thead>
+              <tbody>{(selected.claims || []).map((claim, index) => (
+                <tr key={`${claim.claim_number || "claim"}-${index}`}>
+                  <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claim_number || "—"}</td>
+                  <td>{claim.missing_in_label || (Array.isArray(claim.missing_in) ? claim.missing_in.join(" and ") : "—")}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.sent_at)}</td>
+                  <td>{claim.mir_filename || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.eligible_at)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          ) : (
+            <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr><th>CLAIM</th><th>HELD FROM 835</th><th>HELD SINCE</th><th>ALERT DAY</th><th>ISSUE</th></tr></thead>
+              <tbody>{(selected.claims || []).map((claim, index) => (
+                <tr key={`${claim.claim_number || "claim"}-${index}`}>
+                  <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claim_number || "—"}</td>
+                  <td>{claim.source_835_filename || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.held_since)}</td>
+                  <td>{claim.alert_number ? `${claim.alert_number}/${claim.alert_limit || 7}` : "—"}</td>
+                  <td style={{ minWidth: "340px" }}>{Array.isArray(claim.reasons) && claim.reasons.length ? claim.reasons.join("; ") : "—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function ChecksView({ trackedFiles = [], showHeading = true }) {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState("");
@@ -310,7 +412,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, and held-claim SFTP releases." />}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, held-claim SFTP releases, and alert-email history." />}
 
       <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({ gateKey: "gate1", eyebrow: "Gate 1 · Inbound", metrics: <>{row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}{row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}</>, footer: "The rule totals above come from the backend validation catalog, not from frontend constants." })}
@@ -322,6 +424,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); closeConversionFindings(); }}>Validations</button>
         <button type="button" className={activeChecksTab === "conversion" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("conversion"); setSelectedGroup(null); }}>Conversion</button>
         <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); closeConversionFindings(); }}>Held SFTP Releases</button>
+        <button type="button" className={activeChecksTab === "alert-emails" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("alert-emails"); setSelectedGroup(null); closeConversionFindings(); }}>Alert Emails</button>
       </div>
 
       {activeChecksTab === "validations" ? (
@@ -398,8 +501,10 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             </div>
           )}
         </section>
-      ) : (
+      ) : activeChecksTab === "held-releases" ? (
         <HeldReleaseHistory />
+      ) : (
+        <AlertEmailHistory />
       )}
 
       {selectedGroup && activeChecksTab === "validations" && (
