@@ -373,7 +373,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
                   <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
                 ];
               })}
-              {(() => { const linked = (notice.claims || []).find((claim) => String(claim.claim_number) === String(match.claim_number) || String(claim.highmark_claim_number) === String(match.claim_number)); return <td className="mpl-workflow-cell"><WorkflowStatusSelect value={linked?.workflow_status} disabled={!linked} onChange={(status) => onWorkflowStatus(notice.id, linked.claim_id, status)} /></td>; })()}
+              {(() => { const linked = (notice.claims || []).find((claim) => String(claim.claim_number) === String(match.claim_number) || String(claim.highmark_claim_number) === String(match.claim_number)); const value = notice.claim_workflow_statuses?.[match.claim_number] || linked?.workflow_status || "YET_TO_START"; return <td className="mpl-workflow-cell"><WorkflowStatusSelect value={value} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, linked?.claim_id, status)} /></td>; })()}
             </tr>)}</tbody>
           </table>
         </div>}
@@ -403,11 +403,14 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
-  const updateWorkflowStatus = async (id, claimId, workflowStatus) => {
-    const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/workflow-status/`, {
+  const updateWorkflowStatus = async (id, claimNumber, claimId, workflowStatus) => {
+    const endpoint = claimId
+      ? `/edi835/api/mpl-notices/${id}/claims/${claimId}/workflow-status/`
+      : `/edi835/api/mpl-notices/${id}/claims/workflow-status/`;
+    const { res, data } = await safeFetchJson(endpoint, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workflow_status: workflowStatus }),
+      body: JSON.stringify({ claim_number: claimNumber, workflow_status: workflowStatus }),
     });
     if (!res.ok || !data.success) {
       const message = data.error || "Unable to update claim workflow status.";
@@ -417,6 +420,7 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
     setError("");
     setNotices((items) => items.map((item) => item.id === id ? data.notice : item));
   };
+
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
 
   const loweredQuery = query.trim().toLowerCase();
