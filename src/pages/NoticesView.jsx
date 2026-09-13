@@ -38,11 +38,6 @@ function NoticeModal({ onClose, onCreated }) {
   </div>;
 }
 
-function RelatedFiles({ files = [] }) {
-  if (!files.length) return <p className="mpl-empty">No related files were verified.</p>;
-  return <div className="mpl-table-wrap"><table className="mpl-table"><thead><tr><th>TYPE</th><th>FILENAME</th><th>DATE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{files.map((file) => <tr key={`${file.type}-${file.id}`}><td>{file.type}</td><td className="mono">{file.filename}</td><td>{dateLabel(file.date)}</td><td><span className="mpl-state">{statusLabel(file.status)}</span></td><td><a className="mpl-file-link" href={file.download_url}>Download</a></td></tr>)}</tbody></table></div>;
-}
-
 function viewerLines(rawContent, fileType) {
   const content = String(rawContent || "").replace(/\r\n?/g, "\n");
   const type = String(fileType || "").toUpperCase();
@@ -238,12 +233,10 @@ function ClaimAnalysis({ claim }) {
   </article>;
 }
 
-function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, cardExpanded, onOpen, onClose }) {
+function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, cardExpanded, onOpen, onClose }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
-  const [claimsExpanded, setClaimsExpanded] = useState(false);
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
-  const [analysesExpanded, setAnalysesExpanded] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [sourcePreview, setSourcePreview] = useState(null);
@@ -272,9 +265,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
     }
     setEmailExpanded(false);
     setAiExpanded(false);
-    setClaimsExpanded(false);
     setSourcesExpanded(false);
-    setAnalysesExpanded(false);
     setDetailError("");
     onOpen(notice.id);
     if (!detail) {
@@ -396,7 +387,6 @@ export default function NoticesView() {
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const selectClaim = async (id, claimId) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/select-claim/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim_id: claimId }) }); if (!res.ok || !data.success) return setError(data.error || "Unable to select claim."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
-  const review = async (id, claimId, reviewStatus) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/${claimId}/review/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review_status: reviewStatus }) }); if (!res.ok || !data.success) { const message = data.error || "Unable to save the review decision."; setError(message); throw new Error(message); } setError(""); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); return data.notice; };
 
   const loweredQuery = query.trim().toLowerCase();
   const filteredNotices = notices.filter((notice) => {
@@ -462,7 +452,7 @@ export default function NoticesView() {
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onReview={review} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
