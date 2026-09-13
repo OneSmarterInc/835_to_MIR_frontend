@@ -382,3 +382,9 @@
 .mpl-workflow-select.in_progress{border-color:#4d91c8;background:#e3f2ff;color:#135b91}
 .mpl-workflow-select.resolved{border-color:#36a584;background:#e2f5ef;color:#08745f}
 .mpl-workflow-select:disabled{cursor:not-allowed;opacity:.62}
+
+
+/* Email-level rollup of claim workflow states. */
+.mpl-status.yet_to_start{background:#edf2f6;color:#40536a}
+.mpl-status.in_progress{background:#fff0bf;color:#7b5600}
+.mpl-status.resolved{background:#dff3ec;color:#08745f}
