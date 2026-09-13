@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
 import ConversionErrorFindings from "../components/ConversionErrorFindings";
 import HeldReleaseHistory from "../components/HeldReleaseHistory";
+import MissingReferenceStatus from "../components/MissingReferenceStatus";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function parseDetails(raw) {
@@ -412,7 +413,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, held-claim SFTP releases, and alert-email history." />}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, conversion holds, held-claim SFTP releases, missing 837/RECON claims, and alert-email history." />}
 
       <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({ gateKey: "gate1", eyebrow: "Gate 1 · Inbound", metrics: <>{row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}{row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}</>, footer: "The rule totals above come from the backend validation catalog, not from frontend constants." })}
@@ -424,6 +425,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); closeConversionFindings(); }}>Validations</button>
         <button type="button" className={activeChecksTab === "conversion" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("conversion"); setSelectedGroup(null); }}>Conversion</button>
         <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); closeConversionFindings(); }}>Held SFTP Releases</button>
+        <button type="button" className={activeChecksTab === "missing-files" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("missing-files"); setSelectedGroup(null); closeConversionFindings(); }}>Missing Files</button>
         <button type="button" className={activeChecksTab === "alert-emails" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("alert-emails"); setSelectedGroup(null); closeConversionFindings(); }}>Alert Emails</button>
       </div>
 
@@ -503,6 +505,8 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         </section>
       ) : activeChecksTab === "held-releases" ? (
         <HeldReleaseHistory />
+      ) : activeChecksTab === "missing-files" ? (
+        <MissingReferenceStatus />
       ) : (
         <AlertEmailHistory />
       )}
