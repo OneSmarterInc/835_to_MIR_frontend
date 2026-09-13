@@ -396,7 +396,17 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
   const refresh = useCallback(async () => { try { const clientQuery = activeClientId ? `?client_id=${encodeURIComponent(activeClientId)}` : ""; const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${clientQuery}`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, [activeClientId]);
   const loadDetail = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to open notice."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
+  useEffect(() => {
+    if (!notices.some((item) => ACTIVE.has(item.status))) return undefined;
+    const timer = setInterval(() => {
+      refresh();
+      const openNotice = notices.find((item) => item.id === openNoticeId);
+      if (openNotice && ACTIVE.has(openNotice.status)) {
+        loadDetail(openNotice.id).catch(() => {});
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [notices, openNoticeId, refresh]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const updateWorkflowStatus = async (id, claimNumber, workflowStatus) => {
     const previous = notices.find((item) => item.id === id);
