@@ -174,12 +174,6 @@ export default function App() {
       );
 
 
-      console.log(
-        "USER STATUS:",
-        data
-      );
-
-
       setUserState(data);
 
 

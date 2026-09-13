@@ -63,9 +63,13 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
       
       let assertion;
       try {
-        assertion = await startAuthentication(options);
+        assertion = await startAuthentication({ optionsJSON: options });
       } catch (err) {
-        setError(err.message);
+        if (err.name === 'NotAllowedError') {
+          setError('');
+        } else {
+          setError('Security Key login was cancelled or failed.');
+        }
         return;
       }
       
@@ -86,7 +90,11 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
       onLoginSuccess(verificationData);
       
     } catch (err) {
-      setError(err.message || 'Security Key login failed');
+      if (err.name === 'NotAllowedError') {
+        setError('');
+      } else {
+        setError(err.message || 'Security Key login failed');
+      }
     } finally {
       setLoading(false);
     }

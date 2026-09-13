@@ -49,7 +49,7 @@ export default function SecurityView() {
 
       let attestation;
       try {
-        attestation = await startRegistration(options);
+        attestation = await startRegistration({ optionsJSON: options });
       } catch (err) {
         if (err.name === 'InvalidStateError') {
           setError('This key has already been registered to another account in the system. Please try using a different key.');
