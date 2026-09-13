@@ -10,7 +10,7 @@ const statusLabel = (value) => String(value || "").replaceAll("_", " ");
 const dateLabel = (value) => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString(); };
 const reportedIssuesFor = (notice, claimNumber) => notice.source_matches?.find((item) => item.claim_number === claimNumber)?.reported_issues || [];
 
-function NoticeModal({ onClose, onCreated }) {
+function NoticeModal({ onClose, onCreated, clientId = "" }) {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const submit = async (event) => {
@@ -19,6 +19,7 @@ function NoticeModal({ onClose, onCreated }) {
       if (!file || !file.name.toLowerCase().endsWith(".msg")) throw new Error("Select an Outlook .msg email file.");
       const body = new FormData();
       body.append("email_file", file);
+      if (clientId) body.append("client_id", clientId);
       const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/", { method: "POST", body });
       if (!res.ok || !data.success) throw new Error(data.error || "Unable to upload this email.");
       onCreated(data.notice);
@@ -387,7 +388,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
   </>;
 }
 
-export default function NoticesView() {
+export default function NoticesView({ clients = [], activeClientId = "", onSelectClient = null }) {
   const [notices, setNotices] = useState([]);
   const [modal, setModal] = useState(false);
   const [error, setError] = useState("");
@@ -397,7 +398,7 @@ export default function NoticesView() {
   const [pageSize, setPageSize] = useState(10);
   const [openNoticeId, setOpenNoticeId] = useState(null);
 
-  const refresh = useCallback(async () => { try { const { res, data } = await safeFetchJson("/edi835/api/mpl-notices/"); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, []);
+  const refresh = useCallback(async () => { try { const clientQuery = activeClientId ? `?client_id=${encodeURIComponent(activeClientId)}` : ""; const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${clientQuery}`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, [activeClientId]);
   const loadDetail = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to open notice."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { if (!notices.some((item) => ACTIVE.has(item.status))) return undefined; const timer = setInterval(() => { refresh(); notices.filter((item) => ACTIVE.has(item.status)).forEach((item) => loadDetail(item.id).catch(() => {})); }, 3000); return () => clearInterval(timer); }, [notices, refresh]);
@@ -463,7 +464,7 @@ export default function NoticesView() {
     : visibleNotices;
 
   return <section className="view on mpl-view" id="v-notices">
-    <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></WorkspaceHeader>
+    <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><div className="mpl-header-actions">{onSelectClient && <label className="mpl-admin-client"><span>CLIENT</span><select value={activeClientId} onChange={(event) => onSelectClient(event.target.value)}><option value="">All clients</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>}<button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></div></WorkspaceHeader>
     {error && <div className="mpl-error">{error}</div>}
     {!notices.length && !error && <div className="mpl-zero"><h2>No MPL emails uploaded</h2><p>Upload the first returned MIR .msg file to begin claim investigation.</p><button className="mpl-btn primary" onClick={() => setModal(true)}>Upload Email</button></div>}
     {!!notices.length && <div className="mpl-notice-register">
@@ -491,6 +492,6 @@ export default function NoticesView() {
         <div><button type="button" disabled={currentPage === 1} onClick={() => setPage(1)}>«</button><button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>‹</button><strong>Page {currentPage} of {pageCount}</strong><button type="button" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>›</button><button type="button" disabled={currentPage === pageCount} onClick={() => setPage(pageCount)}>»</button></div>
       </div>
     </div>}
-    {modal && <NoticeModal onClose={() => setModal(false)} onCreated={(notice) => { setNotices((items) => [notice, ...items]); setModal(false); setPage(1); }} />}
+    {modal && <NoticeModal clientId={activeClientId} onClose={() => setModal(false)} onCreated={(notice) => { setNotices((items) => [notice, ...items]); setModal(false); setPage(1); }} />}
   </section>;
 }
