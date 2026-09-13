@@ -396,3 +396,9 @@
 .mpl-admin-client span{color:#a9c4dc;font:700 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em}
 .mpl-admin-client select{min-width:220px;padding:9px 30px 9px 10px;border:1px solid #7690a8;background:#fff;color:#102033;font-weight:700}
 @media(max-width:760px){.mpl-header-actions{width:100%;align-items:stretch;flex-direction:column}.mpl-admin-client select{width:100%;min-width:0}}
+
+
+.mpl-claim-response-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px}
+.mpl-claim-response-heading>strong{color:#102033;font:800 14px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace}
+.mpl-claim-response-heading>small{color:#60758c;font:700 10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;text-align:right}
+.mpl-claim-response p{white-space:pre-wrap}
