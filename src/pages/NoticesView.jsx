@@ -210,62 +210,32 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   </div>, document.body);
 }
 
-function ClaimAnalysis({ claim, noticeId, onReview }) {
-  const [savingDecision, setSavingDecision] = useState("");
-  const [decisionError, setDecisionError] = useState("");
+function ClaimAnalysis({ claim }) {
   const analysis = claim.analysis;
   const claimNumber = claim.claim_number || claim.internal_claim_number;
-  if (!analysis) return <div className="mpl-empty">Evidence analysis is waiting to run for <strong>{claimNumber}</strong>.</div>;
+  if (!analysis) return <article className="mpl-claim-response"><strong>{claimNumber}</strong><p>Evidence analysis is still being prepared for this claim.</p></article>;
 
-  const reviewStatus = analysis.review_status || "PENDING";
-  const submitDecision = async (decision) => {
-    setSavingDecision(decision);
-    setDecisionError("");
-    try {
-      await onReview(noticeId, claim.claim_id, decision);
-    } catch (error) {
-      setDecisionError(error.message || "Unable to save this review decision.");
-    } finally {
-      setSavingDecision("");
-    }
-  };
+  const findings = analysis.findings || [];
+  const timeline = analysis.timeline || [];
+  const duplicateFinding = findings.find((item) => String(item.code || "").toUpperCase().includes("DUPLICATE"));
+  const holdFinding = findings.find((item) => {
+    const value = `${item.code || ""} ${item.description || ""}`.toUpperCase();
+    return value.includes("HOLD") || value.includes("HELD");
+  });
+  const history = timeline.length
+    ? timeline.map((item) => `${item.event || item.status || "File event"} in ${item.file || "an archived file"} on ${dateLabel(item.date)}`).join("; ")
+    : "No archived file history was found.";
+  const response = [
+    analysis.summary,
+    `History: ${history}`,
+    `Duplicate: ${duplicateFinding ? duplicateFinding.description || statusLabel(duplicateFinding.code) : "no stored duplicate indicator found"}.`,
+    `Hold: ${holdFinding ? holdFinding.description || statusLabel(holdFinding.code) : "no stored hold indicator found"}.`,
+  ].filter(Boolean).join(" ");
 
-  return <section className={`mpl-analysis ${reviewStatus.toLowerCase()}`}>
-    <div className="mpl-analysis-heading">
-      <div><span>AI-ASSISTED, EVIDENCE-BOUND REVIEW</span><h3>{claimNumber}</h3></div>
-      <div className="mpl-confidence">{Math.round(analysis.confidence * 100)}% confidence<br/><small>Human review required</small></div>
-    </div>
-
-    <div className="mpl-claim-ai-output"><span>AI ANALYSIS</span><p>{analysis.summary}</p></div>
-
-    <h4>Claim timeline</h4>
-    <div className="mpl-timeline">{analysis.timeline.map((item, index) => <div key={`${item.event}-${index}`}><time>{dateLabel(item.date)}</time><strong>{item.event}</strong><span>{item.file} · {statusLabel(item.status)}</span></div>)}</div>
-
-    <h4>Verified issues</h4>
-    {analysis.findings.length ? <div className="mpl-table-wrap"><table className="mpl-table mpl-findings-table"><thead><tr><th>SEVERITY</th><th>ISSUE</th><th>EVIDENCE</th></tr></thead><tbody>{analysis.findings.map((finding, index) => <tr key={`${finding.code}-${index}`}><td><span className={`mpl-severity ${finding.severity}`}>{finding.severity}</span></td><td><strong>{statusLabel(finding.code)}</strong><small>{finding.description}</small></td><td>{finding.evidence}</td></tr>)}</tbody></table></div> : <p className="mpl-empty">No configured deterministic rule found a discrepancy.</p>}
-
-    {!![...(analysis.unknown_codes || []), ...(analysis.unclear_items || []), ...(analysis.missing_evidence || [])].length && <><h4>Unclear or not understood</h4><ul className="mpl-uncertainty">{(analysis.unknown_codes || []).map((item) => <li key={`code-${item}`}><strong>Unknown code:</strong> {item}</li>)}{(analysis.unclear_items || []).map((item, index) => <li key={`unclear-${index}`}>{item}</li>)}{(analysis.missing_evidence || []).map((item, index) => <li key={`missing-${index}`}><strong>Missing evidence:</strong> {item}</li>)}</ul></>}
-
-    <h4>Recommended resolution</h4>
-    <ol className="mpl-actions">{analysis.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation}</li>)}</ol>
-    <p className="mpl-caution">Recommendations require claims/EDI review. They may improve acceptance but do not guarantee payer approval.</p>
-
-    <h4>Related archived files</h4>
-    <RelatedFiles files={analysis.related_files} />
-
-    <div className={`mpl-review-decision ${reviewStatus.toLowerCase()}`}>
-      <div>
-        <small>HUMAN REVIEW DECISION</small>
-        <strong>{reviewStatus === "APPROVED" ? "Analysis approved" : reviewStatus === "CHANGES_REQUIRED" ? "Changes requested" : "Review required"}</strong>
-        <span>{reviewStatus === "APPROVED" ? "This analysis has been accepted for the operational workflow." : reviewStatus === "CHANGES_REQUIRED" ? "This analysis is flagged for correction and re-review." : "Confirm whether this analysis is acceptable or needs correction."}</span>
-      </div>
-      <div className="mpl-review-actions">
-        <button type="button" className={`mpl-decision-btn approve ${reviewStatus === "APPROVED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("APPROVED")}>{savingDecision === "APPROVED" ? "Saving…" : reviewStatus === "APPROVED" ? "✓ Approved" : "✓ Approve analysis"}</button>
-        <button type="button" className={`mpl-decision-btn changes ${reviewStatus === "CHANGES_REQUIRED" ? "selected" : ""}`} disabled={!!savingDecision} onClick={() => submitDecision("CHANGES_REQUIRED")}>{savingDecision === "CHANGES_REQUIRED" ? "Saving…" : reviewStatus === "CHANGES_REQUIRED" ? "! Changes requested" : "Request changes"}</button>
-      </div>
-      {decisionError && <p className="mpl-decision-error">{decisionError}</p>}
-    </div>
-  </section>;
+  return <article className="mpl-claim-response">
+    <strong>{claimNumber}</strong>
+    <p>{response}</p>
+  </article>;
 }
 
 function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, cardExpanded, onOpen, onClose }) {
@@ -353,44 +323,26 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
       {detailError && <div className="mpl-error">{detailError}</div>}
       {isActive && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}
 
-      {analysisReady && notice.ai_response && <section className="mpl-disclosure">
+      {analysisReady && <section className="mpl-disclosure">
         <button type="button" className="mpl-section-toggle" aria-expanded={aiExpanded} onClick={() => setAiExpanded((value) => !value)}>
-          <span><strong>AI response and overall summary</strong><small>Analysis summary, reported issues, and suggested next steps</small></span>
+          <span><strong>Claim-wise AI response</strong><small>One consolidated evidence-based response for each claim</small></span>
           <b>{aiExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{aiExpanded ? "−" : "+"}</i></b>
         </button>
-        {aiExpanded && <div className="mpl-disclosure-content"><section className="mpl-ai-response">
-        <span>{notice.ai_response_source === "deterministic-fallback" ? "AUTOMATED FALLBACK" : `AI RESPONSE · ${notice.ai_response_source || "QWEN"}`}</span>
-        <p>{notice.ai_response}</p>
-        {!!sourceMatches.length && <div className="mpl-overall-claim-summary">
-          <h4>Overall claim summary</h4>
-          <div>{sourceMatches.map((match) => {
-            const issues = match.reported_issues || [];
-            const sourceTypes = [...new Set((match.sources || []).map((source) => source.type))];
-            return <article key={match.claim_number}>
-              <strong>{match.claim_number}</strong>
-              <div>{issues.length ? issues.map((issue, index) => <p key={`${match.claim_number}-summary-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description ? <> · {issue.description}</> : null}</p>) : <p>No issue was confidently associated from the email.</p>}</div>
-              <small>{sourceTypes.length ? sourceTypes.join(" · ") : "No matching archived source"}</small>
-            </article>;
-          })}</div>
+        {aiExpanded && <div className="mpl-disclosure-content mpl-claim-responses">
+          {!!notice.claims?.length
+            ? notice.claims.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} />)
+            : sourceMatches.map((match) => {
+                const issues = match.reported_issues || [];
+                const history = match.sources || [];
+                const response = [
+                  issues.length ? issues.map((issue) => issue.description || (issue.codes || []).join(", ")).filter(Boolean).join("; ") : "No issue was confidently associated from the email.",
+                  history.length ? `History: ${history.map((source) => `${source.type} ${source.filename} received ${dateLabel(source.date)} (${statusLabel(source.status)})`).join("; ")}.` : "No archived file history was found.",
+                  "Duplicate: no stored duplicate indicator found.",
+                  "Hold: no stored hold indicator found.",
+                ].join(" ");
+                return <article className="mpl-claim-response" key={match.claim_number}><strong>{match.claim_number}</strong><p>{response}</p></article>;
+              })}
         </div>}
-        {!!notice.ai_suggestions?.length && <div className="mpl-ai-next-steps"><h4>Suggested next steps</h4><ol>{notice.ai_suggestions.map((suggestion, index) => <li key={index}>{suggestion}</li>)}</ol></div>}
-      </section></div>}</section>}
-
-      {analysisReady && !!notice.extracted_claim_numbers?.length && <section className="mpl-disclosure">
-        <button type="button" className="mpl-section-toggle" aria-expanded={claimsExpanded} onClick={() => setClaimsExpanded((value) => !value)}>
-          <span><strong>Claims considered in this analysis</strong><small>{notice.extracted_claim_numbers.length} extracted claim{notice.extracted_claim_numbers.length === 1 ? "" : "s"} · reported issues and evidence coverage</small></span>
-          <b>{claimsExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{claimsExpanded ? "−" : "+"}</i></b>
-        </button>
-        {claimsExpanded && <div className="mpl-disclosure-content"><div className="mpl-ai-claim-review">{notice.extracted_claim_numbers.map((number) => {
-          const match = sourceMatches.find((item) => item.claim_number === number);
-          const issues = match?.reported_issues || [];
-          const sources = match?.sources || [];
-          return <div key={number}>
-            <strong>{number}</strong>
-            <div>{issues.length ? issues.map((issue, index) => <span key={`${number}-issue-${index}`}><b>{(issue.codes || []).join(", ") || statusLabel(issue.category || "REPORTED ISSUE")}</b>{issue.description && <> · {issue.description}</>}</span>) : <span>No issue confidently associated</span>}</div>
-            <small>{sources.length ? [...new Set(sources.map((source) => source.type))].join(" · ") : "No matching archived source"}</small>
-          </div>;
-        })}</div></div>}
       </section>}
 
       {analysisReady && !!sourceMatches.length && <section className="mpl-disclosure">
@@ -423,13 +375,6 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onReview, 
 
       {notice.status === "FAILED" && notice.last_error && <div className="mpl-error mpl-failure-note">Analysis could not be completed. Please try again or contact support.</div>}
       {detail && notice.status === "WAITING_FOR_CLAIM_SELECTION" && <div className="mpl-claim-picker"><h3>Select the affected claim</h3><p>More than one stored claim uses the identifier from this email. Choose the correct claim before analysis continues.</p>{notice.claims?.map((claim) => <button key={claim.link_id} onClick={() => onSelectClaim(notice.id, claim.claim_id)}><strong>{claim.claim_number || claim.internal_claim_number}</strong><span>{claim.service_from_date || "No service date"} · ${claim.total_charge}</span></button>)}</div>}
-      {detail && !!notice.claims?.length && <section className="mpl-disclosure">
-        <button type="button" className="mpl-section-toggle" aria-expanded={analysesExpanded} onClick={() => setAnalysesExpanded((value) => !value)}>
-          <span><strong>Claim history and analysis</strong><small>{notice.claims.length} linked claim{notice.claims.length === 1 ? "" : "s"} · timelines, findings, and review status</small></span>
-          <b>{analysesExpanded ? "Collapse" : "Expand"} <i aria-hidden="true">{analysesExpanded ? "−" : "+"}</i></b>
-        </button>
-        {analysesExpanded && <div className="mpl-disclosure-content">{notice.claims.map((claim) => <ClaimAnalysis key={claim.link_id} claim={claim} noticeId={notice.id} onReview={onReview} />)}</div>}
-      </section>}
       {["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <div className="mpl-card-actions"><button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button></div>}
     </div></div></section></div>, document.body)}
   </>;
