@@ -43,7 +43,7 @@ function formatDuplicateEligibleTimestamp(previousSentAt, fallbackEligibleSendAt
   const fourthDay = new Date(Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
-    Number(parts.day) + 3,
+    Number(parts.day) + 4,
     12,
     0,
     0
