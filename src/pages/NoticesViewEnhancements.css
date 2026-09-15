@@ -68,7 +68,7 @@
   border-radius: 2px !important;
   background: #fff !important;
   color: #087363 !important;
-  font: 800 14px/1 ui-monospace, monospace !important;
+  font: 800 14px/1 ui-monospace, SFMono-Regular, Consolas, monospace !important;
   cursor: pointer;
 }
 
@@ -97,42 +97,59 @@
   box-shadow: 0 0 0 2px #747c84 !important;
 }
 
-/* Add one icon-only sliced-claim download action beside Download file. */
+/* Compact icon-only claim-slice download action beside Download file. */
 .mpl-file-viewer .mpl-file-viewer-toolbar {
-  grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.7fr) auto 36px !important;
+  grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.7fr) auto 38px !important;
 }
 
 .mpl-file-viewer .mpl-claim-slice-download {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid #9fb2c4;
-  border-radius: 3px;
-  background: #fff;
-  color: #087363;
-  cursor: pointer;
+  appearance: none !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  align-self: end !important;
+  justify-self: start !important;
+  box-sizing: border-box !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #111827 !important;
+  border-radius: 3px !important;
+  background: #111827 !important;
+  color: #fff !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
 }
 
 .mpl-file-viewer .mpl-claim-slice-download svg {
-  width: 18px;
-  height: 18px;
+  display: block !important;
+  width: 17px !important;
+  height: 17px !important;
+  pointer-events: none;
 }
 
 .mpl-file-viewer .mpl-claim-slice-download:hover:not(:disabled) {
-  border-color: #087363;
-  background: #e8f6f2;
+  border-color: #27364a !important;
+  background: #27364a !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .mpl-file-viewer .mpl-claim-slice-download:focus-visible {
-  outline: 3px solid rgba(11, 128, 109, .22);
+  outline: 3px solid rgba(17, 24, 39, .2) !important;
   outline-offset: 2px;
 }
 
 .mpl-file-viewer .mpl-claim-slice-download:disabled {
-  opacity: .45;
-  cursor: wait;
+  opacity: .5 !important;
+  cursor: wait !important;
 }
 
 .mpl-file-viewer .mpl-claim-slice-message {
@@ -145,7 +162,7 @@
 
 @media (max-width: 900px) {
   .mpl-file-viewer .mpl-file-viewer-toolbar {
-    grid-template-columns: 1fr auto !important;
+    grid-template-columns: 1fr auto auto !important;
   }
 
   .mpl-file-viewer .mpl-file-viewer-toolbar > label,
