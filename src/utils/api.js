@@ -1,9 +1,27 @@
 const inFlightGetRequests = new Map();
 
+function withAdminChecksClient(url) {
+  if (typeof url !== "string" || typeof window === "undefined") return url;
+  const clientId = String(window.__MIR_ADMIN_CHECKS_CLIENT_ID || "").trim();
+  if (!clientId) return url;
+
+  const shouldScope =
+    url.includes("/edi835/api/checks/") ||
+    (url.includes("/edi835/api/tracked-files/") && url.includes("/details/"));
+  if (!shouldScope) return url;
+
+  const [base, hash = ""] = url.split("#", 2);
+  const separator = base.includes("?") ? "&" : "?";
+  const scoped = /(?:^|[?&])client_id=/.test(base)
+    ? base
+    : `${base}${separator}client_id=${encodeURIComponent(clientId)}`;
+  return hash ? `${scoped}#${hash}` : scoped;
+}
+
 export function portalFetch(url, options = {}) {
-  let requestUrl = url;
-  if (typeof url === "string" && /^https?:\/\//i.test(url)) {
-    const parsed = new URL(url);
+  let requestUrl = withAdminChecksClient(url);
+  if (typeof requestUrl === "string" && /^https?:\/\//i.test(requestUrl)) {
+    const parsed = new URL(requestUrl);
     requestUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
   }
   return fetch(requestUrl, { ...options, credentials: "include" });
@@ -40,15 +58,16 @@ async function fetchJsonOnce(url, options = {}) {
 }
 
 export async function safeFetchJson(url, options = {}) {
-  if (!shouldDeduplicate(url, options)) {
-    return fetchJsonOnce(url, options);
+  const scopedUrl = withAdminChecksClient(url);
+  if (!shouldDeduplicate(scopedUrl, options)) {
+    return fetchJsonOnce(scopedUrl, options);
   }
 
-  const key = `${String(options.method || "GET").toUpperCase()}:${url}`;
+  const key = `${String(options.method || "GET").toUpperCase()}:${scopedUrl}`;
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
 
-  const request = fetchJsonOnce(url, options).finally(() => {
+  const request = fetchJsonOnce(scopedUrl, options).finally(() => {
     if (inFlightGetRequests.get(key) === request) {
       inFlightGetRequests.delete(key);
     }
