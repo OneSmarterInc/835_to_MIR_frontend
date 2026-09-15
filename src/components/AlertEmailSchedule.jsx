@@ -1,17 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
 
-function easternToday() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 function formatTimestamp(value) {
   if (!value) return "—";
   const parsed = new Date(value);
@@ -32,12 +21,7 @@ function categoryLabel(email) {
   return email?.category_label || (email?.category === "MISSING_REFERENCE" ? "Missing 837 / RECON" : "Conversion hold");
 }
 
-function statusLabel(email) {
-  return String(email?.status || "NOT_SENT").toUpperCase() === "SENT" ? "SENT" : "NOT SENT";
-}
-
 export default function AlertEmailSchedule({ clientId = "" }) {
-  const [selectedDate, setSelectedDate] = useState(easternToday);
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,26 +34,28 @@ export default function AlertEmailSchedule({ clientId = "" }) {
     setError("");
     setSelectedId("");
 
-    const params = new URLSearchParams({ date: selectedDate });
+    const params = new URLSearchParams();
     if (clientId) params.set("client_id", String(clientId));
+    const query = params.toString();
+    const url = `/edi835/api/checks/alert-emails/${query ? `?${query}` : ""}`;
 
-    safeFetchJson(`/edi835/api/checks/alert-emails/?${params.toString()}`, { credentials: "include" })
+    safeFetchJson(url, { credentials: "include" })
       .then(({ res, data }) => {
         if (!alive) return;
-        if (!res.ok || !data?.success) throw new Error(data?.error || "Unable to load scheduled alert emails.");
+        if (!res.ok || !data?.success) throw new Error(data?.error || "Unable to load alert email history.");
         setEmails(Array.isArray(data.emails) ? data.emails : []);
       })
       .catch((err) => {
         if (!alive) return;
         setEmails([]);
-        setError(err?.message || "Unable to load scheduled alert emails.");
+        setError(err?.message || "Unable to load alert email history.");
       })
       .finally(() => {
         if (alive) setLoading(false);
       });
 
     return () => { alive = false; };
-  }, [selectedDate, clientId, refreshKey]);
+  }, [clientId, refreshKey]);
 
   const selected = useMemo(
     () => emails.find((email) => String(email.id) === String(selectedId)) || null,
@@ -78,46 +64,34 @@ export default function AlertEmailSchedule({ clientId = "" }) {
 
   return (
     <section style={{ marginTop: "10px" }}>
-      <div className="card" style={{ padding: "14px 16px", marginBottom: "12px", display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+      <div className="card" style={{ padding: "14px 16px", marginBottom: "12px", display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start", flexWrap: "wrap" }}>
         <div>
-          <div className="eyebrow">ALERT EMAIL SCHEDULE</div>
-          <h3 style={{ margin: "4px 0", fontSize: "17px" }}>Scheduled claim alert emails</h3>
+          <div className="eyebrow">ALERT EMAIL AUDIT</div>
+          <h3 style={{ margin: "4px 0", fontSize: "17px" }}>Sent claim alert emails</h3>
           <div style={{ color: "var(--ink-2)", fontSize: "12px" }}>
-            Select an Eastern-calendar date to see the emails and claims scheduled for that day. Historical rows show whether delivery was actually sent.
+            Only successfully sent alert emails for the selected client are shown here.
           </div>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <label style={{ display: "grid", gap: "5px", fontSize: "12px", fontWeight: 600 }}>
-            Date
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              style={{ minHeight: "36px", padding: "6px 9px", border: "1px solid var(--line)", borderRadius: "4px", background: "var(--surface)", color: "inherit" }}
-            />
-          </label>
-          <button type="button" className="btn" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading}>
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
+        <button type="button" className="btn" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
 
       {error && <div className="card" style={{ padding: "14px 16px", marginBottom: "12px", color: "var(--ink-2)" }}>{error}</div>}
 
       <div className="card" style={{ padding: 0, overflowX: "auto" }}>
         <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr><th>STATUS</th><th>SCHEDULED</th><th>TYPE</th><th>SUBJECT</th><th>CLAIMS</th><th>RECIPIENTS</th><th>ACTION</th></tr></thead>
+          <thead><tr><th>SENT</th><th>TYPE</th><th>SUBJECT</th><th>CLAIMS</th><th>RECIPIENTS</th><th>ACTION</th></tr></thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading scheduled alerts…</td></tr>
+              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading alert email history…</td></tr>
             ) : emails.length === 0 ? (
-              <tr><td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No alert email is scheduled for this client on the selected date.</td></tr>
+              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No sent alert emails have been recorded for this client.</td></tr>
             ) : emails.map((email) => {
               const isSelected = String(email.id) === String(selectedId);
               return (
                 <tr key={email.id}>
-                  <td><span className="badge">{statusLabel(email)}</span></td>
-                  <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(email.sent_at || email.scheduled_at)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(email.sent_at)}</td>
                   <td><span className="badge">{categoryLabel(email)}</span></td>
                   <td style={{ minWidth: "320px" }}>{email.subject || "—"}</td>
                   <td className="num">{Number(email.claims?.length || 0).toLocaleString()}</td>
@@ -136,11 +110,8 @@ export default function AlertEmailSchedule({ clientId = "" }) {
             <div>
               <div className="eyebrow">{categoryLabel(selected)}</div>
               <h3 style={{ margin: "4px 0", fontSize: "16px" }}>{selected.subject || "Alert email"}</h3>
-              <div style={{ fontSize: "12px", color: "var(--ink-3)" }}>
-                <strong>{statusLabel(selected)}</strong> · {selected.status === "SENT" ? `Sent ${formatTimestamp(selected.sent_at)}` : `Scheduled ${formatTimestamp(selected.scheduled_at)}`}
-              </div>
+              <div style={{ fontSize: "12px", color: "var(--ink-3)" }}>Sent {formatTimestamp(selected.sent_at)} · {selected.client_name || "Client"}</div>
               <div style={{ marginTop: "5px", fontSize: "12px", color: "var(--ink-2)" }}><strong>Recipients:</strong> {selected.recipients?.length ? selected.recipients.join(", ") : "—"}</div>
-              {selected.error_message && <div style={{ marginTop: "5px", fontSize: "12px", color: "var(--ink-2)" }}><strong>Last delivery error:</strong> {selected.error_message}</div>}
             </div>
             <button type="button" className="btn" onClick={() => setSelectedId("")}>Close</button>
           </div>
@@ -160,13 +131,12 @@ export default function AlertEmailSchedule({ clientId = "" }) {
             </table>
           ) : (
             <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><th>CLAIM</th><th>HELD FROM 835</th><th>HELD SINCE</th><th>DAYS HELD</th><th>ALERT DAY</th><th>ISSUE</th></tr></thead>
+              <thead><tr><th>CLAIM</th><th>HELD FROM 835</th><th>HELD SINCE</th><th>ALERT DAY</th><th>ISSUE</th></tr></thead>
               <tbody>{(selected.claims || []).map((claim, index) => (
                 <tr key={`${claim.claim_number || "claim"}-${index}`}>
                   <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{claim.claim_number || "—"}</td>
                   <td>{claim.source_835_filename || "—"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.held_since)}</td>
-                  <td className="num">{Number(claim.days_held || 0).toLocaleString()}</td>
                   <td>{claim.alert_number ? `${claim.alert_number}/${claim.alert_limit || "∞"}` : "—"}</td>
                   <td style={{ minWidth: "340px" }}>{Array.isArray(claim.reasons) && claim.reasons.length ? claim.reasons.join("; ") : "—"}</td>
                 </tr>
