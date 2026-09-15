@@ -19,6 +19,15 @@ function findOccurrences(content, search) {
   return matches;
 }
 
+function format835ForViewer(content) {
+  const source = String(content || "");
+  if (!source) return source;
+  return source
+    .replace(/~\s*/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
 export default function FileViewerModal({ fileId, onClose }) {
   const noDataMessage = "No data available in DataTable for this record.";
   const [loading, setLoading] = useState(true);
@@ -61,7 +70,7 @@ export default function FileViewerModal({ fileId, onClose }) {
       })
       .then((data) => {
         setFilename(data.filename || "File Viewer");
-        setEdiText(data.edi_text || noDataMessage);
+        setEdiText(format835ForViewer(data.edi_text || noDataMessage));
         setMirText(data.mir_text || noDataMessage);
         setLoadedFileId(fileId);
         setLoading(false);
