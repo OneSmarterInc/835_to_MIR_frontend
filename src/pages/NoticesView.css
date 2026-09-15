@@ -460,3 +460,42 @@
 .mpl-report-empty,.mpl-report-empty-card{margin:0;padding:13px;border:1px dashed #b9c7d2;background:#fafcfd;color:#6d7f92;font-size:11px}
 .mpl-report-empty-card{margin-top:10px;text-align:center}
 @media(max-width:820px){.mpl-detail-page{padding:8px}.mpl-detail-title-row,.mpl-report-heading{align-items:flex-start;flex-direction:column}.mpl-report-heading p{text-align:left}.mpl-report-facts{grid-template-columns:1fr 1fr}.mpl-report-two-column{grid-template-columns:1fr}.mpl-compact-table{min-width:760px}}
+
+
+/* MPL detail layout containment and compact polish */
+.mpl-detail-page,
+.mpl-detail-page *{box-sizing:border-box}
+.mpl-detail-page{width:100%;min-width:0;max-width:100%;overflow-x:hidden;padding:12px}
+.mpl-detail-page-header{min-width:0;padding:14px 16px}
+.mpl-detail-title-row{min-width:0}
+.mpl-detail-title-row>div{min-width:0}
+.mpl-detail-title-row h1{overflow-wrap:anywhere;font-size:19px}
+.mpl-detail-meta{margin-top:11px;padding-top:9px}
+.mpl-detail-page-actions{padding:7px 10px}
+.mpl-report-heading{min-width:0;margin:12px 0 7px}
+.mpl-report-heading h2{font-size:16px}
+.mpl-report-card{width:100%;min-width:0}
+.mpl-report-card-head{min-width:0;padding:9px 11px}
+.mpl-report-card-head>div{min-width:0}
+.mpl-report-facts>div{min-width:0;padding:7px 9px}
+.mpl-report-section{min-width:0;padding:9px 11px}
+.mpl-report-section-title{margin-bottom:6px}
+.mpl-report-two-column{min-width:0;gap:7px;padding:9px 11px}
+.mpl-evidence-summary{min-width:0;padding:8px 10px}
+.mpl-compact-table-wrap,
+.mpl-source-matrix-wrap{width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
+.mpl-compact-table td{padding:6px 7px}
+.mpl-workflow-select{width:138px;min-width:138px;padding-right:27px;font-size:9px}
+.mpl-report-card-head .mpl-workflow-select{margin:0}
+.mpl-files-section{width:100%;min-width:0;margin-top:16px;padding:0 0 2px;border-top:1px solid #bdcbd7}
+.mpl-files-heading{padding-top:11px}
+.mpl-files-heading p{white-space:normal}
+.mpl-files-section .mpl-source-matrix-wrap{border:1px solid #bdcbd7;background:#fff}
+.mpl-files-section .mpl-source-matrix{margin:0}
+.mpl-files-section .mpl-workflow-cell{width:154px;min-width:154px}
+@media(max-width:820px){
+  .mpl-detail-page{padding:7px}
+  .mpl-detail-title-row>.mpl-status{flex:0 0 auto}
+  .mpl-report-card-head{align-items:flex-start}
+  .mpl-report-facts>div{padding:7px}
+}
