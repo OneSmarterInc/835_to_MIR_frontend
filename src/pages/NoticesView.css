@@ -499,3 +499,19 @@
   .mpl-report-card-head{align-items:flex-start}
   .mpl-report-facts>div{padding:7px}
 }
+
+
+/* Governed MPL convention issue mapping table */
+.mpl-issue-table{min-width:980px;table-layout:fixed}
+.mpl-issue-table th:nth-child(1),.mpl-issue-table td:nth-child(1){width:132px}
+.mpl-issue-table th:nth-child(2),.mpl-issue-table td:nth-child(2){width:27%}
+.mpl-issue-table th:nth-child(3),.mpl-issue-table td:nth-child(3){width:31%}
+.mpl-issue-table th:nth-child(4),.mpl-issue-table td:nth-child(4){width:auto}
+.mpl-issue-table td>strong,.mpl-issue-table td>span,.mpl-issue-table td>small{display:block}
+.mpl-issue-table td>strong{margin-bottom:3px;color:#172b40;font-size:10px}
+.mpl-issue-table td>small{margin-top:4px;color:#718399;font-size:8px;line-height:1.4}
+.mpl-mapping-status{width:max-content;max-width:118px;margin-top:5px;padding:2px 5px;border-radius:2px;background:#edf2f6;color:#52677d;font:800 7px/1.35 ui-monospace,monospace;letter-spacing:.04em}
+.mpl-mapping-status.authoritative{background:#dff3ec;color:#08745f}
+.mpl-mapping-status.email_supported{background:#e5eff8;color:#285f87}
+.mpl-mapping-status.local_category{background:#eee9f8;color:#654795}
+.mpl-mapping-status.requires_mapping{background:#fff0c9;color:#855800}
