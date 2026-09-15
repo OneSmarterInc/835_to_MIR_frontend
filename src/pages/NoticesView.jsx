@@ -494,7 +494,10 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
       ? "RESOLVED"
       : values.every((value) => value === "YET_TO_START") ? "YET_TO_START" : "IN_PROGRESS";
     setNotices((items) => items.map((item) => item.id === id ? {
-      ...item, claim_workflow_statuses: nextStatuses, workflow_status: rolledUp,
+      ...item,
+      claim_workflow_statuses: nextStatuses,
+      workflow_status: rolledUp,
+      claim_reports: (item.claim_reports || []).map((report) => report.claim_number === claimNumber ? { ...report, workflow_status: workflowStatus } : report),
     } : item));
 
     const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/claims/workflow-status/`, {
