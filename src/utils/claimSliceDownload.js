@@ -24,6 +24,59 @@ function normalizeInternalClaimNumber(value, claimNumber = "") {
   return raw;
 }
 
+function viewerClaimNumber(viewer) {
+  const title = viewer.querySelector("#mpl-file-viewer-title")?.textContent || "";
+  return title.match(/Highmark claim\s+(.+)$/i)?.[1]?.trim() || "";
+}
+
+function cleanViewerInternalIdentity(viewer) {
+  const claimNumber = viewerClaimNumber(viewer);
+  if (!claimNumber) return;
+
+  const toolbar = viewer.querySelector(".mpl-file-viewer-toolbar");
+  let internalValues = [];
+  toolbar?.querySelectorAll("dt").forEach((term) => {
+    if (!/internal claim number/i.test(term.textContent || "")) return;
+    const dd = term.parentElement?.querySelector("dd");
+    if (!dd) return;
+    const normalized = (dd.textContent || "")
+      .split(",")
+      .map((value) => normalizeInternalClaimNumber(value, claimNumber))
+      .filter((value) => value && value.toLowerCase() !== "not found")
+      .filter((value, index, values) => values.findIndex((item) => item.toUpperCase() === value.toUpperCase()) === index);
+    internalValues = normalized;
+    const nextText = normalized.length ? normalized.join(", ") : "Not found";
+    if (dd.textContent !== nextText) dd.textContent = nextText;
+  });
+
+  if (!internalValues.length) return;
+
+  // Preserve the source-file text exactly while limiting the blue highlight to
+  // the actual six-character internal identifier when legacy packed data follows it.
+  viewer.querySelectorAll(".mpl-source-code mark.internal").forEach((mark) => {
+    const raw = mark.textContent || "";
+    const normalized = normalizeInternalClaimNumber(raw, claimNumber);
+    if (!normalized || normalized === raw || !raw.toUpperCase().startsWith(normalized.toUpperCase())) return;
+    const tail = raw.slice(normalized.length);
+    mark.textContent = normalized;
+    if (tail) mark.after(document.createTextNode(tail));
+  });
+
+  const sourceText = viewer.querySelector(".mpl-source-code")?.textContent || "";
+  const count = internalValues.reduce((total, internal) => {
+    if (!internal) return total;
+    return total + sourceText.toUpperCase().split(internal.toUpperCase()).length - 1;
+  }, 0);
+  const summary = [...viewer.querySelectorAll(".mpl-file-match-summary > span")]
+    .find((item) => /internal claim occurrence/i.test(item.textContent || ""));
+  if (summary) {
+    const desiredText = `${count} internal claim occurrence${count === 1 ? "" : "s"}`;
+    if ((summary.textContent || "").trim() !== desiredText) {
+      summary.innerHTML = `<b>${count}</b> internal claim occurrence${count === 1 ? "" : "s"}`;
+    }
+  }
+}
+
 function claimIdentifiers(viewer, claimNumber) {
   const values = [String(claimNumber || "").trim()];
   viewer.querySelectorAll(".mpl-file-viewer-toolbar dt").forEach((term) => {
@@ -69,9 +122,8 @@ async function downloadClaimSlice(button) {
   const toolbar = button.closest(".mpl-file-viewer-toolbar");
   if (!viewer || !toolbar) return;
 
-  const title = viewer.querySelector("#mpl-file-viewer-title")?.textContent || "";
-  const claimMatch = title.match(/Highmark claim\s+(.+)$/i);
-  const claimNumber = claimMatch?.[1]?.trim() || "";
+  cleanViewerInternalIdentity(viewer);
+  const claimNumber = viewerClaimNumber(viewer);
   const sourceLink = toolbar.querySelector("a.mpl-btn.primary[href]");
   if (!claimNumber || !sourceLink) {
     showMessage(toolbar, "Unable to identify the claim file.");
@@ -110,6 +162,7 @@ async function downloadClaimSlice(button) {
 }
 
 function enhanceViewer(viewer) {
+  cleanViewerInternalIdentity(viewer);
   const toolbar = viewer.querySelector(".mpl-file-viewer-toolbar");
   if (!toolbar || toolbar.querySelector(".mpl-claim-slice-download")) return;
 
