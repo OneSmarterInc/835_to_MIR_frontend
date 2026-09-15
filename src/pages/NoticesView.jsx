@@ -360,6 +360,41 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
   </>;
 }
 
+function MatchedFilesMatrix({ notice, isAdmin, onWorkflowStatus }) {
+  const [sourcePreview, setSourcePreview] = useState(null);
+  const sourceMatches = notice.source_matches || [];
+  const matchedClaims = sourceMatches.filter((match) => match.sources?.length);
+  const totalSources = matchedClaims.reduce((total, match) => total + match.sources.length, 0);
+  if (!sourceMatches.length) return null;
+  return <section className="mpl-files-section">
+    <div className="mpl-report-heading mpl-files-heading">
+      <div><span>MATCHED SOURCE FILES</span><h2>Claim-to-file matrix</h2></div>
+      <p>{matchedClaims.length} claims · {totalSources} verified 835, MIR, reconciliation, or 837 matches</p>
+    </div>
+    <div className="mpl-source-matrix-wrap">
+      <table className="mpl-table mpl-source-matrix">
+        <thead>
+          <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
+          <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
+        </thead>
+        <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
+          <td className="mono mpl-matrix-claim">{match.claim_number}</td>
+          {["835", "MIR", "RECON", "837"].flatMap((type) => {
+            const files = (match.sources || []).filter((source) => source.type.toUpperCase() === type);
+            const numbers = [...new Set(files.map((source) => source.internal_claim_number).filter(Boolean))];
+            return [
+              <td key={`${match.claim_number}-${type}-number`} className="mono mpl-matrix-number">{numbers.length ? numbers.map((number) => <span key={number}>{number}</span>) : <span className="mpl-no-match">—</span>}</td>,
+              <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
+            ];
+          })}
+          {isAdmin && <td className="mpl-workflow-cell"><WorkflowStatusSelect value={notice.claim_workflow_statuses?.[match.claim_number] || "YET_TO_START"} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, status)} /></td>}
+        </tr>)}</tbody>
+      </table>
+    </div>
+    {sourcePreview && <SourceFileViewer claimNumber={sourcePreview.claimNumber} sources={sourcePreview.sources} onClose={() => setSourcePreview(null)} />}
+  </section>;
+}
+
 function EvidenceDetails({ items }) {
   if (!items?.length) return null;
   return <ul className="mpl-evidence-list">{items.map((item, index) =>
@@ -410,6 +445,7 @@ function NoticeDetailPage({ notice, loading, error, onBack, onReanalyze, onWorkf
     {emailExpanded && <pre className="mpl-full-email mpl-detail-email">{notice.email_body}</pre>}
     <div className="mpl-report-heading"><div><span>CLAIM-WISE RESPONSE</span><h2>Claim analysis and complete history</h2></div><p>Built from stored 837, 835, MIR, reconciliation, duplicate, and hold evidence.</p></div>
     {reports.length ? <div className="mpl-report-list">{reports.map((report) => <ClaimReportCard key={report.claim_number} report={report} sourceMatch={sourceMatches.find((item) => item.claim_number === report.claim_number)} isAdmin={isAdmin} noticeId={notice.id} onWorkflowStatus={onWorkflowStatus} />)}</div> : <div className="mpl-report-empty-card">No claim report is available yet.</div>}
+    <MatchedFilesMatrix notice={notice} isAdmin={isAdmin} onWorkflowStatus={onWorkflowStatus} />
   </section>;
 }
 
