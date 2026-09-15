@@ -174,6 +174,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [error, setError] = useState("");
   const firstMatchRef = useRef(null);
   const selected = sources[selectedIndex];
+  const is837 = String(selected?.type || "").toUpperCase() === "837";
 
   useEffect(() => {
     let cancelled = false;
@@ -211,7 +212,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  const internalNumbers = normalizedInternalClaimNumbers(
+  const internalNumbers = is837 ? [] : normalizedInternalClaimNumbers(
     selected.internal_claim_number,
     claimNumber,
     content,
@@ -251,7 +252,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       <div className="mpl-file-viewer-toolbar">
         <label><span>FILE</span><select value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>{sources.map((source, index) => <option value={index} key={`${source.type}-${source.filename}-${index}`}>{source.filename}</option>)}</select></label>
         <dl>
-          <div><dt>Internal claim number</dt><dd>{displayedInternalNumber || "Not found"}</dd></div>
+          {!is837 && <div><dt>Internal claim number</dt><dd>{displayedInternalNumber || "Not found"}</dd></div>}
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
@@ -259,8 +260,8 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       </div>
       <div className="mpl-file-match-summary">
         <span><b>{highmarkCount}</b> Highmark claim occurrence{highmarkCount === 1 ? "" : "s"}</span>
-        <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>
-        <small>Yellow = Highmark claim · Blue = internal claim</small>
+        {!is837 && <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>}
+        <small>{is837 ? "Yellow = Highmark claim" : "Yellow = Highmark claim · Blue = internal claim"}</small>
       </div>
       <div className={`mpl-file-content ${["835", "MIR", "RECON", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
         <div className="mpl-file-content-heading"><strong>File content</strong><small>{selected.filename}</small></div>
@@ -396,17 +397,22 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
         {sourcesExpanded && <div className="mpl-disclosure-content mpl-source-matrix-wrap">
           <table className="mpl-table mpl-source-matrix">
             <thead>
-              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
-              <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
+              <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="1">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
+              <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => type === "837" ? [<th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>] : [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
             </thead>
             <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
               <td className="mono mpl-matrix-claim">{match.claim_number}</td>
               {["835", "MIR", "RECON", "837"].flatMap((type) => {
                 const files = (match.sources || []).filter((source) => source.type.toUpperCase() === type);
                 const numbers = [...new Set(files.map((source) => source.internal_claim_number).filter(Boolean))];
+                if (type === "837") return [<td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>];
+
                 return [
+
                   <td key={`${match.claim_number}-${type}-number`} className="mono mpl-matrix-number">{numbers.length ? numbers.map((number) => <span key={number}>{number}</span>) : <span className="mpl-no-match">—</span>}</td>,
+
                   <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
+
                 ];
               })}
               {isAdmin && <td className="mpl-workflow-cell"><WorkflowStatusSelect value={notice.claim_workflow_statuses?.[match.claim_number] || "YET_TO_START"} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, status)} /></td>}
@@ -438,17 +444,22 @@ function MatchedFilesMatrix({ notice, isAdmin, onWorkflowStatus }) {
     <div className="mpl-source-matrix-wrap">
       <table className="mpl-table mpl-source-matrix">
         <thead>
-          <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="2">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
-          <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
+          <tr><th rowSpan="2">HIGHMARK CLAIM NUMBER</th><th colSpan="2">835</th><th colSpan="2">MIR</th><th colSpan="2">RECON</th><th colSpan="1">837</th>{isAdmin && <th rowSpan="2">WORKFLOW STATUS</th>}</tr>
+          <tr>{["835", "MIR", "RECON", "837"].flatMap((type) => type === "837" ? [<th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>] : [<th key={`${type}-number`}>INTERNAL CLAIM NUMBER</th>, <th key={`${type}-action`} className="mpl-matrix-action-heading">ACTION</th>])}</tr>
         </thead>
         <tbody>{sourceMatches.map((match) => <tr key={match.claim_number}>
           <td className="mono mpl-matrix-claim">{match.claim_number}</td>
           {["835", "MIR", "RECON", "837"].flatMap((type) => {
             const files = (match.sources || []).filter((source) => source.type.toUpperCase() === type);
             const numbers = [...new Set(files.map((source) => source.internal_claim_number).filter(Boolean))];
+            if (type === "837") return [<td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>];
+
             return [
+
               <td key={`${match.claim_number}-${type}-number`} className="mono mpl-matrix-number">{numbers.length ? numbers.map((number) => <span key={number}>{number}</span>) : <span className="mpl-no-match">—</span>}</td>,
+
               <td key={`${match.claim_number}-${type}-action`} className="mpl-matrix-action">{files.length ? <button type="button" className="mpl-eye-button" title={`View ${type} source file`} aria-label={`View ${type} source file for claim ${match.claim_number}`} onClick={() => setSourcePreview({ claimNumber: match.claim_number, sources: files })}><EyeIcon /></button> : <span className="mpl-no-match">—</span>}</td>,
+
             ];
           })}
           {isAdmin && <td className="mpl-workflow-cell"><WorkflowStatusSelect value={notice.claim_workflow_statuses?.[match.claim_number] || "YET_TO_START"} onChange={(status) => onWorkflowStatus(notice.id, match.claim_number, status)} /></td>}
