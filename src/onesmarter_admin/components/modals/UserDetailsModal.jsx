@@ -14,10 +14,37 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
   const [revokingGrantId, setRevokingGrantId] = useState(null);
   const [revokeError, setRevokeError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [security, setSecurity] = useState(null);
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+  const [unblocking, setUnblocking] = useState(false);
 
   useEffect(() => {
     setScreens(user?.admin_screens || []);
   }, [user, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !user?.id) {
+      setSecurity(null);
+      setSecurityError('');
+      return undefined;
+    }
+    let alive = true;
+    setSecurityLoading(true);
+    setSecurityError('');
+    fetch(`/accounts/api/admin/users/${encodeURIComponent(user.id)}/security/`, {
+      credentials: 'include',
+      headers: { 'X-Admin-Screen': 'access' },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load account security state.');
+        if (alive) setSecurity(data.security || null);
+      })
+      .catch((error) => { if (alive) setSecurityError(error.message || 'Unable to load account security state.'); })
+      .finally(() => { if (alive) setSecurityLoading(false); });
+    return () => { alive = false; };
+  }, [isOpen, user?.id]);
 
   useEffect(() => {
     if (!isOpen || activeGrants.length === 0) return undefined;
@@ -43,6 +70,27 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
   const editable = canManageScreens && user.role === 'Admin';
   const currentGrants = activeGrants.filter((grant) => new Date(grant.expires_at).getTime() > now);
   const toggleScreen = (key) => setScreens((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+
+  const unblockUser = async () => {
+    if (!user?.id || unblocking) return;
+    setUnblocking(true);
+    setSecurityError('');
+    try {
+      const res = await fetch(`/accounts/api/admin/users/${encodeURIComponent(user.id)}/security/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Screen': 'access' },
+        body: JSON.stringify({ action: 'unblock' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Unable to unblock this account.');
+      setSecurity(data.security || { blocked: false, failed_login_attempts: 0 });
+    } catch (error) {
+      setSecurityError(error.message || 'Unable to unblock this account.');
+    } finally {
+      setUnblocking(false);
+    }
+  };
 
   return (
     <CenteredModal isOpen={isOpen} onClose={onClose}>
@@ -91,7 +139,20 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
 
         <div>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Account Status</span>
-          <span className="tag ok" style={{ fontSize: '11px', fontWeight: 700 }}>Active</span>
+          {securityLoading ? (
+            <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>Checking…</span>
+          ) : security?.blocked ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+              <span className="tag err" style={{ fontSize: '11px', fontWeight: 700 }}>Blocked</span>
+              <span style={{ fontSize: '12px', color: 'var(--ink-2)' }}>{security.reason || 'Blocked after repeated unsuccessful password attempts.'}</span>
+              {security.blocked_at && <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>Blocked: <TimeDisplay value={security.blocked_at} easternOnly /></span>}
+              <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>Failed password attempts: {security.failed_login_attempts || 0}</span>
+              <button type="button" className="btn primary" disabled={unblocking} onClick={unblockUser}>{unblocking ? 'Unblocking…' : 'Unblock User'}</button>
+            </div>
+          ) : (
+            <span className="tag ok" style={{ fontSize: '11px', fontWeight: 700 }}>Active</span>
+          )}
+          {securityError && <div className="admin-client-grant-hint" style={{ marginTop: '8px' }}>{securityError}</div>}
         </div>
       </div>
 
