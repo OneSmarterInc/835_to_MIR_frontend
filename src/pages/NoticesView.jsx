@@ -142,8 +142,7 @@ const countOccurrences = (content, value) => {
   return String(content || "").toUpperCase().split(term.toUpperCase()).length - 1;
 };
 
-const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-");
+const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const normalizedInternalClaimNumbers = (storedValue, claimNumber, content) => {
   const highmark = String(claimNumber || "").trim();
