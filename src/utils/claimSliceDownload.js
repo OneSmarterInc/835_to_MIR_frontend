@@ -24,38 +24,20 @@ function normalizeInternalClaimNumber(value, claimNumber = "") {
   return raw;
 }
 
-function sourceFileIdentity(source) {
-  const url = String(source?.download_url || "");
-  const match = url.match(/\/mpl-files\/[^/]+\/([0-9a-f-]{36})\/download\//i);
-  return match?.[1] || url || `${source?.filename || ""}|${source?.date || ""}`;
-}
-
 function normalizeSourceMatches(matches) {
   return (Array.isArray(matches) ? matches : []).map((match) => {
     const claimNumber = String(match?.claim_number || "").trim();
-    const seen = new Set();
-    const sources = [];
-
-    (Array.isArray(match?.sources) ? match.sources : []).forEach((rawSource) => {
-      const source = { ...rawSource };
-      source.internal_claim_number = normalizeInternalClaimNumber(
-        source.internal_claim_number,
+    const sources = (Array.isArray(match?.sources) ? match.sources : []).map((rawSource) => ({
+      ...rawSource,
+      internal_claim_number: normalizeInternalClaimNumber(
+        rawSource?.internal_claim_number,
         claimNumber,
-      );
+      ),
+    }));
 
-      // A repeated source with the same database file ID is a UI/matching
-      // duplicate. Separate database file rows have different IDs in the URL
-      // and remain visible even when their filenames happen to be identical.
-      const key = [
-        String(source.type || "").toUpperCase(),
-        sourceFileIdentity(source),
-        String(source.internal_claim_number || "").toUpperCase(),
-      ].join("|");
-      if (seen.has(key)) return;
-      seen.add(key);
-      sources.push(source);
-    });
-
+    // Duplicate-source decisions are made by the backend against the actual
+    // database rows. The browser only normalizes the displayed internal ID so
+    // a legitimate duplicate database occurrence is never hidden here.
     return { ...match, sources };
   });
 }
