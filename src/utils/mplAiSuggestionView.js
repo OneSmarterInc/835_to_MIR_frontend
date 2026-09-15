@@ -84,6 +84,11 @@ function renderClaimSuggestion(card, payload) {
   const suggestion = payload?.claims?.find(
     (item) => String(item.claim_number || '').trim() === claimNumber,
   );
+  const signature = suggestion
+    ? `${payload?.source || ''}:${claimNumber}:${JSON.stringify(suggestion)}`
+    : `unavailable:${claimNumber}:${payload?.source || ''}`;
+  const currentTitle = (section.querySelector('h4')?.textContent || '').trim().toLowerCase();
+  if (card.dataset.qwenSuggestionSignature === signature && currentTitle === 'ai suggestion') return;
 
   section.replaceChildren();
   buildTitleRow(section, payload?.source || '');
@@ -92,6 +97,7 @@ function renderClaimSuggestion(card, payload) {
     note.className = 'mpl-ai-suggestion-unavailable';
     note.textContent = 'AI suggestion is not available for this analysis yet. Select Analyze Again after the Qwen service is running.';
     section.append(note);
+    card.dataset.qwenSuggestionSignature = signature;
     return;
   }
 
@@ -110,20 +116,22 @@ function renderClaimSuggestion(card, payload) {
     list.append(item);
   });
   section.append(list);
+  card.dataset.qwenSuggestionSignature = signature;
 }
 
 function updateTopAiBlock() {
   document.querySelectorAll('.mpl-section-toggle').forEach((button) => {
     const title = button.querySelector('strong');
     if (!title || !/claim-wise ai response|ai suggestion/i.test(title.textContent || '')) return;
-    title.textContent = 'AI suggestion';
+    if (title.textContent !== 'AI suggestion') title.textContent = 'AI suggestion';
     const subtitle = title.parentElement?.querySelector('small');
-    if (subtitle) subtitle.textContent = 'Qwen professionally restates the Python-generated recommendations';
+    const subtitleText = 'Qwen professionally restates the Python-generated recommendations';
+    if (subtitle && subtitle.textContent !== subtitleText) subtitle.textContent = subtitleText;
   });
 
   document.querySelectorAll('.mpl-notice-ai-response').forEach((article) => {
     const heading = article.querySelector('.mpl-claim-response-heading strong');
-    if (heading) heading.textContent = 'AI suggestions';
+    if (heading && heading.textContent !== 'AI suggestions') heading.textContent = 'AI suggestions';
     const paragraph = article.querySelector('p');
     if (!paragraph || article.dataset.qwenFormatted === '1') return;
     try {
