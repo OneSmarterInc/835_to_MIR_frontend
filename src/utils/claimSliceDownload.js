@@ -23,6 +23,10 @@ function x12ClaimRows(content, claimTag) {
       claim = [segment];
       return;
     }
+    if (["SE", "GE", "IEA"].includes(tag)) {
+      flush();
+      return;
+    }
     if (claim.length) claim.push(segment);
   });
   flush();
@@ -42,7 +46,7 @@ function candidateRows(data) {
   }
   if (type === "RECON") return content.split("\n").filter((row) => row.trim());
 
-  return Array.isArray(data?.claim_rows) ? data.claim_rows : content.split("\n");
+  return content.split("\n");
 }
 
 function claimIdentifiers(viewer, claimNumber) {
@@ -57,18 +61,19 @@ function claimIdentifiers(viewer, claimNumber) {
 
 function matchingRows(data, identifiers) {
   const upperIdentifiers = identifiers.map((value) => value.toUpperCase());
-  const matches = candidateRows(data).filter((row) => {
+  const containsIdentifier = (row) => {
     const upper = String(row || "").toUpperCase();
     return upperIdentifiers.some((identifier) => upper.includes(identifier));
-  });
-  if (matches.length) return matches;
+  };
 
+  // The API's normalized claim_rows are the safest source for a true claim-only slice:
+  // they preserve the whole claim loop/record and exclude unrelated claims.
   const databaseRows = Array.isArray(data?.claim_rows) ? data.claim_rows.filter(Boolean) : [];
-  const databaseMatches = databaseRows.filter((row) => {
-    const upper = String(row || "").toUpperCase();
-    return upperIdentifiers.some((identifier) => upper.includes(identifier));
-  });
+  const databaseMatches = databaseRows.filter(containsIdentifier);
   if (databaseMatches.length) return databaseMatches;
+
+  const contentMatches = candidateRows(data).filter(containsIdentifier);
+  if (contentMatches.length) return contentMatches;
 
   // Safe fallback for a file that contains exactly one normalized claim.
   return databaseRows.length === 1 ? databaseRows : [];
