@@ -118,7 +118,7 @@ function buildHeading(section, sourceLabel = '') {
   const title = document.createElement('h4');
   title.textContent = 'AI suggestion';
   const source = document.createElement('span');
-  source.textContent = sourceLabel ? `Qwen · ${sourceLabel}` : 'Qwen';
+  source.textContent = 'AI';
   row.append(title, source);
   section.append(row);
 }
@@ -141,7 +141,7 @@ function renderUnavailable(section) {
   buildHeading(section);
   const note = document.createElement('p');
   note.className = 'mpl-ai-suggestion-unavailable';
-  note.textContent = 'AI suggestion is not available for this analysis yet. Select Analyze Again after the Qwen service is running.';
+  note.textContent = 'AI suggestion not available or under processing.';
   section.append(note);
 }
 
