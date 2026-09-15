@@ -173,7 +173,10 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const highmarkRefs = useRef([]);
+  const searchRefs = useRef([]);
   const [highmarkIndex, setHighmarkIndex] = useState(0);
+  const [fileSearch, setFileSearch] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
   const selected = sources[selectedIndex];
   const is837 = String(selected?.type || "").toUpperCase() === "837";
 
@@ -184,7 +187,10 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     setContent("");
     setClaimRows([]);
     highmarkRefs.current = [];
+    searchRefs.current = [];
     setHighmarkIndex(0);
+    setFileSearch("");
+    setSearchIndex(0);
     portalFetch(`${selected.download_url}?view=1`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load the archived file.");
@@ -204,10 +210,16 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   }, [selected]);
 
   useEffect(() => {
-    if (!loading && content) {
+    if (!loading && content && !fileSearch) {
       highmarkRefs.current[highmarkIndex]?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
     }
-  }, [content, loading, selectedIndex, highmarkIndex]);
+  }, [content, loading, selectedIndex, highmarkIndex, fileSearch]);
+
+  useEffect(() => {
+    if (!loading && content && fileSearch) {
+      searchRefs.current[searchIndex]?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    }
+  }, [content, loading, selectedIndex, fileSearch, searchIndex]);
 
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
@@ -223,7 +235,10 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const displayedInternalNumber = internalNumbers.join(", ");
   const highmarkCount = countOccurrences(content, claimNumber);
   const internalCount = internalNumbers.reduce((total, number) => total + countOccurrences(content, number), 0);
-  const terms = [...new Set([claimNumber, ...internalNumbers].filter(Boolean))].sort((left, right) => right.length - left.length);
+  const searchTerm = fileSearch.trim();
+  const searchCount = countOccurrences(content, searchTerm);
+  const baseTerms = [claimNumber, ...internalNumbers].filter(Boolean).sort((left, right) => right.length - left.length);
+  const terms = [searchTerm, ...baseTerms].filter((term, index, values) => term && values.findIndex((value) => value.toUpperCase() === term.toUpperCase()) === index);
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join("|")})`, "gi") : null;
   const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
     .flatMap((row) => String(row || "")
@@ -236,13 +251,23 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     if (!highmarkCount) return;
     setHighmarkIndex((current) => (current + direction + highmarkCount) % highmarkCount);
   };
+  const moveSearch = (direction) => {
+    if (!searchCount) return;
+    setSearchIndex((current) => (current + direction + searchCount) % searchCount);
+  };
   let highmarkRenderIndex = 0;
+  let searchRenderIndex = 0;
   const renderLine = (line, lineIndex) => {
     if (!pattern) return <div className="mpl-source-code-line" key={lineIndex}>{line || " "}</div>;
     const parts = line.split(pattern);
     return <div className="mpl-source-code-line" key={lineIndex}>{parts.map((part, partIndex) => {
       const isMatch = terms.some((term) => term.toUpperCase() === part.toUpperCase());
       if (!isMatch) return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+      const isSearchMatch = Boolean(searchTerm) && part.toUpperCase() === searchTerm.toUpperCase();
+      if (isSearchMatch) {
+        const occurrenceIndex = searchRenderIndex++;
+        return <mark ref={(node) => { searchRefs.current[occurrenceIndex] = node; }} className={occurrenceIndex === searchIndex ? "file-search active" : "file-search"} key={partIndex}>{part}</mark>;
+      }
       const isHighmark = part.toUpperCase() === String(claimNumber).toUpperCase();
       if (isHighmark) {
         const occurrenceIndex = highmarkRenderIndex++;
@@ -278,7 +303,16 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
         <small>{is837 ? "Yellow = Highmark claim" : "Yellow = Highmark claim · Blue = internal claim"}</small>
       </div>
       <div className={`mpl-file-content ${["835", "MIR", "RECON", "837"].includes(String(selected.type).toUpperCase()) ? "one-claim-per-line" : ""}`}>
-        <div className="mpl-file-content-heading"><strong>File content</strong><small>{selected.filename}</small></div>
+        <div className="mpl-file-content-heading">
+          <strong>File content</strong>
+          <div className="mpl-file-search">
+            <label><span className="sr-only">Search file content</span><input type="search" value={fileSearch} onChange={(event) => { setFileSearch(event.target.value); setSearchIndex(0); searchRefs.current = []; }} placeholder="Search file…" /></label>
+            <span>{searchTerm ? `${searchCount ? searchIndex + 1 : 0} / ${searchCount}` : "0 / 0"}</span>
+            <button type="button" onClick={() => moveSearch(-1)} disabled={searchCount < 2} aria-label="Previous search result" title="Previous search result">↑</button>
+            <button type="button" onClick={() => moveSearch(1)} disabled={searchCount < 2} aria-label="Next search result" title="Next search result">↓</button>
+          </div>
+          <small>{selected.filename}</small>
+        </div>
         {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{displayRows.map(renderLine)}</div>}
       </div>
     </section>
