@@ -373,6 +373,59 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
   </>;
 }
 
+function EvidenceDetails({ items }) {
+  if (!items?.length) return null;
+  return <ul className="mpl-evidence-list">{items.map((item, index) =>
+    <li key={index}>{item.description || item.event || item.filename || JSON.stringify(item)}</li>
+  )}</ul>;
+}
+
+function ClaimReportCard({ report, sourceMatch, isAdmin, noticeId, onWorkflowStatus }) {
+  const [files, setFiles] = useState(null);
+  const issues = report.issues || [];
+  const history = report.history || [];
+  return <article className="mpl-report-card">
+    <header className="mpl-report-card-head">
+      <div><span>HIGHMARK CLAIM</span><h3>{report.claim_number}</h3><p>Internal: {report.internal_claim_numbers?.join(", ") || "Not found"}</p></div>
+      {isAdmin && <WorkflowStatusSelect value={report.workflow_status || "YET_TO_START"} onChange={(status) => onWorkflowStatus(noticeId, report.claim_number, status)} />}
+    </header>
+    <div className="mpl-report-facts">
+      <div><span>ISSUES</span><strong>{issues.length}</strong></div><div><span>HISTORY EVENTS</span><strong>{history.length}</strong></div>
+      <div className={report.duplicate?.found ? "attention" : "clear"}><span>DUPLICATE</span><strong>{report.duplicate?.found ? "Found" : "None found"}</strong></div>
+      <div className={report.hold?.found ? "attention" : "clear"}><span>HOLD</span><strong>{report.hold?.found ? "Found" : "None found"}</strong></div>
+    </div>
+    <section className="mpl-report-section">
+      <div className="mpl-report-section-title"><h4>Issues</h4><span>Reported and verified findings</span></div>
+      {issues.length ? <div className="mpl-compact-table-wrap"><table className="mpl-compact-table"><thead><tr><th>Issue tag</th><th>Description</th><th>Evidence</th></tr></thead><tbody>{issues.map((issue, index) => <tr key={`${issue.issue_id}-${index}`}><td><span className={`mpl-issue-tag ${String(issue.severity || "").toLowerCase()}`}>{issue.issue_id}</span></td><td>{issue.description}</td><td>{issue.source}</td></tr>)}</tbody></table></div> : <p className="mpl-report-empty">No issue was associated with this claim.</p>}
+    </section>
+    <section className="mpl-report-section">
+      <div className="mpl-report-section-title"><div><h4>Claim history</h4><span>Every matched archived file and processing event</span></div>{!!sourceMatch?.sources?.length && <button className="mpl-text-button" type="button" onClick={() => setFiles(sourceMatch.sources)}>View source files</button>}</div>
+      {history.length ? <div className="mpl-compact-table-wrap"><table className="mpl-compact-table mpl-history-table"><thead><tr><th>Date</th><th>Type</th><th>File</th><th>Internal claim</th><th>Status / event</th></tr></thead><tbody>{history.map((item, index) => <tr key={index}><td>{dateLabel(item.date)}</td><td><span className="mpl-file-type">{item.file_type || "—"}</span></td><td>{item.filename}</td><td className="mono">{item.internal_claim_number || "—"}</td><td><strong>{statusLabel(item.status)}</strong><small>{item.event}</small></td></tr>)}</tbody></table></div> : <p className="mpl-report-empty">No archived file history was found for this claim.</p>}
+    </section>
+    <div className="mpl-report-two-column">
+      <section className={`mpl-evidence-summary ${report.duplicate?.found ? "attention" : ""}`}><span>DUPLICATE REVIEW</span><p>{report.duplicate?.summary}</p><EvidenceDetails items={report.duplicate?.details} /></section>
+      <section className={`mpl-evidence-summary ${report.hold?.found ? "attention" : ""}`}><span>HOLD REVIEW</span><p>{report.hold?.summary}</p><EvidenceDetails items={report.hold?.details} /></section>
+    </div>
+    {!!report.recommended_actions?.length && <section className="mpl-report-section"><div className="mpl-report-section-title"><h4>Recommended resolution</h4><span>Python rules-based guidance</span></div><ol className="mpl-resolution-list">{report.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation || action.text || action.reason}</li>)}</ol></section>}
+    {files && <SourceFileViewer claimNumber={report.claim_number} sources={files} onClose={() => setFiles(null)} />}
+  </article>;
+}
+
+function NoticeDetailPage({ notice, loading, error, onBack, onReanalyze, onWorkflowStatus, isAdmin }) {
+  const [emailExpanded, setEmailExpanded] = useState(false);
+  const reports = notice?.claim_reports || [];
+  const sourceMatches = notice?.source_matches || [];
+  if (!notice) return <section className="mpl-detail-page"><button className="mpl-back-button" onClick={onBack}>← Back to MPL Notices</button>{loading && <div className="mpl-processing"><span></span>Loading email details…</div>}{error && <div className="mpl-error">{error}</div>}</section>;
+  return <section className="mpl-detail-page">
+    <header className="mpl-detail-page-header"><button type="button" className="mpl-back-button" onClick={onBack}>← Back to MPL Notices</button><div className="mpl-detail-title-row"><div><span>{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h1>{notice.subject}</h1><p>{notice.sender || "Sender unavailable"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><span className={`mpl-status ${(notice.workflow_status || notice.status)?.toLowerCase()}`}>{statusLabel(notice.workflow_status || notice.status)}</span></div><div className="mpl-detail-meta"><span>PROGRAM <b>{notice.program || "—"}</b></span><span>PERIOD <b>{notice.period_start || "—"} – {notice.period_end || "—"}</b></span><span>CLAIMS <b>{reports.length}</b></span><span>ANALYSIS <b>Python rules</b></span></div></header>
+    {loading && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}{error && <div className="mpl-error">{error}</div>}
+    <div className="mpl-detail-page-actions"><button type="button" className="mpl-text-button" onClick={() => setEmailExpanded((value) => !value)}>{emailExpanded ? "Hide email" : "View email"}</button>{notice.source_file_url && <a className="mpl-text-button" href={notice.source_file_url}>Download .msg</a>}{["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button>}</div>
+    {emailExpanded && <pre className="mpl-full-email mpl-detail-email">{notice.email_body}</pre>}
+    <div className="mpl-report-heading"><div><span>CLAIM-WISE RESPONSE</span><h2>Claim analysis and complete history</h2></div><p>Built from stored 837, 835, MIR, reconciliation, duplicate, and hold evidence.</p></div>
+    {reports.length ? <div className="mpl-report-list">{reports.map((report) => <ClaimReportCard key={report.claim_number} report={report} sourceMatch={sourceMatches.find((item) => item.claim_number === report.claim_number)} isAdmin={isAdmin} noticeId={notice.id} onWorkflowStatus={onWorkflowStatus} />)}</div> : <div className="mpl-report-empty-card">No claim report is available yet.</div>}
+  </section>;
+}
+
 export default function NoticesView({ clients = [], activeClientId = "", onSelectClient = null, isAdmin = false }) {
   const [notices, setNotices] = useState([]);
   const [modal, setModal] = useState(false);
@@ -381,7 +434,9 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
   const [sort, setSort] = useState({ key: "received", direction: "desc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [openNoticeId, setOpenNoticeId] = useState(null);
+  const [openNoticeId, setOpenNoticeId] = useState(() => new URLSearchParams(window.location.search).get("notice") || null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
 
   const refresh = useCallback(async () => { try { const clientQuery = activeClientId ? `?client_id=${encodeURIComponent(activeClientId)}` : ""; const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${clientQuery}`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to load MPL notices."); setNotices((current) => data.notices.map((item) => current.find((old) => old.id === item.id && old.status === item.status && old.email_body !== undefined) || item)); setError(""); } catch (err) { setError(err.message); } }, [activeClientId]);
   const loadDetail = useCallback(async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/`); if (!res.ok || !data.success) throw new Error(data.error || "Unable to open notice."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); }, []);
@@ -401,6 +456,34 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
     const timer = setInterval(poll, 8000);
     return () => clearInterval(timer);
   }, [hasActiveNotice, openActiveNoticeId, loadDetail, refresh]);
+  const openNoticePage = useCallback((id) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("notice", id);
+    window.history.pushState({}, "", url.toString());
+    setOpenNoticeId(id);
+  }, []);
+  const closeNoticePage = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("notice");
+    window.history.pushState({}, "", url.toString());
+    setOpenNoticeId(null);
+    setDetailError("");
+  }, []);
+  useEffect(() => {
+    const syncNoticeRoute = () => setOpenNoticeId(new URLSearchParams(window.location.search).get("notice") || null);
+    window.addEventListener("popstate", syncNoticeRoute);
+    return () => window.removeEventListener("popstate", syncNoticeRoute);
+  }, []);
+  useEffect(() => {
+    if (!openNoticeId) return;
+    const selected = notices.find((item) => item.id === openNoticeId);
+    if (selected?.email_body !== undefined) return;
+    setDetailLoading(true);
+    setDetailError("");
+    loadDetail(openNoticeId)
+      .catch((reason) => setDetailError(reason.message || "Unable to load this email."))
+      .finally(() => setDetailLoading(false));
+  }, [openNoticeId, notices, loadDetail]);
   const reanalyze = async (id) => { const { res, data } = await safeFetchJson(`/edi835/api/mpl-notices/${id}/analyze/`, { method: "POST" }); if (!res.ok || !data.success) return setError(data.error || "Unable to reanalyze."); setNotices((items) => items.map((item) => item.id === id ? data.notice : item)); };
   const updateWorkflowStatus = async (id, claimNumber, workflowStatus) => {
     const previous = notices.find((item) => item.id === id);
@@ -477,6 +560,18 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
     ? [...visibleNotices, openNotice]
     : visibleNotices;
 
+  if (openNoticeId) {
+    return <NoticeDetailPage
+      notice={openNotice}
+      loading={detailLoading || Boolean(openNotice && ACTIVE.has(openNotice.status))}
+      error={detailError}
+      onBack={closeNoticePage}
+      onReanalyze={reanalyze}
+      onWorkflowStatus={updateWorkflowStatus}
+      isAdmin={isAdmin}
+    />;
+  }
+
   return <section className="view on mpl-view" id="v-notices">
     <WorkspaceHeader eyebrow="Returned from MPL" title="MPL Notices" description="Upload the original Outlook MPL email, investigate its claims against verified application data, and review evidence-bound recommendations."><div className="mpl-header-actions">{onSelectClient && <label className="mpl-admin-client"><span>CLIENT</span><select value={activeClientId} onChange={(event) => onSelectClient(event.target.value)}><option value="">All clients</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>}<button className="mpl-btn light" onClick={() => setModal(true)}>+ Upload Email</button></div></WorkspaceHeader>
     {error && <div className="mpl-error">{error}</div>}
@@ -498,7 +593,7 @@ export default function NoticesView({ clients = [], activeClientId = "", onSelec
             <SortHeader column="period">PERIOD</SortHeader>
             <SortHeader column="status">STATUS</SortHeader>
           </tr></thead>
-          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onWorkflowStatus={updateWorkflowStatus} isAdmin={isAdmin} cardExpanded={openNoticeId === notice.id} onOpen={setOpenNoticeId} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
+          <tbody>{renderedNotices.length ? renderedNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} loadDetail={loadDetail} onReanalyze={reanalyze} onSelectClaim={selectClaim} onWorkflowStatus={updateWorkflowStatus} isAdmin={isAdmin} cardExpanded={openNoticeId === notice.id} onOpen={openNoticePage} onClose={() => setOpenNoticeId(null)} />) : <tr><td colSpan="7" className="mpl-no-results">No MPL emails match the current search and filters.</td></tr>}</tbody>
         </table>
       </div>
       <div className="mpl-pagination">
