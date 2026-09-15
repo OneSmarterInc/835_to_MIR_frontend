@@ -193,13 +193,21 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   }, [activeClientId]);
   useEffect(() => {
     if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true); setError('');
-      try { const data = await search837Claims(activeClientId, query.trim(), searchField); setRows(data.results || []); }
-      catch (err) { setError(err.message); setRows([]); }
-      finally { setLoading(false); }
-    }, 300);
-    return () => clearTimeout(timer);
+      try {
+        const data = await search837Claims(activeClientId, query.trim(), searchField, 100, controller.signal);
+        if (!controller.signal.aborted) setRows(data.results || []);
+      }
+      catch (err) {
+        if (err.name !== 'AbortError' && !controller.signal.aborted) {
+          setError(err.message); setRows([]);
+        }
+      }
+      finally { if (!controller.signal.aborted) setLoading(false); }
+    }, 350);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [activeClientId, query, searchField]);
   useEffect(() => {
     if (!activeClientId) { setFileData({ results: [], count: 0, pages: 0, has_previous: false, has_next: false }); return undefined; }
