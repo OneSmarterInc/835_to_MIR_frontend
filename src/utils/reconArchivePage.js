@@ -14,6 +14,11 @@ function currentClientId() {
   return new URLSearchParams(window.location.search).get('client') || '';
 }
 
+function isAdministrator() {
+  const path = window.location.pathname.toLowerCase();
+  return path.includes('administrator') || path.includes('adminstrator');
+}
+
 function parseMeta(row) {
   const smalls = [...row.querySelectorAll('small')].map((node) => (node.textContent || '').trim());
   const bits = (smalls[0] || '').split('·').map((value) => value.trim());
@@ -44,7 +49,7 @@ async function loadClients(select) {
     });
     select.value = currentClientId();
   } catch {
-    select.closest('.recon-archive-client')?.remove();
+    select.closest('.recon-archive-header-client')?.remove();
   }
 }
 
@@ -52,7 +57,7 @@ async function resolveFileId(filename) {
   const params = new URLSearchParams();
   const clientId = currentClientId();
   if (clientId) params.set('client_id', clientId);
-  else if (window.location.pathname.toLowerCase().includes('administrator')) params.set('scope', 'global');
+  else if (isAdministrator()) params.set('scope', 'global');
   const response = await fetch(`/edi835/api/recon/files/?${params}`, { headers: authHeaders(), credentials: 'include' });
   if (!response.ok) throw new Error('Unable to load RECON file details.');
   const data = await response.json();
@@ -95,7 +100,7 @@ async function openPreview(filename) {
     fileId = await resolveFileId(filename);
     if (!fileId) throw new Error('RECON file record was not found.');
   } catch (error) {
-    window.alert(error.message);
+    console.error(error);
     return;
   }
 
@@ -156,13 +161,12 @@ function enhanceArchive(backdrop) {
     close.textContent = '← Back to Reconciliation';
   }
 
-  const tools = document.createElement('div');
-  tools.className = 'recon-archive-tools';
-  tools.innerHTML = `<div class="recon-archive-client"><label>Client</label><select aria-label="Select client"></select></div><label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, status, import mode…"></label>`;
-  titleBar?.after(tools);
-  const clientSelect = tools.querySelector('select');
-  if (!window.location.pathname.toLowerCase().includes('administrator')) tools.querySelector('.recon-archive-client')?.remove();
-  else {
+  if (isAdministrator() && titleBar && close) {
+    const clientBox = document.createElement('div');
+    clientBox.className = 'recon-archive-header-client';
+    clientBox.innerHTML = '<label>Client</label><select aria-label="Select client"></select>';
+    titleBar.insertBefore(clientBox, close);
+    const clientSelect = clientBox.querySelector('select');
     loadClients(clientSelect);
     clientSelect.addEventListener('change', () => {
       const url = new URL(window.location.href);
@@ -173,6 +177,11 @@ function enhanceArchive(backdrop) {
     });
   }
 
+  const tools = document.createElement('div');
+  tools.className = 'recon-archive-tools';
+  tools.innerHTML = `<label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, date, status, claims, size, import mode…" aria-label="Search uploaded RECON files"></label>`;
+  titleBar?.after(tools);
+
   const list = modal.querySelector('.result-files-list');
   if (!list) return;
   const sourceRows = [...list.querySelectorAll('.result-file-row')];
@@ -180,7 +189,7 @@ function enhanceArchive(backdrop) {
   tableWrap.className = 'recon-archive-table-wrap';
   const table = document.createElement('table');
   table.className = 'recon-archive-table';
-  table.innerHTML = '<thead><tr><th>Filename</th><th>Received</th><th>Status</th><th>Claims</th><th>Size</th><th>Import Mode</th><th>Action</th></tr></thead><tbody></tbody>';
+  table.innerHTML = '<thead><tr><th>Date / Time</th><th>Filename</th><th>Status</th><th>Claims</th><th>Bytes</th><th>Import Mode</th><th>Action</th></tr></thead><tbody></tbody>';
   const tbody = table.querySelector('tbody');
 
   sourceRows.forEach((row) => {
@@ -188,14 +197,15 @@ function enhanceArchive(backdrop) {
     const download = row.querySelector('button');
     const tr = document.createElement('tr');
     tr.dataset.search = `${meta.filename} ${meta.date} ${meta.status} ${meta.claims} ${meta.size} ${meta.importMode}`.toLowerCase();
-    tr.innerHTML = `<td><strong></strong></td><td></td><td><span class="recon-archive-status"></span></td><td></td><td></td><td></td><td class="recon-archive-actions"></td>`;
-    tr.children[0].querySelector('strong').textContent = meta.filename;
-    tr.children[1].textContent = meta.date;
+    tr.innerHTML = `<td></td><td><strong></strong></td><td><span class="recon-archive-status"></span></td><td class="num"></td><td class="num"></td><td></td><td class="recon-archive-actions"></td>`;
+    tr.children[0].textContent = meta.date;
+    tr.children[1].querySelector('strong').textContent = meta.filename;
     tr.children[2].querySelector('span').textContent = meta.status;
     tr.children[3].textContent = meta.claims.replace(/\s*claims?$/i, '');
-    tr.children[4].textContent = meta.size;
+    tr.children[4].textContent = meta.size.replace(/\s*bytes?$/i, '');
     tr.children[5].textContent = meta.importMode;
     const actions = tr.querySelector('.recon-archive-actions');
+
     const eye = document.createElement('button');
     eye.type = 'button';
     eye.className = 'recon-archive-icon';
@@ -204,6 +214,7 @@ function enhanceArchive(backdrop) {
     eye.innerHTML = EYE_SVG;
     eye.addEventListener('click', () => openPreview(meta.filename));
     actions.append(eye);
+
     if (download) {
       download.className = 'recon-archive-icon';
       download.title = 'Download file';
@@ -214,13 +225,42 @@ function enhanceArchive(backdrop) {
     tbody.append(tr);
   });
   tableWrap.append(table);
+
+  const pagination = document.createElement('div');
+  pagination.className = 'recon-archive-pagination';
+  pagination.innerHTML = `<label>Rows per page: <select aria-label="Rows per page"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label><div><button type="button" class="recon-archive-page-button" data-direction="previous">Previous</button><span class="recon-archive-page-status">Page 1 of 1</span><button type="button" class="recon-archive-page-button" data-direction="next">Next</button></div>`;
+  tableWrap.append(pagination);
   list.replaceWith(tableWrap);
 
   const search = tools.querySelector('.recon-archive-search input');
-  search.addEventListener('input', () => {
+  const pageSizeSelect = pagination.querySelector('select');
+  const previous = pagination.querySelector('[data-direction="previous"]');
+  const next = pagination.querySelector('[data-direction="next"]');
+  const pageStatus = pagination.querySelector('.recon-archive-page-status');
+  let page = 1;
+
+  const filteredRows = () => {
     const value = search.value.trim().toLowerCase();
-    [...tbody.rows].forEach((row) => { row.hidden = Boolean(value) && !row.dataset.search.includes(value); });
-  });
+    return [...tbody.rows].filter((row) => !value || row.dataset.search.includes(value));
+  };
+
+  const renderPage = () => {
+    const matches = filteredRows();
+    const pageSize = Number(pageSizeSelect.value) || 10;
+    const pages = Math.max(1, Math.ceil(matches.length / pageSize));
+    page = Math.min(Math.max(1, page), pages);
+    const visible = new Set(matches.slice((page - 1) * pageSize, page * pageSize));
+    [...tbody.rows].forEach((row) => { row.hidden = !visible.has(row); });
+    pageStatus.textContent = `Page ${page} of ${pages}`;
+    previous.disabled = page <= 1;
+    next.disabled = page >= pages;
+  };
+
+  search.addEventListener('input', () => { page = 1; renderPage(); });
+  pageSizeSelect.addEventListener('change', () => { page = 1; renderPage(); });
+  previous.addEventListener('click', () => { page -= 1; renderPage(); });
+  next.addEventListener('click', () => { page += 1; renderPage(); });
+  renderPage();
 }
 
 export function installReconArchivePage() {
