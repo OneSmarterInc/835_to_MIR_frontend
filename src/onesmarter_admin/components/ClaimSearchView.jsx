@@ -50,7 +50,6 @@ async function downloadClaimWithFilename(claimId, filename) {
   setTimeout(() => URL.revokeObjectURL(href), 1500);
 }
 
-
 function ClaimOperationalDetails({ operational }) {
   const data = operational || { status: 'CLEAR', history: [], findings: [], occurrence_count: 0 };
   return <section className="claim-operational">
@@ -126,7 +125,6 @@ function Claim837Modal({ claimId, namingFormat, summary, onClose }) {
   </div>;
 }
 
-
 function UniversalClaimModal({ row, onClose }) {
   return <div className="claim837-backdrop claim837-summary-backdrop" role="presentation">
     <div className="claim837-modal" role="dialog" aria-modal="true" aria-label="Universal claim summary">
@@ -186,6 +184,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState('');
   const [fileRefresh, setFileRefresh] = useState(0);
+  const [pushingPending, setPushingPending] = useState(false);
 
   useEffect(() => {
     setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice(''); setFileQuery(''); setFilePage(1);
@@ -258,6 +257,50 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     finally { setRenaming(false); }
   };
 
+  const pushAllPending837 = async () => {
+    if (!activeClientId || pushingPending) return;
+    setPushingPending(true); setError(''); setFileError(''); setNotice('');
+    try {
+      const headers = { 'Content-Type': 'application/json', 'X-Admin-Screen': 'search' };
+      const queueRes = await fetch('/edi835/api/837/files/', {
+        method: 'POST', credentials: 'include', headers,
+        body: JSON.stringify({ client_id: activeClientId }),
+      });
+      const queued = await queueRes.json().catch(() => ({}));
+      if (!queueRes.ok || !queued.success) throw new Error(queued.error || 'Unable to queue pending 837 files for SFTP delivery.');
+      if (!queued.job_id || queued.state === 'COMPLETED') {
+        setNotice(queued.message || 'All processed 837 files are already pushed to SFTP.');
+        setFileRefresh(value => value + 1);
+        return;
+      }
+
+      setNotice(queued.message || `Queued ${queued.pending_count || 0} pending 837 file(s) for sequential SFTP delivery.`);
+      let completedJob = null;
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const statusRes = await fetch(`/edi835/api/start-batch-conversion/?job_id=${encodeURIComponent(queued.job_id)}`, {
+          method: 'GET', credentials: 'include', headers: { 'X-Admin-Screen': 'search' },
+        });
+        const statusData = await statusRes.json().catch(() => ({}));
+        if (!statusRes.ok || !statusData.success) throw new Error(statusData.error || 'Unable to read 837 SFTP push status.');
+        const job = statusData.job || {};
+        if (job.state === 'COMPLETED' || job.state === 'FAILED') { completedJob = job; break; }
+      }
+      if (!completedJob) throw new Error('837 SFTP delivery is still running. Refresh to check the latest status.');
+      const result = completedJob.result || {};
+      if (completedJob.state === 'FAILED' || result.success === false) throw new Error(result.error || (result.errors || []).join('; ') || '837 SFTP delivery failed.');
+      const sent = Number(result.processed_count || (result.sent_files || []).length || 0);
+      const remainingErrors = Array.isArray(result.errors) ? result.errors.length : 0;
+      setNotice(remainingErrors ? `Pushed ${sent} 837 file(s). ${remainingErrors} file(s) could not be pushed and remain queued for retry.` : `Pushed ${sent} pending 837 file(s) to SFTP one by one.`);
+      setFileRefresh(value => value + 1);
+    } catch (err) {
+      setFileError(err.message);
+      setFileRefresh(value => value + 1);
+    } finally {
+      setPushingPending(false);
+    }
+  };
+
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
       <div className="claim-search-heading-copy"><div className="claim-search-eyebrow">Claims workspace</div><h1>Universal Claim Search</h1><p>Locate and review claim records across 835, MIR, RECON, and 837 files for the selected client.</p></div>
@@ -276,13 +319,13 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       {!rows.length ? <tr><td colSpan="7" className="empty">{query.trim() && !loading ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'Universal claim search results will appear here.'}</td></tr> : rows.map(row => { const openRow = () => { if (row.has_837 === false) setSourceClaim(row); else { setClaimSummary(row); setClaimId(row.id); } }; return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
     </tbody></table></div></div>
     <section className="claim-files-section">
-      <div className="claim-files-heading"><div><div className="eyebrow">837 FILE HISTORY</div><h2>837 Files</h2><p>{fileData.count} file{fileData.count === 1 ? '' : 's'} for the selected client</p></div><button type="button" className="btn" disabled={!activeClientId || fileLoading} onClick={() => setFileRefresh(value => value + 1)}>Refresh</button></div>
+      <div className="claim-files-heading"><div><div className="eyebrow">837 FILE HISTORY</div><h2>837 Files</h2><p>{fileData.count} file{fileData.count === 1 ? '' : 's'} for the selected client{Number(fileData.pending_outbound_count || 0) > 0 ? ` · ${fileData.pending_outbound_count} waiting for SFTP` : ''}</p></div><button type="button" className="btn" disabled={!activeClientId || fileLoading || pushingPending} onClick={() => setFileRefresh(value => value + 1)}>Refresh</button></div>
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={fileQuery} onChange={event => { setFileQuery(event.target.value); setFilePage(1); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />{fileLoading && <span>Loading…</span>}</div>
       {fileError && <div className="claim837-message error">{fileError}</div>}
       <div className="claim-search-results"><div className="claim837-table-wrap"><table className="claim-files-table"><thead><tr><th>Inbound 837 file</th><th>Outbound 837 file</th><th>Processing status</th><th>Inbound</th><th>Inbound status</th><th>Outbound status</th><th>Claims</th><th>Services</th><th>Total charge</th><th>Processed</th></tr></thead><tbody>
-        {!fileData.results.length ? <tr><td colSpan="10" className="empty">{fileLoading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : fileData.results.map(file => <tr key={file.id}><td className="file-name-cell">{file.original_file_name || file.file_name || '—'}</td><td className="file-name-cell">{file.outbound_file_name || '—'}</td><td><span className={`file-status status-${file.status.toLowerCase()}`}>{file.status}</span></td><td>{file.inbound_source}</td><td><span className="file-status status-received">{file.inbound_status}</span></td><td><span className={`file-status ${file.outbound_ready ? 'status-pushed' : 'status-not-pushed'}`}>{file.outbound_status}</span></td><td>{file.claim_count}</td><td>{file.service_count}</td><td>{money(file.total_charge_amount)}</td><td>{dateTime(file.processed_at || file.uploaded_at)}</td></tr>)}
+        {!fileData.results.length ? <tr><td colSpan="10" className="empty">{fileLoading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : fileData.results.map(file => <tr key={file.id}><td className="file-name-cell">{file.original_file_name || file.file_name || '—'}</td><td className="file-name-cell">{file.outbound_file_name || '—'}</td><td><span className={`file-status status-${file.status.toLowerCase()}`}>{file.status}</span></td><td>{file.inbound_source}</td><td><span className="file-status status-received">{file.inbound_status}</span></td><td>{file.outbound_ready ? <span className="file-status status-pushed">{file.outbound_status}</span> : <button type="button" className="file-status status-not-pushed" disabled={pushingPending} title={`Push all ${fileData.pending_outbound_count || 'pending'} processed 837 files to SFTP one by one`} style={{ border: 0, cursor: pushingPending ? 'wait' : 'pointer', font: 'inherit' }} onClick={pushAllPending837}>{pushingPending ? 'PUSHING…' : file.outbound_status}</button>}</td><td>{file.claim_count}</td><td>{file.service_count}</td><td>{money(file.total_charge_amount)}</td><td>{dateTime(file.processed_at || file.uploaded_at)}</td></tr>)}
       </tbody></table></div></div>
-      <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
+      <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading || pushingPending} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading || pushingPending} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
     </section>
     {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} summary={claimSummary} onClose={() => { setClaimId(null); setClaimSummary(null); }} />}
     {sourceClaim && <UniversalClaimModal row={sourceClaim} onClose={() => setSourceClaim(null)} />}
