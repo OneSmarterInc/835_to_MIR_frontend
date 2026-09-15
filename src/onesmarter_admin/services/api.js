@@ -88,9 +88,11 @@ export async function process837Upload(clientId, files) {
   return data;
 }
 
-export async function search837Claims(clientId, query, field = 'all', limit = 100) {
+export async function search837Claims(clientId, query, field = 'all', limit = 100, signal) {
   const params = new URLSearchParams({ client_id: clientId, q: query, field, limit: String(limit) });
-  const res = await fetch(`/edi835/api/837/search/?${params}`, { credentials: 'include', headers: getAuthHeaders() });
+  const res = await fetch(`/edi835/api/837/search/?${params}`, {
+    credentials: 'include', headers: getAuthHeaders(), signal,
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) throw new Error(data.error || 'Unable to search 837 claims.');
   return data;
