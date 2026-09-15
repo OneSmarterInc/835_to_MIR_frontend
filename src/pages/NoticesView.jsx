@@ -395,11 +395,23 @@ function MatchedFilesMatrix({ notice, isAdmin, onWorkflowStatus }) {
   </section>;
 }
 
+const duplicateStatusLabel = status => ({
+  ADJUSTMENT: "Adjustment",
+  DUPLICATE_FOUND: "Duplicate found",
+  NOT_FOUND: "Not found",
+})[status] || "Not found";
+
 function EvidenceDetails({ items }) {
   if (!items?.length) return null;
-  return <ul className="mpl-evidence-list">{items.map((item, index) =>
-    <li key={index}>{item.description || item.event || item.filename || JSON.stringify(item)}</li>
-  )}</ul>;
+  return <div className="mpl-evidence-table-wrap"><table className="mpl-evidence-table">
+    <thead><tr><th>When</th><th>File</th><th>Rule / status</th><th>Why</th></tr></thead>
+    <tbody>{items.map((item, index) => <tr key={index}>
+      <td>{dateLabel(item.date)}</td>
+      <td title={item.filename || ""}>{item.filename || "—"}</td>
+      <td><strong>{item.code || statusLabel(item.severity || item.status) || "—"}</strong>{item.severity && item.code ? <small>{statusLabel(item.severity)}</small> : null}</td>
+      <td>{item.description || item.event || item.source || "Recorded evidence"}</td>
+    </tr>)}</tbody>
+  </table></div>;
 }
 
 function ClaimReportCard({ report, sourceMatch, isAdmin, noticeId, onWorkflowStatus }) {
@@ -413,7 +425,7 @@ function ClaimReportCard({ report, sourceMatch, isAdmin, noticeId, onWorkflowSta
     </header>
     <div className="mpl-report-facts">
       <div><span>ISSUES</span><strong>{issues.length}</strong></div><div><span>HISTORY EVENTS</span><strong>{history.length}</strong></div>
-      <div className={report.duplicate?.found ? "attention" : "clear"}><span>DUPLICATE</span><strong>{report.duplicate?.found ? "Found" : "None found"}</strong></div>
+      <div className={report.duplicate?.status === "DUPLICATE_FOUND" ? "attention" : report.duplicate?.status === "ADJUSTMENT" ? "adjustment" : "clear"}><span>CLAIM STATUS</span><strong>{duplicateStatusLabel(report.duplicate?.status)}</strong></div>
       <div className={report.hold?.found ? "attention" : "clear"}><span>HOLD</span><strong>{report.hold?.found ? "Found" : "None found"}</strong></div>
     </div>
     <section className="mpl-report-section">
@@ -425,8 +437,8 @@ function ClaimReportCard({ report, sourceMatch, isAdmin, noticeId, onWorkflowSta
       {history.length ? <div className="mpl-compact-table-wrap"><table className="mpl-compact-table mpl-history-table"><thead><tr><th>Date</th><th>Type</th><th>File</th><th>Internal claim</th><th>Status / event</th></tr></thead><tbody>{history.map((item, index) => <tr key={index}><td>{dateLabel(item.date)}</td><td><span className="mpl-file-type">{item.file_type || "—"}</span></td><td>{item.filename}</td><td className="mono">{item.internal_claim_number || "—"}</td><td><strong>{statusLabel(item.status)}</strong><small>{item.event}</small></td></tr>)}</tbody></table></div> : <p className="mpl-report-empty">No archived file history was found for this claim.</p>}
     </section>
     <div className="mpl-report-two-column">
-      <section className={`mpl-evidence-summary ${report.duplicate?.found ? "attention" : ""}`}><span>DUPLICATE REVIEW</span><p>{report.duplicate?.summary}</p><EvidenceDetails items={report.duplicate?.details} /></section>
-      <section className={`mpl-evidence-summary ${report.hold?.found ? "attention" : ""}`}><span>HOLD REVIEW</span><p>{report.hold?.summary}</p><EvidenceDetails items={report.hold?.details} /></section>
+      <section className={`mpl-evidence-summary ${report.duplicate?.status === "DUPLICATE_FOUND" ? "attention" : report.duplicate?.status === "ADJUSTMENT" ? "adjustment" : ""}`}><span>DUPLICATE REVIEW</span><strong className="mpl-review-status">{duplicateStatusLabel(report.duplicate?.status)}</strong><p>{report.duplicate?.summary}</p><EvidenceDetails items={report.duplicate?.details} /></section>
+      <section className={`mpl-evidence-summary ${report.hold?.found ? "attention" : ""}`}><span>HOLD REVIEW</span><strong className="mpl-review-status">{report.hold?.found ? "Hold found" : "Not found"}</strong><p>{report.hold?.summary}</p><EvidenceDetails items={report.hold?.details} /></section>
     </div>
     {!!report.recommended_actions?.length && <section className="mpl-report-section"><div className="mpl-report-section-title"><h4>Recommended resolution</h4><span>Python rules-based guidance</span></div><ol className="mpl-resolution-list">{report.recommended_actions.map((action, index) => <li key={index}>{typeof action === "string" ? action : action.explanation || action.text || action.reason}</li>)}</ol></section>}
     {files && <SourceFileViewer claimNumber={report.claim_number} sources={files} onClose={() => setFiles(null)} />}
