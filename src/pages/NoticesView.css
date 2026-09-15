@@ -534,3 +534,14 @@
   .mpl-files-section .mpl-source-matrix-wrap{overflow-x:hidden}
   .mpl-files-section .mpl-source-matrix{min-width:0}
 }
+
+.mpl-report-facts>div.adjustment,.mpl-evidence-summary.adjustment{border-color:#7da7c7;border-left-color:#24658f;background:#eef7fc}
+.mpl-review-status{display:block;margin-top:4px;color:#10283d;font-size:12px}
+.mpl-evidence-table-wrap{max-width:100%;margin-top:8px;overflow-x:auto}
+.mpl-evidence-table{width:100%;min-width:560px;border-collapse:collapse;background:#fff;font-size:9px}
+.mpl-evidence-table th,.mpl-evidence-table td{padding:6px 7px;border:1px solid #d5e0e8;text-align:left;vertical-align:top}
+.mpl-evidence-table th{background:#edf3f6;color:#5d7187;font:800 8px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+.mpl-evidence-table td:nth-child(1){width:145px;white-space:nowrap}
+.mpl-evidence-table td:nth-child(2){max-width:220px;overflow-wrap:anywhere}
+.mpl-evidence-table td:nth-child(3){width:95px}
+.mpl-evidence-table td small{display:block;margin-top:2px;color:#718399}
