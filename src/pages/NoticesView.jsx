@@ -142,7 +142,30 @@ const countOccurrences = (content, value) => {
   return String(content || "").toUpperCase().split(term.toUpperCase()).length - 1;
 };
 
-const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+");
+
+const normalizedInternalClaimNumbers = (storedValue, claimNumber, content) => {
+  const highmark = String(claimNumber || "").trim();
+  const candidates = String(storedValue || "").split(",").map((value) => value.trim()).filter(Boolean);
+  if (highmark) {
+    const adjacentPattern = new RegExp(`${escapePattern(highmark)}([A-Za-z][A-Za-z0-9_-]{1,30})`, "gi");
+    let match;
+    while ((match = adjacentPattern.exec(String(content || ""))) !== null) candidates.push(match[1]);
+  }
+
+  const normalized = [];
+  candidates.forEach((candidate) => {
+    let value = String(candidate || "").trim();
+    if (!value) return;
+    if (highmark && value.toUpperCase().startsWith(highmark.toUpperCase())) {
+      value = value.slice(highmark.length).trim();
+    }
+    if (!value || value.toUpperCase() === highmark.toUpperCase() || /^\d{15,}$/.test(value)) return;
+    if (!normalized.some((item) => item.toUpperCase() === value.toUpperCase())) normalized.push(value);
+  });
+  return normalized;
+};
 
 function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -189,15 +212,11 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  const storedInternalNumbers = String(selected.internal_claim_number || "").split(",").map((value) => value.trim()).filter(Boolean);
-  const visibleInternalPattern = new RegExp(`${escapePattern(String(claimNumber))}([A-Za-z][A-Za-z0-9_-]{1,30})`, "gi");
-  const inferredInternalNumbers = [];
-  let inferredMatch;
-  while ((inferredMatch = visibleInternalPattern.exec(content)) !== null) {
-    const value = inferredMatch[0];
-    if (!inferredInternalNumbers.some((item) => item.toUpperCase() === value.toUpperCase())) inferredInternalNumbers.push(value);
-  }
-  const internalNumbers = [...new Set([...storedInternalNumbers, ...inferredInternalNumbers])];
+  const internalNumbers = normalizedInternalClaimNumbers(
+    selected.internal_claim_number,
+    claimNumber,
+    content,
+  );
   const displayedInternalNumber = internalNumbers.join(", ");
   const highmarkCount = countOccurrences(content, claimNumber);
   const internalCount = internalNumbers.reduce((total, number) => total + countOccurrences(content, number), 0);
