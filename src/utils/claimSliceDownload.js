@@ -1,52 +1,117 @@
 const DOWNLOAD_ICON = `
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-  <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 3v10m0 0 4-4m-4 4-4-4M5 16.5v3h14v-3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
-function x12ClaimRows(content, claimTag) {
-  const source = String(content || "");
-  const delimiter = source.startsWith("ISA") && source.length > 105 ? source[105] : "~";
-  const segments = source.split(delimiter).map((segment) => segment.trim()).filter(Boolean);
-  const rows = [];
-  let claim = [];
+const INTERNAL_EXACT = /^[A-Z]{3}\d{3}$/i;
+const INTERNAL_PACKED = /^([A-Z]{3}\d{3})(?=\d{4,})/i;
 
-  const flush = () => {
-    if (!claim.length) return;
-    rows.push(`${claim.join(delimiter)}${delimiter}`);
-    claim = [];
-  };
+function normalizeInternalClaimNumber(value, claimNumber = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const highmark = String(claimNumber || "").trim();
 
-  segments.forEach((segment) => {
-    const tag = segment.split("*", 1)[0].toUpperCase();
-    if (tag === claimTag) {
-      flush();
-      claim = [segment];
-      return;
-    }
-    if (["SE", "GE", "IEA"].includes(tag)) {
-      flush();
-      return;
-    }
-    if (claim.length) claim.push(segment);
-  });
-  flush();
-  return rows;
+  if (highmark) {
+    const packedAfterClaim = raw.match(
+      new RegExp(`(?:HI)?${highmark.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^A-Z0-9]*([A-Z]{3}\\d{3})`, "i"),
+    );
+    if (packedAfterClaim) return packedAfterClaim[1].toUpperCase();
+  }
+
+  if (INTERNAL_EXACT.test(raw)) return raw.toUpperCase();
+  const packed = raw.match(INTERNAL_PACKED);
+  if (packed) return packed[1].toUpperCase();
+  return raw;
 }
 
-function candidateRows(data) {
-  const type = String(data?.type || "").toUpperCase();
-  const content = String(data?.content || "").replace(/\r\n?/g, "\n");
+function sourceFileIdentity(source) {
+  const url = String(source?.download_url || "");
+  const match = url.match(/\/mpl-files\/[^/]+\/([0-9a-f-]{36})\/download\//i);
+  return match?.[1] || url || `${source?.filename || ""}|${source?.date || ""}`;
+}
 
-  if (type === "835") return x12ClaimRows(content, "CLP");
-  if (type === "837") return x12ClaimRows(content, "CLM");
-  if (type === "MIR") {
-    const physicalRows = content.split("\n").filter((row) => row.trim());
-    if (physicalRows.length > 1) return physicalRows;
-    return content.split(/(?=HI\d{15,})/).filter((row) => row.trim());
-  }
-  if (type === "RECON") return content.split("\n").filter((row) => row.trim());
+function normalizeSourceMatches(matches) {
+  return (Array.isArray(matches) ? matches : []).map((match) => {
+    const claimNumber = String(match?.claim_number || "").trim();
+    const seen = new Set();
+    const sources = [];
 
-  return content.split("\n");
+    (Array.isArray(match?.sources) ? match.sources : []).forEach((rawSource) => {
+      const source = { ...rawSource };
+      source.internal_claim_number = normalizeInternalClaimNumber(
+        source.internal_claim_number,
+        claimNumber,
+      );
+
+      // A repeated source with the same database file ID is a UI/matching
+      // duplicate. Separate database file rows have different IDs in the URL
+      // and remain visible even when their filenames happen to be identical.
+      const key = [
+        String(source.type || "").toUpperCase(),
+        sourceFileIdentity(source),
+        String(source.internal_claim_number || "").toUpperCase(),
+      ].join("|");
+      if (seen.has(key)) return;
+      seen.add(key);
+      sources.push(source);
+    });
+
+    return { ...match, sources };
+  });
+}
+
+function normalizeClaimReports(reports) {
+  return (Array.isArray(reports) ? reports : []).map((report) => {
+    const claimNumber = String(report?.claim_number || "").trim();
+    const internals = [];
+    (Array.isArray(report?.internal_claim_numbers) ? report.internal_claim_numbers : []).forEach((value) => {
+      const normalized = normalizeInternalClaimNumber(value, claimNumber);
+      if (normalized && !internals.some((item) => item.toUpperCase() === normalized.toUpperCase())) {
+        internals.push(normalized);
+      }
+    });
+    const history = (Array.isArray(report?.history) ? report.history : []).map((item) => ({
+      ...item,
+      internal_claim_number: normalizeInternalClaimNumber(item?.internal_claim_number, claimNumber),
+    }));
+    return { ...report, internal_claim_numbers: internals, history };
+  });
+}
+
+function normalizeNoticePayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  const normalizeNotice = (notice) => {
+    if (!notice || typeof notice !== "object") return notice;
+    return {
+      ...notice,
+      source_matches: normalizeSourceMatches(notice.source_matches),
+      claim_reports: normalizeClaimReports(notice.claim_reports),
+    };
+  };
+
+  if (payload.notice) return { ...payload, notice: normalizeNotice(payload.notice) };
+  if (Array.isArray(payload.notices)) return { ...payload, notices: payload.notices.map(normalizeNotice) };
+  return payload;
+}
+
+function installMplResponseNormalizer() {
+  if (window.__mplResponseNormalizerInstalled) return;
+  window.__mplResponseNormalizerInstalled = true;
+  const previousFetch = window.fetch;
+
+  window.fetch = async function normalizedMplFetch(input, options) {
+    const response = await previousFetch(input, options);
+    const url = typeof input === "string" ? input : input?.url || "";
+    if (!String(url).includes("/edi835/api/mpl-notices/")) return response;
+
+    const originalJson = response.json.bind(response);
+    Object.defineProperty(response, "json", {
+      configurable: true,
+      value: async () => normalizeNoticePayload(await originalJson()),
+    });
+    return response;
+  };
 }
 
 function claimIdentifiers(viewer, claimNumber) {
@@ -54,38 +119,12 @@ function claimIdentifiers(viewer, claimNumber) {
   viewer.querySelectorAll(".mpl-file-viewer-toolbar dt").forEach((term) => {
     if (!/internal claim number/i.test(term.textContent || "")) return;
     const text = term.parentElement?.querySelector("dd")?.textContent || "";
-    text.split(",").map((value) => value.trim()).filter(Boolean).forEach((value) => values.push(value));
+    text.split(",").map((value) => value.trim()).filter(Boolean).forEach((value) => {
+      const normalized = normalizeInternalClaimNumber(value, claimNumber);
+      if (normalized) values.push(normalized);
+    });
   });
   return [...new Set(values.filter((value) => value && value.toLowerCase() !== "not found"))];
-}
-
-function matchingRows(data, identifiers) {
-  const upperIdentifiers = identifiers.map((value) => value.toUpperCase());
-  const containsIdentifier = (row) => {
-    const upper = String(row || "").toUpperCase();
-    return upperIdentifiers.some((identifier) => upper.includes(identifier));
-  };
-
-  // The API's normalized claim_rows are the safest source for a true claim-only slice:
-  // they preserve the whole claim loop/record and exclude unrelated claims.
-  const databaseRows = Array.isArray(data?.claim_rows) ? data.claim_rows.filter(Boolean) : [];
-  const databaseMatches = databaseRows.filter(containsIdentifier);
-  if (databaseMatches.length) return databaseMatches;
-
-  const contentMatches = candidateRows(data).filter(containsIdentifier);
-  if (contentMatches.length) return contentMatches;
-
-  // Safe fallback for a file that contains exactly one normalized claim.
-  return databaseRows.length === 1 ? databaseRows : [];
-}
-
-function slicedFilename(filename, claimNumber) {
-  const source = String(filename || "claim-file.txt");
-  const dot = source.lastIndexOf(".");
-  const base = dot > 0 ? source.slice(0, dot) : source;
-  const extension = dot > 0 ? source.slice(dot) : ".txt";
-  const safeClaim = String(claimNumber || "claim").replace(/[^A-Za-z0-9_-]+/g, "_");
-  return `${base}_sliced_claim_${safeClaim}${extension}`;
 }
 
 function showMessage(toolbar, text) {
@@ -96,7 +135,23 @@ function showMessage(toolbar, text) {
     toolbar.appendChild(message);
   }
   message.textContent = text;
-  window.setTimeout(() => message.remove(), 3200);
+  window.setTimeout(() => message.remove(), 3600);
+}
+
+function filenameFromResponse(response, fallback) {
+  const disposition = response.headers.get("content-disposition") || "";
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const quoted = disposition.match(/filename="([^"]+)"/i);
+  if (encoded) return decodeURIComponent(encoded[1]);
+  if (quoted) return quoted[1];
+  return fallback;
+}
+
+function claimSliceUrl(sourceUrl, claimNumber, internalNumber) {
+  const base = String(sourceUrl || "").replace(/\/download\/?(?:\?.*)?$/i, "/claim-slice/");
+  const params = new URLSearchParams({ claim_number: claimNumber });
+  if (internalNumber) params.set("internal_claim_number", internalNumber);
+  return `${base}?${params.toString()}`;
 }
 
 async function downloadClaimSlice(button) {
@@ -113,29 +168,25 @@ async function downloadClaimSlice(button) {
     return;
   }
 
+  const identifiers = claimIdentifiers(viewer, claimNumber);
+  const internalNumber = identifiers.find((value) => value !== claimNumber) || "";
   const sourceUrl = sourceLink.getAttribute("href") || "";
-  const viewUrl = `${sourceUrl}${sourceUrl.includes("?") ? "&" : "?"}view=1`;
+  const url = claimSliceUrl(sourceUrl, claimNumber, internalNumber);
+
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
-
   try {
-    const response = await window.fetch(viewUrl, { credentials: "include" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.success) throw new Error(data.error || "Unable to read the source file.");
-
-    const identifiers = claimIdentifiers(viewer, claimNumber);
-    const rows = matchingRows(data, identifiers);
-    if (!rows.length) {
-      showMessage(toolbar, "No matching claim record was found in this file.");
-      return;
+    const response = await window.fetch(url, { credentials: "include" });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Unable to create the sliced claim file.");
     }
 
-    const output = `${rows.map((row) => String(row).trim()).filter(Boolean).join("\n")}\n`;
-    const blob = new Blob([output], { type: "application/octet-stream" });
+    const blob = await response.blob();
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = href;
-    anchor.download = slicedFilename(data.filename, claimNumber);
+    anchor.download = filenameFromResponse(response, `claim_${claimNumber}.txt`);
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -155,14 +206,15 @@ function enhanceViewer(viewer) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mpl-claim-slice-download";
-  button.setAttribute("aria-label", "Download sliced claims");
-  button.title = "Download sliced claims";
+  button.setAttribute("aria-label", "Download sliced claim file");
+  button.title = "Download sliced claim file";
   button.innerHTML = DOWNLOAD_ICON;
   button.addEventListener("click", () => downloadClaimSlice(button));
   toolbar.appendChild(button);
 }
 
 export function installClaimSliceDownload() {
+  installMplResponseNormalizer();
   const refresh = () => document.querySelectorAll(".mpl-file-viewer").forEach(enhanceViewer);
   refresh();
   const observer = new MutationObserver(refresh);
