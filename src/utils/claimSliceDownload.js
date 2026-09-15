@@ -24,78 +24,6 @@ function normalizeInternalClaimNumber(value, claimNumber = "") {
   return raw;
 }
 
-function normalizeSourceMatches(matches) {
-  return (Array.isArray(matches) ? matches : []).map((match) => {
-    const claimNumber = String(match?.claim_number || "").trim();
-    const sources = (Array.isArray(match?.sources) ? match.sources : []).map((rawSource) => ({
-      ...rawSource,
-      internal_claim_number: normalizeInternalClaimNumber(
-        rawSource?.internal_claim_number,
-        claimNumber,
-      ),
-    }));
-
-    // Duplicate-source decisions are made by the backend against the actual
-    // database rows. The browser only normalizes the displayed internal ID so
-    // a legitimate duplicate database occurrence is never hidden here.
-    return { ...match, sources };
-  });
-}
-
-function normalizeClaimReports(reports) {
-  return (Array.isArray(reports) ? reports : []).map((report) => {
-    const claimNumber = String(report?.claim_number || "").trim();
-    const internals = [];
-    (Array.isArray(report?.internal_claim_numbers) ? report.internal_claim_numbers : []).forEach((value) => {
-      const normalized = normalizeInternalClaimNumber(value, claimNumber);
-      if (normalized && !internals.some((item) => item.toUpperCase() === normalized.toUpperCase())) {
-        internals.push(normalized);
-      }
-    });
-    const history = (Array.isArray(report?.history) ? report.history : []).map((item) => ({
-      ...item,
-      internal_claim_number: normalizeInternalClaimNumber(item?.internal_claim_number, claimNumber),
-    }));
-    return { ...report, internal_claim_numbers: internals, history };
-  });
-}
-
-function normalizeNoticePayload(payload) {
-  if (!payload || typeof payload !== "object") return payload;
-
-  const normalizeNotice = (notice) => {
-    if (!notice || typeof notice !== "object") return notice;
-    return {
-      ...notice,
-      source_matches: normalizeSourceMatches(notice.source_matches),
-      claim_reports: normalizeClaimReports(notice.claim_reports),
-    };
-  };
-
-  if (payload.notice) return { ...payload, notice: normalizeNotice(payload.notice) };
-  if (Array.isArray(payload.notices)) return { ...payload, notices: payload.notices.map(normalizeNotice) };
-  return payload;
-}
-
-function installMplResponseNormalizer() {
-  if (window.__mplResponseNormalizerInstalled) return;
-  window.__mplResponseNormalizerInstalled = true;
-  const previousFetch = window.fetch;
-
-  window.fetch = async function normalizedMplFetch(input, options) {
-    const response = await previousFetch(input, options);
-    const url = typeof input === "string" ? input : input?.url || "";
-    if (!String(url).includes("/edi835/api/mpl-notices/")) return response;
-
-    const originalJson = response.json.bind(response);
-    Object.defineProperty(response, "json", {
-      configurable: true,
-      value: async () => normalizeNoticePayload(await originalJson()),
-    });
-    return response;
-  };
-}
-
 function claimIdentifiers(viewer, claimNumber) {
   const values = [String(claimNumber || "").trim()];
   viewer.querySelectorAll(".mpl-file-viewer-toolbar dt").forEach((term) => {
@@ -196,7 +124,6 @@ function enhanceViewer(viewer) {
 }
 
 export function installClaimSliceDownload() {
-  installMplResponseNormalizer();
   const refresh = () => document.querySelectorAll(".mpl-file-viewer").forEach(enhanceViewer);
   refresh();
   const observer = new MutationObserver(refresh);
