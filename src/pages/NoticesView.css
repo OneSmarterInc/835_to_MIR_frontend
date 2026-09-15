@@ -545,3 +545,9 @@
 .mpl-evidence-table td:nth-child(2){max-width:220px;overflow-wrap:anywhere}
 .mpl-evidence-table td:nth-child(3){width:95px}
 .mpl-evidence-table td small{display:block;margin-top:2px;color:#718399}
+
+
+.mpl-msg-download{display:inline-flex;align-items:center;gap:7px}
+.mpl-msg-download button.mpl-file-link{padding:0;border:0;background:transparent;font:inherit;cursor:pointer}
+.mpl-msg-download button:disabled{cursor:wait;opacity:.65}
+.mpl-msg-download small{max-width:260px;color:#a52b22;font-size:10px;font-weight:600}
