@@ -325,6 +325,11 @@
 .mpl-file-match-summary span{white-space:nowrap}
 .mpl-file-match-summary b{color:#111c2d;font:800 13px/1 ui-monospace,monospace}
 .mpl-file-match-summary small{margin-left:auto;color:#647991}
+.mpl-match-navigation{display:flex;align-items:center;gap:5px}
+.mpl-match-navigation button{display:grid;place-items:center;width:27px;height:25px;padding:0;border:1px solid #9fb2c4;border-radius:2px;background:#fff;color:#087363;font:800 14px/1 ui-monospace,monospace;cursor:pointer}
+.mpl-match-navigation button:hover:not(:disabled){border-color:#087363;background:#e8f6f2}
+.mpl-match-navigation button:disabled{opacity:.35;cursor:not-allowed}
+.mpl-match-navigation span{min-width:35px;color:#34485f;font:700 10px/1 ui-monospace,monospace;text-align:center}
 .mpl-source-code{flex:1;min-height:0;overflow:auto;padding:12px 14px;border:1px solid #b8c7d4;background:#fff;color:#1c2b3d;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;scrollbar-gutter:stable both-edges}
 .mpl-source-code-line{display:block;width:max-content;min-width:100%;white-space:pre}
 .mpl-source-code-line+ .mpl-source-code-line{margin-top:1px}
