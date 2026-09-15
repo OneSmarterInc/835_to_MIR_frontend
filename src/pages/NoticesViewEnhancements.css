@@ -1,0 +1,175 @@
+/* Source-file viewer polish loaded globally after the MPL page styles. */
+.mpl-file-viewer .sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.mpl-file-viewer .mpl-file-content-heading {
+  display: grid !important;
+  grid-template-columns: auto minmax(300px, 1fr) auto;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.mpl-file-viewer .mpl-file-search {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.mpl-file-viewer .mpl-file-search label {
+  display: block !important;
+  order: 1;
+}
+
+.mpl-file-viewer .mpl-file-search input {
+  box-sizing: border-box;
+  width: 220px !important;
+  height: 30px !important;
+  padding: 0 9px !important;
+  border: 1px solid #9fb2c4 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: #23374c !important;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+}
+
+.mpl-file-viewer .mpl-file-search input:focus {
+  border-color: #6f879c !important;
+  outline: 2px solid rgba(111, 135, 156, .18) !important;
+  outline-offset: 1px;
+}
+
+.mpl-file-viewer .mpl-file-search > span {
+  order: 3;
+  min-width: 48px !important;
+  color: #34485f !important;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.mpl-file-viewer .mpl-file-search button {
+  display: grid !important;
+  place-items: center !important;
+  width: 27px !important;
+  height: 25px !important;
+  padding: 0 !important;
+  border: 1px solid #9fb2c4 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: #087363 !important;
+  font: 800 14px/1 ui-monospace, monospace !important;
+  cursor: pointer;
+}
+
+.mpl-file-viewer .mpl-file-search button:first-of-type { order: 2; }
+.mpl-file-viewer .mpl-file-search button:last-of-type { order: 4; }
+
+.mpl-file-viewer .mpl-file-search button:hover:not(:disabled) {
+  border-color: #087363 !important;
+  background: #e8f6f2 !important;
+}
+
+.mpl-file-viewer .mpl-file-search button:disabled {
+  opacity: .35 !important;
+  cursor: not-allowed;
+}
+
+.mpl-file-viewer .mpl-source-code mark.file-search {
+  background: #d7dadd !important;
+  color: #1b2734 !important;
+  box-shadow: 0 0 0 1px #b8bdc2 !important;
+}
+
+.mpl-file-viewer .mpl-source-code mark.file-search.active {
+  background: #aeb4ba !important;
+  color: #101820 !important;
+  box-shadow: 0 0 0 2px #747c84 !important;
+}
+
+/* Add one icon-only sliced-claim download action beside Download file. */
+.mpl-file-viewer .mpl-file-viewer-toolbar {
+  grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.7fr) auto 36px !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #9fb2c4;
+  border-radius: 3px;
+  background: #fff;
+  color: #087363;
+  cursor: pointer;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:hover:not(:disabled) {
+  border-color: #087363;
+  background: #e8f6f2;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:focus-visible {
+  outline: 3px solid rgba(11, 128, 109, .22);
+  outline-offset: 2px;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:disabled {
+  opacity: .45;
+  cursor: wait;
+}
+
+.mpl-file-viewer .mpl-claim-slice-message {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  color: #805000;
+  font-size: 10px;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .mpl-file-viewer .mpl-file-viewer-toolbar {
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .mpl-file-viewer .mpl-file-viewer-toolbar > label,
+  .mpl-file-viewer .mpl-file-viewer-toolbar > dl {
+    grid-column: 1 / -1;
+  }
+
+  .mpl-file-viewer .mpl-file-content-heading {
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .mpl-file-viewer .mpl-file-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .mpl-file-viewer .mpl-file-search label {
+    flex: 1;
+  }
+
+  .mpl-file-viewer .mpl-file-search input {
+    width: 100% !important;
+  }
+}
