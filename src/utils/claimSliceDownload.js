@@ -47,6 +47,27 @@ function cleanViewerInternalIdentity(viewer) {
   });
 }
 
+function enableSingleOccurrenceJump(viewer) {
+  const navigation = viewer.querySelector('.mpl-match-navigation');
+  if (!navigation) return;
+
+  const counter = navigation.querySelector('span')?.textContent || '';
+  const match = counter.match(/(\d+)\s*\/\s*(\d+)/);
+  const total = Number(match?.[2] || 0);
+  if (total !== 1) return;
+
+  navigation.querySelectorAll('button').forEach((button) => {
+    if (button.disabled) button.disabled = false;
+    if (button.dataset.singleOccurrenceJump === '1') return;
+    button.dataset.singleOccurrenceJump = '1';
+    button.title = 'Jump to Highmark claim occurrence';
+    button.addEventListener('click', () => {
+      const target = viewer.querySelector('.mpl-source-code mark.highmark');
+      target?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+    });
+  });
+}
+
 function claimIdentifiers(viewer, claimNumber) {
   const values = [String(claimNumber || "").trim()];
   viewer.querySelectorAll(".mpl-file-viewer-toolbar dt").forEach((term) => {
@@ -133,6 +154,7 @@ async function downloadClaimSlice(button) {
 
 function enhanceViewer(viewer) {
   cleanViewerInternalIdentity(viewer);
+  enableSingleOccurrenceJump(viewer);
   const toolbar = viewer.querySelector(".mpl-file-viewer-toolbar");
   if (!toolbar || toolbar.querySelector(".mpl-claim-slice-download")) return;
 
@@ -150,6 +172,6 @@ export function installClaimSliceDownload() {
   const refresh = () => document.querySelectorAll(".mpl-file-viewer").forEach(enhanceViewer);
   refresh();
   const observer = new MutationObserver(refresh);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
   return () => observer.disconnect();
 }
