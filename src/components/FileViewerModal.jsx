@@ -37,8 +37,12 @@ export default function FileViewerModal({ fileId, onClose }) {
     if (!fileId) {
       setLoadedFileId(null);
       setLoading(true);
+      setError(null);
+      setFileSearch("");
+      setSearchIndex(0);
       return undefined;
     }
+
     const controller = new AbortController();
     setLoading(true);
     setLoadedFileId(null);
@@ -67,18 +71,25 @@ export default function FileViewerModal({ fileId, onClose }) {
         setLoadedFileId(fileId);
         setLoading(false);
       });
+
     return () => controller.abort();
   }, [fileId]);
 
-  if (!fileId) return null;
-
   const currentText = activeTab === "835" ? ediText : mirText;
-  const isCurrentFileLoading = loading || loadedFileId !== fileId;
-  const occurrences = useMemo(() => findOccurrences(currentText, fileSearch), [currentText, fileSearch]);
+  const isCurrentFileLoading = Boolean(fileId) && (loading || loadedFileId !== fileId);
+  const occurrences = useMemo(
+    () => findOccurrences(currentText, fileSearch),
+    [currentText, fileSearch],
+  );
 
   useEffect(() => {
     setSearchIndex(0);
   }, [fileSearch, activeTab]);
+
+  // This component stays mounted in both the client and admin shells. Keep all
+  // hooks above the null-file return so clicking an eye button cannot change
+  // the React hook order (null -> file id) and abort the viewer render.
+  if (!fileId) return null;
 
   const handleTextChange = (event) => {
     const value = event.target.value;
