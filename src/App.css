@@ -182,3 +182,114 @@
     border-right-color: var(--border);
   }
 }
+
+/* Dynamic search controls in the archived source-file viewer. */
+.mpl-file-content-heading {
+  align-items: center;
+}
+
+.mpl-file-search {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.mpl-file-search label {
+  display: block;
+}
+
+.mpl-file-search input {
+  box-sizing: border-box;
+  width: 220px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #aebfce;
+  border-radius: 3px;
+  background: #fff;
+  color: #111c2d;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.mpl-file-search input:focus {
+  border-color: #70839b;
+  outline: 2px solid rgba(112, 131, 155, .18);
+  outline-offset: 1px;
+}
+
+.mpl-file-search > span {
+  min-width: 44px;
+  color: #52657c;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mpl-file-search button {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: 1px solid #9fb2c4;
+  border-radius: 3px;
+  background: #fff;
+  color: #34485f;
+  font: 800 14px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  cursor: pointer;
+}
+
+.mpl-file-search button:hover:not(:disabled) {
+  border-color: #66788b;
+  background: #eef1f4;
+}
+
+.mpl-file-search button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
+.mpl-source-code mark.file-search {
+  background: #d8dadd;
+  color: #17202b;
+  box-shadow: 0 0 0 1px #b7bbc0;
+}
+
+.mpl-source-code mark.file-search.active {
+  background: #aeb3b9;
+  color: #111820;
+  box-shadow: 0 0 0 2px #737a82;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .mpl-file-content-heading {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mpl-file-search {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mpl-file-search label {
+    flex: 1;
+  }
+
+  .mpl-file-search input {
+    width: 100%;
+  }
+}
