@@ -10,6 +10,52 @@ const statusLabel = (value) => String(value || "").replaceAll("_", " ");
 const dateLabel = (value) => { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString(); };
 const reportedIssuesFor = (notice, claimNumber) => notice.source_matches?.find((item) => item.claim_number === claimNumber)?.reported_issues || [];
 
+async function downloadMsgFile(url, fallbackName = "email.msg") {
+  const response = await portalFetch(url);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Unable to download the original email (${response.status}).`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") || "";
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const quoted = disposition.match(/filename="([^"]+)"/i);
+  const filename = encoded
+    ? decodeURIComponent(encoded[1])
+    : quoted?.[1] || fallbackName;
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1500);
+}
+
+function MsgDownloadLink({ notice, className }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (!notice?.source_file_url) return null;
+  const download = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await downloadMsgFile(notice.source_file_url, notice.source_filename || "email.msg");
+    } catch (downloadError) {
+      setError(downloadError.message || "Unable to download the original email.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <span className="mpl-msg-download">
+    <button type="button" className={className} disabled={busy} onClick={download}>
+      {busy ? "Downloading…" : "Download .msg"}
+    </button>
+    {error && <small role="alert">{error}</small>}
+  </span>;
+}
+
 function NoticeModal({ onClose, onCreated, clientId = "" }) {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
@@ -295,7 +341,7 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
         </div>
         <div className="mpl-email-actions">
           <button type="button" className="mpl-thread-toggle" onClick={toggleEmail}><span aria-hidden="true">✉</span> {emailExpanded ? "Hide email" : "Email"}</button>
-          {notice.source_file_url && <a className="mpl-file-link" href={notice.source_file_url}>Download .msg</a>}
+          <MsgDownloadLink notice={notice} className="mpl-file-link" />
         </div>
       </div>
       {emailExpanded && detail && <pre className="mpl-full-email">{notice.email_body}</pre>}
@@ -453,7 +499,7 @@ function NoticeDetailPage({ notice, loading, error, onBack, onReanalyze, onWorkf
   return <section className="mpl-detail-page">
     <header className="mpl-detail-page-header"><button type="button" className="mpl-back-button" onClick={onBack}>← Back to MPL Notices</button><div className="mpl-detail-title-row"><div><span>{notice.notice_type === "ACKNOWLEDGEMENT" ? "ACKNOWLEDGEMENT" : "MPL RETURN EMAIL"}</span><h1>{notice.subject}</h1><p>{notice.sender || "Sender unavailable"} · {dateLabel(notice.received_at || notice.created_at)}</p></div><span className={`mpl-status ${(notice.workflow_status || notice.status)?.toLowerCase()}`}>{statusLabel(notice.workflow_status || notice.status)}</span></div><div className="mpl-detail-meta"><span>PROGRAM <b>{notice.program || "—"}</b></span><span>PERIOD <b>{notice.period_start || "—"} – {notice.period_end || "—"}</b></span><span>CLAIMS <b>{reports.length}</b></span><span>ANALYSIS <b>Python rules</b></span></div></header>
     {loading && <div className="mpl-processing"><span></span>{statusLabel(notice.status)}…</div>}{error && <div className="mpl-error">{error}</div>}
-    <div className="mpl-detail-page-actions"><button type="button" className="mpl-text-button" onClick={() => setEmailExpanded((value) => !value)}>{emailExpanded ? "Hide email" : "View email"}</button>{notice.source_file_url && <a className="mpl-text-button" href={notice.source_file_url}>Download .msg</a>}{["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button>}</div>
+    <div className="mpl-detail-page-actions"><button type="button" className="mpl-text-button" onClick={() => setEmailExpanded((value) => !value)}>{emailExpanded ? "Hide email" : "View email"}</button><MsgDownloadLink notice={notice} className="mpl-text-button" />{["FAILED", "REVIEW_REQUIRED"].includes(notice.status) && <button className="mpl-btn primary" onClick={() => onReanalyze(notice.id)}>Analyze Again</button>}</div>
     {emailExpanded && <pre className="mpl-full-email mpl-detail-email">{notice.email_body}</pre>}
     <div className="mpl-report-heading"><div><span>CLAIM-WISE RESPONSE</span><h2>Claim analysis and complete history</h2></div><p>Built from stored 837, 835, MIR, reconciliation, duplicate, and hold evidence.</p></div>
     {reports.length ? <div className="mpl-report-list">{reports.map((report) => <ClaimReportCard key={report.claim_number} report={report} sourceMatch={sourceMatches.find((item) => item.claim_number === report.claim_number)} isAdmin={isAdmin} noticeId={notice.id} onWorkflowStatus={onWorkflowStatus} />)}</div> : <div className="mpl-report-empty-card">No claim report is available yet.</div>}
