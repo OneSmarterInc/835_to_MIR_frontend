@@ -209,6 +209,12 @@
   outline-offset: 2px;
 }
 
+/* Qwen output is a lightweight professional restatement of the Python recommendations. */
+.mpl-notice-ai-response > p {
+  white-space: pre-line;
+  line-height: 1.65;
+}
+
 @media (max-width: 900px) {
   .mpl-file-viewer .mpl-file-viewer-toolbar {
     grid-template-columns: 1fr auto auto !important;
