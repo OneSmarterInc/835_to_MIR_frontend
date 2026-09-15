@@ -4,6 +4,7 @@ let installed = false;
 let cachedNoticeId = '';
 let cachedPayload = null;
 let requestPromise = null;
+let refreshQueued = false;
 
 function activeNoticeId() {
   return new URLSearchParams(window.location.search).get('notice') || '';
@@ -26,6 +27,7 @@ function parseAiResponse(notice) {
 async function loadPayload() {
   const noticeId = activeNoticeId();
   if (!noticeId) return null;
+
   if (noticeId === cachedNoticeId && cachedPayload) return cachedPayload;
   if (requestPromise && noticeId === cachedNoticeId) return requestPromise;
 
@@ -47,59 +49,63 @@ function ensureStyles() {
   const style = document.createElement('style');
   style.id = 'mpl-qwen-suggestion-styles';
   style.textContent = `
-    .mpl-ai-suggestion-paragraph{margin:10px 0 12px;color:#334a61;font-size:12px;line-height:1.6}
-    .mpl-ai-suggestion-list{margin:0;padding-left:20px;color:#334a61;font-size:12px;line-height:1.6}
-    .mpl-ai-suggestion-list li+li{margin-top:4px}
+    .mpl-ai-suggestion-section{background:#fff}
+    .mpl-ai-suggestion-paragraph{margin:10px 0 12px;color:#334a61;font-size:12px;line-height:1.65}
+    .mpl-ai-suggestion-list{margin:0;padding-left:20px;color:#334a61;font-size:12px;line-height:1.65}
+    .mpl-ai-suggestion-list li+li{margin-top:5px}
     .mpl-ai-suggestion-unavailable{margin:10px 0 0;color:#805000;font-size:12px;line-height:1.5}
-    .mpl-notice-ai-claim{padding:10px 0;border-top:1px solid #dbe3ea}
-    .mpl-notice-ai-claim:first-child{border-top:0}
-    .mpl-notice-ai-claim strong{display:block;margin-bottom:6px;color:#172638}
+    .mpl-ai-suggestion-loading{margin:10px 0 0;color:#66788d;font-size:12px;line-height:1.5}
   `;
   document.head.append(style);
 }
 
-function buildTitleRow(section, source) {
-  const titleRow = document.createElement('div');
-  titleRow.className = 'mpl-report-section-title';
-  const title = document.createElement('h4');
-  title.textContent = 'AI suggestion';
-  const label = document.createElement('span');
-  label.textContent = source ? `Qwen · ${source}` : 'Qwen';
-  titleRow.append(title, label);
-  section.append(titleRow);
+function findSuggestionSection(card) {
+  return [...card.querySelectorAll('.mpl-report-section')].find((section) => {
+    const title = (section.querySelector('.mpl-report-section-title h4')?.textContent || '')
+      .trim()
+      .toLowerCase();
+    return title === 'recommended resolution' || title === 'ai suggestion';
+  }) || null;
 }
 
-function renderClaimSuggestion(card, payload) {
-  const heading = card.querySelector('.mpl-report-card-head h3');
-  const claimNumber = (heading?.textContent || '').trim();
-  if (!claimNumber) return;
+function buildHeading(section, sourceLabel = '') {
+  const row = document.createElement('div');
+  row.className = 'mpl-report-section-title';
+  const title = document.createElement('h4');
+  title.textContent = 'AI suggestion';
+  const source = document.createElement('span');
+  source.textContent = sourceLabel ? `Qwen · ${sourceLabel}` : 'Qwen';
+  row.append(title, source);
+  section.append(row);
+}
 
-  const section = [...card.querySelectorAll('.mpl-report-section')]
-    .find((node) => {
-      const title = (node.querySelector('h4')?.textContent || '').trim().toLowerCase();
-      return title === 'recommended resolution' || title === 'ai suggestion';
-    });
-  if (!section) return;
-
-  const suggestion = payload?.claims?.find(
-    (item) => String(item.claim_number || '').trim() === claimNumber,
-  );
-  const signature = suggestion
-    ? `${payload?.source || ''}:${claimNumber}:${JSON.stringify(suggestion)}`
-    : `unavailable:${claimNumber}:${payload?.source || ''}`;
-  const currentTitle = (section.querySelector('h4')?.textContent || '').trim().toLowerCase();
-  if (card.dataset.qwenSuggestionSignature === signature && currentTitle === 'ai suggestion') return;
-
+function markLoading(section) {
+  section.dataset.aiSuggestionState = 'loading';
+  section.classList.add('mpl-ai-suggestion-section');
   section.replaceChildren();
-  buildTitleRow(section, payload?.source || '');
-  if (!suggestion) {
-    const note = document.createElement('p');
-    note.className = 'mpl-ai-suggestion-unavailable';
-    note.textContent = 'AI suggestion is not available for this analysis yet. Select Analyze Again after the Qwen service is running.';
-    section.append(note);
-    card.dataset.qwenSuggestionSignature = signature;
-    return;
-  }
+  buildHeading(section);
+  const note = document.createElement('p');
+  note.className = 'mpl-ai-suggestion-loading';
+  note.textContent = 'Loading AI suggestion…';
+  section.append(note);
+}
+
+function renderUnavailable(section) {
+  section.dataset.aiSuggestionState = 'unavailable';
+  section.classList.add('mpl-ai-suggestion-section');
+  section.replaceChildren();
+  buildHeading(section);
+  const note = document.createElement('p');
+  note.className = 'mpl-ai-suggestion-unavailable';
+  note.textContent = 'AI suggestion is not available for this analysis yet. Select Analyze Again after the Qwen service is running.';
+  section.append(note);
+}
+
+function renderSuggestion(section, suggestion, sourceLabel) {
+  section.dataset.aiSuggestionState = 'done';
+  section.classList.add('mpl-ai-suggestion-section');
+  section.replaceChildren();
+  buildHeading(section, sourceLabel);
 
   const paragraph = document.createElement('p');
   paragraph.className = 'mpl-ai-suggestion-paragraph';
@@ -116,88 +122,90 @@ function renderClaimSuggestion(card, payload) {
     list.append(item);
   });
   section.append(list);
-  card.dataset.qwenSuggestionSignature = signature;
 }
 
-function updateTopAiBlock() {
-  document.querySelectorAll('.mpl-section-toggle').forEach((button) => {
-    const title = button.querySelector('strong');
-    if (!title || !/claim-wise ai response|ai suggestion/i.test(title.textContent || '')) return;
-    if (title.textContent !== 'AI suggestion') title.textContent = 'AI suggestion';
-    const subtitle = title.parentElement?.querySelector('small');
-    const subtitleText = 'Qwen professionally restates the Python-generated recommendations';
-    if (subtitle && subtitle.textContent !== subtitleText) subtitle.textContent = subtitleText;
-  });
+function claimNumberForCard(card) {
+  return (card.querySelector('.mpl-report-card-head h3')?.textContent || '').trim();
+}
 
-  document.querySelectorAll('.mpl-notice-ai-response').forEach((article) => {
-    const heading = article.querySelector('.mpl-claim-response-heading strong');
-    if (heading && heading.textContent !== 'AI suggestions') heading.textContent = 'AI suggestions';
-    const paragraph = article.querySelector('p');
-    if (!paragraph || article.dataset.qwenFormatted === '1') return;
-    try {
-      const parsed = JSON.parse(paragraph.textContent || '');
-      if (!Array.isArray(parsed?.claims)) return;
-      paragraph.remove();
-      parsed.claims.forEach((claim) => {
-        const block = document.createElement('div');
-        block.className = 'mpl-notice-ai-claim';
-        const title = document.createElement('strong');
-        title.textContent = claim.claim_number === 'NOTICE' ? 'AI suggestion' : `Claim ${claim.claim_number}`;
-        const summary = document.createElement('p');
-        summary.className = 'mpl-ai-suggestion-paragraph';
-        summary.textContent = String(claim.paragraph || '').trim();
-        const list = document.createElement('ul');
-        list.className = 'mpl-ai-suggestion-list';
-        (claim.bullets || []).forEach((value) => {
-          const li = document.createElement('li');
-          li.textContent = String(value || '').trim();
-          if (li.textContent) list.append(li);
-        });
-        block.append(title, summary, list);
-        article.append(block);
-      });
-      article.dataset.qwenFormatted = '1';
-    } catch {
-      // Older completed notices can contain the legacy plain-text response.
+function hideLegacyTopAiBlock() {
+  document.querySelectorAll('.mpl-disclosure').forEach((section) => {
+    const title = section.querySelector('.mpl-section-toggle strong');
+    if (!title) return;
+    if (/claim-wise ai response|ai suggestion/i.test(title.textContent || '')) {
+      section.style.display = 'none';
+      section.setAttribute('aria-hidden', 'true');
     }
   });
 }
 
-async function updateClaimCards() {
+async function enhanceClaimCards() {
   const cards = [...document.querySelectorAll('.mpl-report-card')];
   if (!cards.length) return;
+
+  const pending = [];
+  cards.forEach((card) => {
+    const section = findSuggestionSection(card);
+    const claimNumber = claimNumberForCard(card);
+    if (!section || !claimNumber) return;
+
+    // Remove the Python list immediately. The user-facing recommendation is
+    // Qwen's professional restatement of the Python-generated guidance.
+    if (!section.dataset.aiSuggestionState) markLoading(section);
+    if (section.dataset.aiSuggestionState !== 'done') {
+      pending.push({ card, section, claimNumber });
+    }
+  });
+
+  if (!pending.length) return;
   const payload = await loadPayload();
-  cards.forEach((card) => renderClaimSuggestion(card, payload));
+
+  pending.forEach(({ card, section, claimNumber }) => {
+    if (!document.documentElement.contains(card)) return;
+    const liveSection = findSuggestionSection(card) || section;
+    const suggestion = payload?.claims?.find(
+      (item) => String(item.claim_number || '').trim() === claimNumber,
+    );
+    if (!suggestion) {
+      renderUnavailable(liveSection);
+      return;
+    }
+    renderSuggestion(liveSection, suggestion, payload.source || '');
+  });
 }
 
-function refresh() {
-  ensureStyles();
-  updateTopAiBlock();
-  updateClaimCards();
+function scheduleRefresh() {
+  if (refreshQueued) return;
+  refreshQueued = true;
+  window.requestAnimationFrame(() => {
+    refreshQueued = false;
+    ensureStyles();
+    hideLegacyTopAiBlock();
+    enhanceClaimCards();
+  });
 }
 
 export function installMplAiSuggestionView() {
   if (installed || typeof document === 'undefined') return () => {};
   installed = true;
-  let queued = false;
-  const schedule = () => {
-    if (queued) return;
-    queued = true;
-    window.requestAnimationFrame(() => {
-      queued = false;
-      refresh();
-    });
-  };
+  scheduleRefresh();
 
-  schedule();
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((mutations) => {
+    const meaningful = mutations.some((mutation) => {
+      const target = mutation.target?.nodeType === 1 ? mutation.target : mutation.target?.parentElement;
+      return !target?.closest?.('.mpl-ai-suggestion-section');
+    });
+    if (meaningful) scheduleRefresh();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
+
   const resetForHistory = () => {
     cachedNoticeId = '';
     cachedPayload = null;
-    schedule();
+    scheduleRefresh();
   };
   window.addEventListener('popstate', resetForHistory);
+
   return () => {
     observer.disconnect();
     window.removeEventListener('popstate', resetForHistory);
