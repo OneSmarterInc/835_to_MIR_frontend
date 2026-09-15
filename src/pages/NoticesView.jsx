@@ -172,7 +172,8 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   const [claimRows, setClaimRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const firstMatchRef = useRef(null);
+  const highmarkRefs = useRef([]);
+  const [highmarkIndex, setHighmarkIndex] = useState(0);
   const selected = sources[selectedIndex];
   const is837 = String(selected?.type || "").toUpperCase() === "837";
 
@@ -182,6 +183,8 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     setError("");
     setContent("");
     setClaimRows([]);
+    highmarkRefs.current = [];
+    setHighmarkIndex(0);
     portalFetch(`${selected.download_url}?view=1`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load the archived file.");
@@ -201,10 +204,10 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
   }, [selected]);
 
   useEffect(() => {
-    if (!loading && content && firstMatchRef.current) {
-      firstMatchRef.current.scrollIntoView({ block: "center", inline: "center" });
+    if (!loading && content) {
+      highmarkRefs.current[highmarkIndex]?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
     }
-  }, [content, loading, selectedIndex]);
+  }, [content, loading, selectedIndex, highmarkIndex]);
 
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
@@ -229,7 +232,11 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       .split("\n"))
     .map((row) => row.trim())
     .filter((row) => row.length);
-  let firstMatchAssigned = false;
+  const moveHighmark = (direction) => {
+    if (!highmarkCount) return;
+    setHighmarkIndex((current) => (current + direction + highmarkCount) % highmarkCount);
+  };
+  let highmarkRenderIndex = 0;
   const renderLine = (line, lineIndex) => {
     if (!pattern) return <div className="mpl-source-code-line" key={lineIndex}>{line || " "}</div>;
     const parts = line.split(pattern);
@@ -237,9 +244,11 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       const isMatch = terms.some((term) => term.toUpperCase() === part.toUpperCase());
       if (!isMatch) return <React.Fragment key={partIndex}>{part}</React.Fragment>;
       const isHighmark = part.toUpperCase() === String(claimNumber).toUpperCase();
-      const takeRef = !firstMatchAssigned;
-      if (takeRef) firstMatchAssigned = true;
-      return <mark ref={takeRef ? firstMatchRef : undefined} className={isHighmark ? "highmark" : "internal"} key={partIndex}>{part}</mark>;
+      if (isHighmark) {
+        const occurrenceIndex = highmarkRenderIndex++;
+        return <mark ref={(node) => { highmarkRefs.current[occurrenceIndex] = node; }} className="highmark" key={partIndex}>{part}</mark>;
+      }
+      return <mark className="internal" key={partIndex}>{part}</mark>;
     })}</div>;
   };
 
@@ -260,6 +269,11 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
       </div>
       <div className="mpl-file-match-summary">
         <span><b>{highmarkCount}</b> Highmark claim occurrence{highmarkCount === 1 ? "" : "s"}</span>
+        <div className="mpl-match-navigation" aria-label="Highmark claim match navigation">
+          <button type="button" onClick={() => moveHighmark(-1)} disabled={highmarkCount < 2} aria-label="Previous Highmark claim occurrence" title="Previous match">↑</button>
+          <span>{highmarkCount ? highmarkIndex + 1 : 0} / {highmarkCount}</span>
+          <button type="button" onClick={() => moveHighmark(1)} disabled={highmarkCount < 2} aria-label="Next Highmark claim occurrence" title="Next match">↓</button>
+        </div>
         {!is837 && <span><b>{internalCount}</b> internal claim occurrence{internalCount === 1 ? "" : "s"}</span>}
         <small>{is837 ? "Yellow = Highmark claim" : "Yellow = Highmark claim · Blue = internal claim"}</small>
       </div>
