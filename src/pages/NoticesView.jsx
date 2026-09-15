@@ -261,23 +261,10 @@ function NoticeCard({ notice, loadDetail, onReanalyze, onSelectClaim, onWorkflow
     };
   }, [cardExpanded, onClose]);
 
-  const toggleCard = async () => {
-    if (cardExpanded) {
-      onClose();
-      return;
-    }
-    setEmailExpanded(false);
-    setAiExpanded(false);
-    setSourcesExpanded(false);
-    setDetailError("");
+  const toggleCard = () => {
+    // The full-page route owns detail loading. Keeping it here as well caused
+    // two identical API requests whenever an email row was opened.
     onOpen(notice.id);
-    if (!detail) {
-      setDetailLoading(true);
-      setDetailError("");
-      loadDetail(notice.id)
-        .catch((error) => setDetailError(error.message || "Unable to load this email."))
-        .finally(() => setDetailLoading(false));
-    }
   };
   const toggleEmail = async () => {
     if (!detail) await loadDetail(notice.id);
