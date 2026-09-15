@@ -10,6 +10,7 @@ import { AppDialogProvider } from './components/AppDialog.jsx'
 import { installClaimSliceDownload } from './utils/claimSliceDownload.js'
 import { installReconciliationPageEnhancement } from './utils/reconciliationPage.js'
 import { installReconArchivePage } from './utils/reconArchivePage.js'
+import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
@@ -51,6 +52,7 @@ if (BACKEND_URL) {
   };
 }
 
+installBrowserHistoryNavigation();
 installClaimSliceDownload();
 installReconciliationPageEnhancement();
 installReconArchivePage();
