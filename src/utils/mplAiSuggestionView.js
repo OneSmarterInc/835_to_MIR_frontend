@@ -55,8 +55,52 @@ function ensureStyles() {
     .mpl-ai-suggestion-list li+li{margin-top:5px}
     .mpl-ai-suggestion-unavailable{margin:10px 0 0;color:#805000;font-size:12px;line-height:1.5}
     .mpl-ai-suggestion-loading{margin:10px 0 0;color:#66788d;font-size:12px;line-height:1.5}
+    .mpl-analyze-again-error{align-self:center;margin-left:4px;color:#a33a2d;font-size:11px;line-height:1.3}
   `;
   document.head.append(style);
+}
+
+function ensureAnalyzeAgainButton() {
+  const actions = document.querySelector('.mpl-detail-page-actions');
+  const noticeId = activeNoticeId();
+  if (!actions || !noticeId) return;
+  if (actions.querySelector('[data-mpl-analyze-again="1"]')) return;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'mpl-btn primary';
+  button.dataset.mplAnalyzeAgain = '1';
+  button.textContent = 'Analyze Again';
+
+  button.addEventListener('click', async () => {
+    const existingError = actions.querySelector('.mpl-analyze-again-error');
+    if (existingError) existingError.remove();
+    button.disabled = true;
+    button.textContent = 'Analyzing…';
+    try {
+      const { res, data } = await safeFetchJson(
+        `/edi835/api/mpl-notices/${encodeURIComponent(noticeId)}/analyze/`,
+        { method: 'POST' },
+      );
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Unable to start analysis.');
+      }
+      cachedNoticeId = '';
+      cachedPayload = null;
+      window.location.reload();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Analyze Again';
+      const message = document.createElement('span');
+      message.className = 'mpl-analyze-again-error';
+      message.textContent = error?.message || 'Unable to start analysis.';
+      button.insertAdjacentElement('afterend', message);
+    }
+  });
+
+  const download = actions.querySelector('.mpl-msg-download');
+  if (download) download.insertAdjacentElement('afterend', button);
+  else actions.append(button);
 }
 
 function findSuggestionSection(card) {
@@ -180,6 +224,7 @@ function scheduleRefresh() {
   window.requestAnimationFrame(() => {
     refreshQueued = false;
     ensureStyles();
+    ensureAnalyzeAgainButton();
     hideLegacyTopAiBlock();
     enhanceClaimCards();
   });
