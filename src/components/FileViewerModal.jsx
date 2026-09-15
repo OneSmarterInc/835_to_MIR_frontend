@@ -31,7 +31,7 @@ export default function FileViewerModal({ fileId, onClose }) {
   const [loadedFileId, setLoadedFileId] = useState(null);
   const [fileSearch, setFileSearch] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
-  const editorRef = useRef(null);
+  const matchRefs = useRef([]);
 
   useEffect(() => {
     if (!fileId) {
@@ -40,6 +40,7 @@ export default function FileViewerModal({ fileId, onClose }) {
       setError(null);
       setFileSearch("");
       setSearchIndex(0);
+      matchRefs.current = [];
       return undefined;
     }
 
@@ -50,6 +51,7 @@ export default function FileViewerModal({ fileId, onClose }) {
     setActiveTab("835");
     setFileSearch("");
     setSearchIndex(0);
+    matchRefs.current = [];
 
     portalFetch(`/api/file-content/${fileId}/`, { signal: controller.signal })
       .then(async (res) => {
@@ -58,7 +60,7 @@ export default function FileViewerModal({ fileId, onClose }) {
         return data;
       })
       .then((data) => {
-        setFilename(data.filename || "File View & Edit");
+        setFilename(data.filename || "File Viewer");
         setEdiText(data.edi_text || noDataMessage);
         setMirText(data.mir_text || noDataMessage);
         setLoadedFileId(fileId);
@@ -77,25 +79,80 @@ export default function FileViewerModal({ fileId, onClose }) {
 
   const currentText = activeTab === "835" ? ediText : mirText;
   const isCurrentFileLoading = Boolean(fileId) && (loading || loadedFileId !== fileId);
+  const displayText = isCurrentFileLoading
+    ? "Loading file content..."
+    : error
+      ? `Error: ${error}`
+      : currentText;
+
   const occurrences = useMemo(
-    () => findOccurrences(currentText, fileSearch),
-    [currentText, fileSearch],
+    () => findOccurrences(displayText, fileSearch),
+    [displayText, fileSearch],
   );
 
   useEffect(() => {
     setSearchIndex(0);
-  }, [fileSearch, activeTab]);
+    matchRefs.current = [];
+  }, [fileSearch, activeTab, displayText]);
+
+  useEffect(() => {
+    const term = fileSearch.trim();
+    if (!term || !occurrences.length) return undefined;
+    const boundedIndex = Math.min(searchIndex, occurrences.length - 1);
+    if (boundedIndex !== searchIndex) {
+      setSearchIndex(boundedIndex);
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      matchRefs.current[boundedIndex]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [fileSearch, occurrences.length, searchIndex]);
+
+  const renderedPreview = useMemo(() => {
+    const term = fileSearch.trim();
+    if (!term || !displayText) return displayText;
+
+    const lowerText = displayText.toLocaleLowerCase();
+    const lowerTerm = term.toLocaleLowerCase();
+    const parts = [];
+    let cursor = 0;
+    let occurrenceIndex = 0;
+
+    while (cursor < displayText.length) {
+      const index = lowerText.indexOf(lowerTerm, cursor);
+      if (index < 0) {
+        parts.push(displayText.slice(cursor));
+        break;
+      }
+
+      if (index > cursor) parts.push(displayText.slice(cursor, index));
+      const currentOccurrence = occurrenceIndex;
+      const end = index + term.length;
+      parts.push(
+        <mark
+          key={`${index}-${currentOccurrence}`}
+          ref={(node) => { matchRefs.current[currentOccurrence] = node; }}
+          className={currentOccurrence === searchIndex ? "file-search active" : "file-search"}
+        >
+          {displayText.slice(index, end)}
+        </mark>,
+      );
+      occurrenceIndex += 1;
+      cursor = end;
+    }
+
+    return parts;
+  }, [displayText, fileSearch, searchIndex]);
 
   // This component stays mounted in both the client and admin shells. Keep all
   // hooks above the null-file return so clicking an eye button cannot change
   // the React hook order (null -> file id) and abort the viewer render.
   if (!fileId) return null;
-
-  const handleTextChange = (event) => {
-    const value = event.target.value;
-    if (activeTab === "835") setEdiText(value);
-    else setMirText(value);
-  };
 
   const handleCopy = () => {
     if (!currentText) return;
@@ -106,24 +163,15 @@ export default function FileViewerModal({ fileId, onClose }) {
   };
 
   const jumpToSearch = (direction) => {
-    if (!occurrences.length || !editorRef.current) return;
-    const next = (searchIndex + direction + occurrences.length) % occurrences.length;
-    setSearchIndex(next);
-    const start = occurrences[next];
-    const end = start + fileSearch.trim().length;
-    const editor = editorRef.current;
-    editor.focus({ preventScroll: true });
-    editor.setSelectionRange(start, end);
-    const before = currentText.slice(0, start);
-    const line = before.split("\n").length - 1;
-    const lineHeight = parseFloat(window.getComputedStyle(editor).lineHeight) || 18;
-    editor.scrollTop = Math.max(0, line * lineHeight - editor.clientHeight / 2);
+    if (!occurrences.length) return;
+    setSearchIndex((current) => (current + direction + occurrences.length) % occurrences.length);
   };
 
   const selectTab = (tab) => {
     setActiveTab(tab);
     setFileSearch("");
     setSearchIndex(0);
+    matchRefs.current = [];
   };
 
   return (
@@ -153,18 +201,11 @@ export default function FileViewerModal({ fileId, onClose }) {
       </div>
 
       <div className="file-viewer-page-body">
-        <textarea
-          ref={editorRef}
-          className="file-viewer-page-editor"
-          spellCheck="false"
-          value={isCurrentFileLoading ? "Loading file content..." : error ? `Error: ${error}` : currentText}
-          onChange={handleTextChange}
-          style={{ whiteSpace: activeTab === "835" ? "pre-wrap" : "pre", overflowX: activeTab === "835" ? "hidden" : "auto" }}
-        />
+        <pre className="file-viewer-page-preview">{renderedPreview}</pre>
       </div>
 
       <footer className="file-viewer-page-footer">
-        <span className="file-viewer-page-note">Search arrows jump directly to the selected occurrence without changing file spacing.</span>
+        <span className="file-viewer-page-note">Gray = search match · dark = current match. Use ↑ / ↓ to jump directly to each occurrence.</span>
         <div className="file-viewer-page-footer-actions">
           <button type="button" className="btn secondary" onClick={handleCopy}>{copyStatus}</button>
           <button type="button" className="btn primary" onClick={onClose}>Back</button>
