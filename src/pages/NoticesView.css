@@ -515,3 +515,22 @@
 .mpl-mapping-status.email_supported{background:#e5eff8;color:#285f87}
 .mpl-mapping-status.local_category{background:#eee9f8;color:#654795}
 .mpl-mapping-status.requires_mapping{background:#fff0c9;color:#855800}
+
+
+/* Compact claim-to-file matrix: fit desktop width without page overflow. */
+.mpl-files-section{overflow:hidden;padding:0 10px 8px}
+.mpl-files-section .mpl-report-heading{padding-right:2px;padding-left:2px}
+.mpl-files-section .mpl-source-matrix-wrap{overflow-x:auto;scrollbar-gutter:auto}
+.mpl-files-section .mpl-source-matrix{width:100%;min-width:1020px;table-layout:fixed;border-collapse:collapse}
+.mpl-files-section .mpl-source-matrix thead tr:first-child th:first-child{width:190px}
+.mpl-files-section .mpl-source-matrix thead tr:first-child th:last-child{width:154px}
+.mpl-files-section .mpl-source-matrix th,.mpl-files-section .mpl-source-matrix td{padding:6px 7px}
+.mpl-files-section .mpl-source-matrix th.mpl-matrix-action-heading{width:46px}
+.mpl-files-section .mpl-matrix-action{width:46px}
+.mpl-files-section .mpl-eye-button{width:32px;height:28px}
+.mpl-files-section .mpl-workflow-cell{width:154px;min-width:154px;padding:5px!important}
+.mpl-files-section .mpl-workflow-select{width:140px;min-width:140px;height:34px}
+@media(min-width:1180px){
+  .mpl-files-section .mpl-source-matrix-wrap{overflow-x:hidden}
+  .mpl-files-section .mpl-source-matrix{min-width:0}
+}
