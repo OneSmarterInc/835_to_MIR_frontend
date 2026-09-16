@@ -96,15 +96,16 @@ function ReconFilePreview({ file, onBack }) {
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    fetch(`/edi835/api/recon/files/${file.id}/download/`, {
+    fetch(`/edi835/api/recon/files/${file.id}/download/?view=1`, {
       credentials: 'include', headers: authHeaders(), signal: controller.signal,
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`Unable to open file (${response.status}).`);
-        return response.text();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error(data.error || `Unable to open file (${response.status}).`);
+        return String(data.content || '');
       })
       .then((value) => setText(value || '(Empty file)'))
-      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message); })
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, [file.id]);
@@ -124,15 +125,8 @@ function ReconFilePreview({ file, onBack }) {
       setIndex(next);
       return undefined;
     }
-
-    // Wait until React has committed the newly highlighted <mark> nodes.
-    // This guarantees that typing a fresh search immediately jumps to match 1.
     const timer = window.setTimeout(() => {
-      matchRefs.current[next]?.scrollIntoView({
-        block: 'center',
-        inline: 'nearest',
-        behavior: 'smooth',
-      });
+      matchRefs.current[next]?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
     }, 0);
     return () => window.clearTimeout(timer);
   }, [query, text, index, occurrences.length]);
