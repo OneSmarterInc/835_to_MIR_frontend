@@ -1,0 +1,20 @@
+.mpl-detail-page-actions > .mpl-btn.primary:not(.mpl-persistent-analyze-again) {
+  display: none !important;
+}
+
+.mpl-persistent-analyze-again {
+  min-width: 116px;
+}
+
+.mpl-persistent-analyze-again:disabled {
+  cursor: wait !important;
+  opacity: .58;
+}
+
+.mpl-analyze-again-error {
+  align-self: center;
+  max-width: 320px;
+  color: #a33a2d;
+  font-size: 11px;
+  line-height: 1.35;
+}
