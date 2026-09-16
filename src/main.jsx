@@ -8,7 +8,6 @@ import './components/ReconArchivePage.css'
 import App from './App.jsx'
 import { AppDialogProvider } from './components/AppDialog.jsx'
 import { installClaimSliceDownload } from './utils/claimSliceDownload.js'
-import { installReconciliationPageEnhancement } from './utils/reconciliationPage.js'
 import { installReconArchivePage } from './utils/reconArchivePage.js'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 
@@ -54,7 +53,6 @@ if (BACKEND_URL) {
 
 installBrowserHistoryNavigation();
 installClaimSliceDownload();
-installReconciliationPageEnhancement();
 installReconArchivePage();
 
 createRoot(document.getElementById('root')).render(
