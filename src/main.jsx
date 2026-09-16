@@ -8,6 +8,7 @@ import './components/ReconArchivePage.css'
 import App from './App.jsx'
 import { AppDialogProvider } from './components/AppDialog.jsx'
 import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
+import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
@@ -57,6 +58,7 @@ createRoot(document.getElementById('root')).render(
     <AppDialogProvider>
       <App />
       <ReconArchiveOverlay />
+      <MplAnalyzeAgainAction />
     </AppDialogProvider>
   </StrictMode>,
 )
