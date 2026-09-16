@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
+import Uploaded837FilesView from './Uploaded837FilesView';
 import { fetch837ClaimDetail, fetch837Files, process837Upload, push837ClaimToSftp, search837Claims } from '../services/api';
 import { EASTERN_TIME_ZONE, formatInZone } from '../../utils/timezone';
 import './ClaimSearchView.css';
@@ -178,19 +179,36 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [claimId, setClaimId] = useState(null);
   const [claimSummary, setClaimSummary] = useState(null);
   const [sourceClaim, setSourceClaim] = useState(null);
-  const [fileQuery, setFileQuery] = useState('');
-  const [filePage, setFilePage] = useState(1);
-  const [fileData, setFileData] = useState({ results: [], count: 0, pages: 0, has_previous: false, has_next: false });
-  const [fileLoading, setFileLoading] = useState(false);
-  const [fileError, setFileError] = useState('');
-  const [fileRefresh, setFileRefresh] = useState(0);
-  const [pushingPending, setPushingPending] = useState(false);
+  const [show837Files, setShow837Files] = useState(() => new URLSearchParams(window.location.search).get('search_view') === '837-files');
 
   useEffect(() => {
-    setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice(''); setFileQuery(''); setFilePage(1);
+    setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice('');
     const savedFormat = activeClientId ? localStorage.getItem(namingStorageKey(activeClientId)) : '';
     setActive837Filename(savedFormat || DEFAULT_837_FILENAME_FORMAT);
   }, [activeClientId]);
+
+  useEffect(() => {
+    if (!activeClientId) return undefined;
+    let current = true;
+    fetch837Files(activeClientId, '', 1, 10)
+      .then(data => {
+        if (!current) return;
+        const serverFormat = String(data.filename_format || '').trim();
+        if (serverFormat) {
+          setActive837Filename(serverFormat);
+          localStorage.setItem(namingStorageKey(activeClientId), serverFormat);
+        }
+      })
+      .catch(() => {});
+    return () => { current = false; };
+  }, [activeClientId]);
+
+  useEffect(() => {
+    const sync = () => setShow837Files(new URLSearchParams(window.location.search).get('search_view') === '837-files');
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
   useEffect(() => {
     if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
     const controller = new AbortController();
@@ -209,24 +227,6 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     }, 350);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [activeClientId, query, searchField]);
-  useEffect(() => {
-    if (!activeClientId) { setFileData({ results: [], count: 0, pages: 0, has_previous: false, has_next: false }); return undefined; }
-    const timer = setTimeout(async () => {
-      setFileLoading(true); setFileError('');
-      try {
-        const data = await fetch837Files(activeClientId, fileQuery.trim(), filePage, 20);
-        setFileData(data);
-        const serverFormat = String(data.filename_format || '').trim();
-        if (serverFormat) {
-          setActive837Filename(serverFormat);
-          localStorage.setItem(namingStorageKey(activeClientId), serverFormat);
-        }
-      }
-      catch (err) { setFileError(err.message); }
-      finally { setFileLoading(false); }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [activeClientId, fileQuery, filePage, fileRefresh]);
 
   const processUpload = async () => {
     if (!activeClientId || !uploads.length) return;
@@ -236,8 +236,9 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       const claims = (data.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0);
       const failure = data.failed_count ? ` ${data.failed_count} file(s) failed.` : '';
       setNotice(`${data.processed_count} file(s) processed, ${data.duplicate_count} already present, ${claims} claims indexed.${failure}`);
-      setFilePage(1); setFileRefresh(value => value + 1);
-      setUploads([]); document.getElementById('search-837-upload').value = '';
+      setUploads([]);
+      const input = document.getElementById('search-837-upload');
+      if (input) input.value = '';
     } catch (err) { setError(err.message); }
     finally { setProcessing(false); }
   };
@@ -246,10 +247,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     if (!activeClientId || renaming) return;
     setRenaming(true); setError(''); setNotice('');
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-Admin-Screen': 'search',
-      };
+      const headers = { 'Content-Type': 'application/json', 'X-Admin-Screen': 'search' };
       const res = await fetch('/edi835/api/837/sftp-rename/', {
         method: 'POST', credentials: 'include', headers,
         body: JSON.stringify({ client_id: activeClientId, filename_format: filename }),
@@ -265,49 +263,25 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     finally { setRenaming(false); }
   };
 
-  const pushAllPending837 = async () => {
-    if (!activeClientId || pushingPending) return;
-    setPushingPending(true); setError(''); setFileError(''); setNotice('');
-    try {
-      const headers = { 'Content-Type': 'application/json', 'X-Admin-Screen': 'search' };
-      const queueRes = await fetch('/edi835/api/837/files/', {
-        method: 'POST', credentials: 'include', headers,
-        body: JSON.stringify({ client_id: activeClientId }),
-      });
-      const queued = await queueRes.json().catch(() => ({}));
-      if (!queueRes.ok || !queued.success) throw new Error(queued.error || 'Unable to queue pending 837 files for SFTP delivery.');
-      if (!queued.job_id || queued.state === 'COMPLETED') {
-        setNotice(queued.message || 'All processed 837 files are already pushed to SFTP.');
-        setFileRefresh(value => value + 1);
-        return;
-      }
-
-      setNotice(queued.message || `Queued ${queued.pending_count || 0} pending 837 file(s) for sequential SFTP delivery.`);
-      let completedJob = null;
-      for (let attempt = 0; attempt < 600; attempt += 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const statusRes = await fetch(`/edi835/api/start-batch-conversion/?job_id=${encodeURIComponent(queued.job_id)}`, {
-          method: 'GET', credentials: 'include', headers: { 'X-Admin-Screen': 'search' },
-        });
-        const statusData = await statusRes.json().catch(() => ({}));
-        if (!statusRes.ok || !statusData.success) throw new Error(statusData.error || 'Unable to read 837 SFTP push status.');
-        const job = statusData.job || {};
-        if (job.state === 'COMPLETED' || job.state === 'FAILED') { completedJob = job; break; }
-      }
-      if (!completedJob) throw new Error('837 SFTP delivery is still running. Refresh to check the latest status.');
-      const result = completedJob.result || {};
-      if (completedJob.state === 'FAILED' || result.success === false) throw new Error(result.error || (result.errors || []).join('; ') || '837 SFTP delivery failed.');
-      const sent = Number(result.processed_count || (result.sent_files || []).length || 0);
-      const remainingErrors = Array.isArray(result.errors) ? result.errors.length : 0;
-      setNotice(remainingErrors ? `Pushed ${sent} 837 file(s). ${remainingErrors} file(s) could not be pushed and remain queued for retry.` : `Pushed ${sent} pending 837 file(s) to SFTP one by one.`);
-      setFileRefresh(value => value + 1);
-    } catch (err) {
-      setFileError(err.message);
-      setFileRefresh(value => value + 1);
-    } finally {
-      setPushingPending(false);
-    }
+  const open837Files = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('search_view', '837-files');
+    window.history.pushState({ ...(window.history.state || {}), oneSmarterNav: true }, '', url.toString());
+    setShow837Files(true);
   };
+
+  const close837Files = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('search_view') === '837-files') {
+      window.history.back();
+      return;
+    }
+    setShow837Files(false);
+  };
+
+  if (show837Files) {
+    return <Uploaded837FilesView clients={clients} activeClientId={activeClientId} onSelectClient={onSelectClient} onBack={close837Files} />;
+  }
 
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
@@ -320,21 +294,12 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, member, patient, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
       <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => setSearchField(event.target.value)}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option><option value="837">837 filename</option></select></label>
-      <div className="claim-search-current-name" title="Filename format used for 837 SFTP pushes"><span>Naming format</span><b>{active837Filename}</b></div>
+      <button type="button" className="btn" disabled={!activeClientId} onClick={open837Files}>837 Uploaded Files</button>
       <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
     </div>
     <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table"><thead><tr><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>835</th><th>MIR</th><th>RECON</th><th>837</th></tr></thead><tbody>
       {!rows.length ? <tr><td colSpan="7" className="empty">{query.trim() && !loading ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'Universal claim search results will appear here.'}</td></tr> : rows.map(row => { const openRow = () => { if (row.has_837 === false) setSourceClaim(row); else { setClaimSummary(row); setClaimId(row.id); } }; return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
     </tbody></table></div></div>
-    <section className="claim-files-section">
-      <div className="claim-files-heading"><div><div className="eyebrow">837 FILE HISTORY</div><h2>837 Files</h2><p>{fileData.count} file{fileData.count === 1 ? '' : 's'} for the selected client{Number(fileData.pending_outbound_count || 0) > 0 ? ` · ${fileData.pending_outbound_count} waiting for SFTP` : ''}</p></div><button type="button" className="btn" disabled={!activeClientId || fileLoading || pushingPending} onClick={() => setFileRefresh(value => value + 1)}>Refresh</button></div>
-      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={fileQuery} onChange={event => { setFileQuery(event.target.value); setFilePage(1); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />{fileLoading && <span>Loading…</span>}</div>
-      {fileError && <div className="claim837-message error">{fileError}</div>}
-      <div className="claim-search-results"><div className="claim837-table-wrap"><table className="claim-files-table"><thead><tr><th>Inbound 837 file</th><th>Outbound 837 file</th><th>Processing status</th><th>Inbound</th><th>Inbound status</th><th>Outbound status</th><th>Claims</th><th>Services</th><th>Total charge</th><th>Processed</th></tr></thead><tbody>
-        {!fileData.results.length ? <tr><td colSpan="10" className="empty">{fileLoading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : fileData.results.map(file => <tr key={file.id}><td className="file-name-cell">{file.original_file_name || file.file_name || '—'}</td><td className="file-name-cell">{file.outbound_file_name || '—'}</td><td><span className={`file-status status-${file.status.toLowerCase()}`}>{file.status}</span></td><td>{file.inbound_source}</td><td><span className="file-status status-received">{file.inbound_status}</span></td><td>{file.outbound_ready ? <span className="file-status status-pushed">{file.outbound_status}</span> : <button type="button" className="file-status status-not-pushed" disabled={pushingPending} title={`Push all ${fileData.pending_outbound_count || 'pending'} processed 837 files to SFTP one by one`} style={{ border: 0, cursor: pushingPending ? 'wait' : 'pointer', font: 'inherit' }} onClick={pushAllPending837}>{pushingPending ? 'PUSHING…' : file.outbound_status}</button>}</td><td>{file.claim_count}</td><td>{file.service_count}</td><td>{money(file.total_charge_amount)}</td><td>{dateTime(file.processed_at || file.uploaded_at)}</td></tr>)}
-      </tbody></table></div></div>
-      <div className="claim-files-pagination"><span>Page {fileData.pages ? filePage : 0} of {fileData.pages}</span><div><button type="button" className="btn" disabled={!fileData.has_previous || fileLoading || pushingPending} onClick={() => setFilePage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!fileData.has_next || fileLoading || pushingPending} onClick={() => setFilePage(page => page + 1)}>Next</button></div></div>
-    </section>
     {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} summary={claimSummary} onClose={() => { setClaimId(null); setClaimSummary(null); }} />}
     {sourceClaim && <UniversalClaimModal row={sourceClaim} onClose={() => setSourceClaim(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
