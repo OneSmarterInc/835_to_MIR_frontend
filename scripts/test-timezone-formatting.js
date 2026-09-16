@@ -24,7 +24,8 @@ assert.equal(shouldShowTimeZoneSelector('Asia/Kolkata'), true);
 const insideUs = formatDateTimeWithZones(summer, {
   localTimeZone: 'America/New_York',
 });
-assert.match(insideUs, /^US Eastern \(America\/New_York\): .*10:00 AM EDT$/);
+assert.match(insideUs, /^US Eastern \(America\/New_York\): .*10:00 AM EST$/);
+assert.doesNotMatch(insideUs, /EDT/);
 assert.doesNotMatch(insideUs, /Local/);
 assert.equal(shouldShowTimeZoneSelector('America/New_York'), false);
 
