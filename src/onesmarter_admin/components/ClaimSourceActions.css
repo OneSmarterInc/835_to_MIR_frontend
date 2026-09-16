@@ -1,8 +1,12 @@
-.universal-source-actions{display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.universal-source-action{display:inline-grid;place-items:center;width:38px;height:36px;padding:0;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink);cursor:pointer}
-.universal-source-action:hover{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
-.universal-source-action svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.universal-source-action svg path[fill]{fill:currentColor;stroke:none}
+.universal-source-actions{display:inline-flex;visibility:visible;align-items:center;justify-content:center;gap:8px}
+.universal-source-action{display:inline-flex;visibility:visible;opacity:1;width:40px;min-width:40px;height:40px;padding:0;align-items:center;justify-content:center;background:#fff;color:#172638;border-radius:7px;cursor:pointer}
+.universal-source-action:first-child{border:1px solid #d5e1ed}
+.universal-source-action:nth-child(2){border:1px solid #d2e4e0}
+.universal-source-action:hover{background:#fff;color:#172638}
+.universal-source-action:first-child svg{display:block;width:15px!important;height:15px!important;fill:#172638!important;stroke:none!important;visibility:visible}
+.universal-source-action:first-child svg path{fill:#172638!important;stroke:none!important}
+.universal-source-action:nth-child(2) svg{display:none!important}
+.universal-source-action:nth-child(2)::before{content:"";display:block;width:15px;height:15px;background:center/15px 15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23172638' d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E")}
 .claim-source-download-backdrop{position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:24px;background:rgba(13,23,36,.58)}
 .claim-source-download-dialog{width:min(520px,94vw);overflow:hidden;border-radius:4px;background:var(--paper);box-shadow:0 24px 70px rgba(0,0,0,.3)}
 .claim-source-download-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#111c2d;border-bottom:3px solid #18a38b;color:#fff}
