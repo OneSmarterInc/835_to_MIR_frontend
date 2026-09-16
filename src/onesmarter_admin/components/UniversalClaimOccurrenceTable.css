@@ -1,10 +1,13 @@
-.universal-claim-table.occurrence-table{min-width:1120px!important;table-layout:fixed}
+.universal-claim-table.occurrence-table{min-width:1380px!important;table-layout:fixed}
 .universal-claim-table.occurrence-table th,.universal-claim-table.occurrence-table td{vertical-align:middle!important}
-.universal-claim-table.occurrence-table th:nth-child(1){width:145px}
-.universal-claim-table.occurrence-table th:nth-child(2){width:205px}
-.universal-claim-table.occurrence-table th:nth-child(3){width:175px}
-.universal-claim-table.occurrence-table th:nth-child(n+4):nth-child(-n+7){width:145px;text-align:center}
-.universal-claim-table.occurrence-table td:nth-child(n+4):nth-child(-n+7){text-align:center}
+.universal-claim-table.occurrence-table .identity-header.highmark{width:205px;text-align:left}
+.universal-claim-table.occurrence-table .identity-header.internal{width:175px;text-align:left}
+.universal-claim-table.occurrence-table .source-group-header{width:250px;text-align:center!important;border-left:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.12em}
+.universal-claim-table.occurrence-table .source-subheader th{padding-top:7px!important;padding-bottom:7px!important;background:#f5f8fb;color:var(--ink-3);font-size:9px;letter-spacing:.08em;text-align:center!important;text-transform:uppercase}
+.universal-claim-table.occurrence-table .source-subheader-date{width:145px;border-left:1px solid var(--line)}
+.universal-claim-table.occurrence-table .source-subheader-actions{width:105px}
+.universal-claim-table.occurrence-table .universal-source-date-cell{width:145px;padding-left:14px!important;padding-right:10px!important;border-left:1px solid var(--line);text-align:left}
+.universal-claim-table.occurrence-table .universal-source-cell{width:105px;padding-left:8px!important;padding-right:8px!important;text-align:center}
 .universal-claim-table.occurrence-table .universal-claim-row{cursor:default}
 .universal-claim-table.occurrence-table .universal-claim-row:hover td{background:var(--surface)}
 .occurrence-datetime{display:grid;gap:3px;white-space:nowrap}
