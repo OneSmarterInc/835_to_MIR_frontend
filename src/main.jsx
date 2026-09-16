@@ -7,8 +7,8 @@ import './components/ReconciliationPageEnhancement.css'
 import './components/ReconArchivePage.css'
 import App from './App.jsx'
 import { AppDialogProvider } from './components/AppDialog.jsx'
+import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
 import { installClaimSliceDownload } from './utils/claimSliceDownload.js'
-import { installReconArchivePage } from './utils/reconArchivePage.js'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
@@ -53,11 +53,13 @@ if (BACKEND_URL) {
 
 installBrowserHistoryNavigation();
 installClaimSliceDownload();
-installReconArchivePage();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AppDialogProvider><App /></AppDialogProvider>
+    <AppDialogProvider>
+      <App />
+      <ReconArchiveOverlay />
+    </AppDialogProvider>
   </StrictMode>,
 )
 //test
