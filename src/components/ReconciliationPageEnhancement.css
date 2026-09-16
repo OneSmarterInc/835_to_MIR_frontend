@@ -1,78 +1,92 @@
-.recon-popup-backdrop.recon-page-shell {
-  position: absolute;
-  inset: 0 auto auto 0;
-  z-index: 10020;
-  width: 100%;
-  min-height: 100vh;
-  height: auto;
-  padding: 0;
-  overflow: visible;
-  background: #e7ecf1;
+.recon-popup-backdrop {
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
+  z-index: 10020 !important;
+  display: block !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  height: auto !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: #e7ecf1 !important;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-popup.recon-page {
-  display: block;
-  width: 100%;
-  min-height: 100vh;
-  height: auto;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: #e7ecf1;
-  box-shadow: none;
+.recon-popup-backdrop .recon-popup {
+  display: block !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #e7ecf1 !important;
+  box-shadow: none !important;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-page-header {
+.recon-popup-backdrop .recon-popup-header {
   position: relative;
-  display: grid;
+  display: grid !important;
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 16px;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-page-back-button {
+/* The React component still owns the close action. Present that native button
+   as the page-level Back action without a MutationObserver rewriting the DOM. */
+.recon-popup-backdrop .recon-popup-header .modal-cross-btn {
   appearance: none;
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
+  min-width: 174px;
   min-height: 36px;
-  padding: 0 13px;
-  border: 1px solid #52657c;
-  border-radius: 3px;
-  background: #1b2a40;
-  color: #d9f7f1;
-  font-size: 12px;
+  padding: 0 13px !important;
+  border: 1px solid #52657c !important;
+  border-radius: 3px !important;
+  background: #1b2a40 !important;
+  color: transparent !important;
+  font-size: 0 !important;
   font-weight: 800;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-page-back-button:hover {
-  border-color: #2dd4bf;
-  background: #20344d;
+.recon-popup-backdrop .recon-popup-header .modal-cross-btn::after {
+  content: "← Back to Reconciliation";
+  color: #d9f7f1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.recon-popup-backdrop .recon-popup-header .modal-cross-btn:hover {
+  border-color: #2dd4bf !important;
+  background: #20344d !important;
+}
+
+.recon-popup-backdrop .recon-popup-header .modal-cross-btn:hover::after {
   color: #fff;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-page-back-button:focus-visible {
+.recon-popup-backdrop .recon-popup-header .modal-cross-btn:focus-visible {
   outline: 3px solid rgba(45, 212, 191, .24);
   outline-offset: 2px;
 }
 
-.recon-popup-backdrop.recon-page-shell .recon-page-body {
-  display: block;
-  min-height: 0;
-  height: auto;
-  overflow: visible;
+.recon-popup-backdrop .recon-popup-body {
+  display: block !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 @media (max-width: 760px) {
-  .recon-popup-backdrop.recon-page-shell .recon-page-header {
+  .recon-popup-backdrop .recon-popup-header {
     grid-template-columns: 1fr;
   }
 
-  .recon-popup-backdrop.recon-page-shell .recon-page-back-button {
+  .recon-popup-backdrop .recon-popup-header .modal-cross-btn {
     justify-self: start;
   }
 }
