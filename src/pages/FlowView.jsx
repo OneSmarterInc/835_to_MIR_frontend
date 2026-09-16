@@ -82,9 +82,6 @@ export default function FlowView({
                       f.mir_filename
                   )
                   .map((f, idx) => {
-                    // The conversions table uses the backend's canonical
-                    // admin-configured MIR filename. Use that exact same field
-                    // here and never derive the display name from output_path.
                     const mirName = f.mir_filename;
 
                     return (
@@ -129,13 +126,6 @@ export default function FlowView({
               )}
             </div>
           </div>
-        </div>
-
-        {/* VAULT FOOTER BAR */}
-        <div className="vault">
-          <span className="lock">&squarf; 837 never feeds MIR generation</span>
-          <span className="lock">&squarf; 835 validation happens on the backend</span>
-          <span className="lock">&squarf; Plan and file metadata persist in SQLite</span>
         </div>
       </div>
 
