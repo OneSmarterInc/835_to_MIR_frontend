@@ -1,60 +1,53 @@
-function splitDateTimeCell(cell) {
-  if (!cell || cell.querySelector('.archive-date-time-stack')) return;
-  const text = String(cell.textContent || '').trim();
-  if (!text) return;
+function normalizeArchiveCellText(cell, transform, marker) {
+  if (!cell || cell.dataset?.[marker] === '1') return;
+  const current = String(cell.textContent || '').trim();
+  if (!current) return;
 
-  const commaIndex = text.indexOf(',');
-  if (commaIndex === -1) return;
+  const next = transform(current);
+  if (!next || next === current) return;
 
-  const dateText = text.slice(0, commaIndex).trim();
-  const timeText = text.slice(commaIndex + 1).trim();
-  if (!dateText || !timeText) return;
+  // Keep the existing React-owned element intact. Only adjust its visible text
+  // so React's layout/reconciliation is not disrupted by replacing children.
+  const target = cell.firstElementChild || cell;
+  if (target.childElementCount === 0) {
+    target.textContent = next;
+  } else {
+    // TimeDisplay is a single span in the archive table. If an unexpected nested
+    // structure appears, fall back to the cell text without creating wrappers.
+    cell.textContent = next;
+  }
 
-  const stack = document.createElement('div');
-  stack.className = 'archive-date-time-stack';
-  stack.style.display = 'grid';
-  stack.style.gap = '3px';
-  stack.style.lineHeight = '1.25';
-  stack.style.whiteSpace = 'nowrap';
-
-  const date = document.createElement('div');
-  date.textContent = dateText;
-  const time = document.createElement('div');
-  time.textContent = timeText;
-
-  stack.append(date, time);
-  cell.replaceChildren(stack);
+  cell.style.whiteSpace = 'pre-line';
+  cell.style.overflowWrap = 'anywhere';
+  cell.style.wordBreak = 'break-word';
+  cell.style.verticalAlign = 'top';
+  cell.dataset[marker] = '1';
 }
 
-function stack835Files(cell) {
-  if (!cell || cell.querySelector('.archive-835-file-stack')) return;
-  const text = String(cell.textContent || '').trim();
-  if (!text) return;
+function splitArchiveDateTime(cell) {
+  normalizeArchiveCellText(
+    cell,
+    (text) => {
+      const commaIndex = text.indexOf(',');
+      if (commaIndex === -1) return text;
+      const date = text.slice(0, commaIndex).trim();
+      const time = text.slice(commaIndex + 1).trim();
+      return date && time ? `${date}\n${time}` : text;
+    },
+    'archiveDateEnhanced',
+  );
+}
 
-  const files = text
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  if (!files.length) return;
-
-  const stack = document.createElement('div');
-  stack.className = 'archive-835-file-stack';
-  stack.style.display = 'grid';
-  stack.style.gap = '4px';
-  stack.style.minWidth = '0';
-
-  files.forEach((filename) => {
-    const row = document.createElement('div');
-    row.textContent = filename;
-    row.style.whiteSpace = 'normal';
-    row.style.overflowWrap = 'anywhere';
-    row.style.wordBreak = 'break-word';
-    row.style.lineHeight = '1.25';
-    stack.appendChild(row);
-  });
-
-  cell.replaceChildren(stack);
+function stackArchive835Files(cell) {
+  normalizeArchiveCellText(
+    cell,
+    (text) => text
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join('\n'),
+    'archiveFilesEnhanced',
+  );
 }
 
 function enhanceArchiveTable(table) {
@@ -66,25 +59,25 @@ function enhanceArchiveTable(table) {
 
   if (dateIndex === -1 || inputIndex === -1 || refIndex === -1) return;
 
-  const cols = table.querySelectorAll('colgroup col');
-  if (cols[inputIndex]) cols[inputIndex].style.width = '18%';
-  if (cols[refIndex]) {
-    cols[refIndex].style.width = '0';
-    cols[refIndex].style.visibility = 'collapse';
-  }
-
-  const refHeader = headers[refIndex];
-  if (refHeader) refHeader.style.display = 'none';
+  // Hide only the obsolete 837 reference header/cells. Do not collapse the
+  // colgroup; browsers can produce pathological table heights when a fixed
+  // table combines visibility:collapse with hidden cells.
+  headers[refIndex].style.display = 'none';
 
   Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
-    const cells = row.children;
+    const cells = Array.from(row.children);
     if (!cells.length) return;
 
-    const refCell = cells[refIndex];
-    if (refCell) refCell.style.display = 'none';
+    if (cells[refIndex]) cells[refIndex].style.display = 'none';
+    splitArchiveDateTime(cells[dateIndex]);
+    stackArchive835Files(cells[inputIndex]);
 
-    splitDateTimeCell(cells[dateIndex]);
-    stack835Files(cells[inputIndex]);
+    // Keep archive rows compact and aligned at the top, even for batch rows.
+    row.style.height = 'auto';
+    Array.from(row.children).forEach((cell) => {
+      cell.style.height = 'auto';
+      cell.style.verticalAlign = 'top';
+    });
   });
 }
 
@@ -108,8 +101,10 @@ if (document.readyState === 'loading') {
   queueEnhancement();
 }
 
+// React can replace rows during filtering/pagination. Re-apply formatting only
+// when nodes are added; avoid character-data observation so this helper cannot
+// create a self-triggering layout loop.
 new MutationObserver(queueEnhancement).observe(document.documentElement, {
   childList: true,
   subtree: true,
-  characterData: true,
 });
