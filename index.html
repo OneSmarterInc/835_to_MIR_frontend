@@ -16,6 +16,28 @@
         display: none !important;
       }
 
+      /* Checks > Conversion: keep short status/import labels on one line. */
+      .table-screen .datatable th:nth-child(2),
+      .table-screen .datatable td:nth-child(2) {
+        min-width: 92px;
+        white-space: nowrap !important;
+      }
+
+      .table-screen .datatable th:nth-child(3),
+      .table-screen .datatable td:nth-child(3) {
+        min-width: 106px;
+        white-space: nowrap !important;
+      }
+
+      .table-screen .datatable td:nth-child(2) .badge,
+      .table-screen .datatable td:nth-child(3) .badge {
+        display: inline-block;
+        min-width: max-content;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+      }
+
       /* Archived source viewer: compact search toolbar matching claim navigation. */
       .mpl-file-content-heading {
         display: flex !important;
