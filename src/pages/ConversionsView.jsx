@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { splitClaimNumber } from "../utils/claimNumber";
-import { process837Upload } from "../onesmarter_admin/services/api";
+import { pushEdiFileToSftp } from "../onesmarter_admin/services/api";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
@@ -19,15 +19,12 @@ export default function ConversionsView({
   const [ediText, setEdiText] = useState("");
   const [currentFileName, setCurrentFileName] = useState("uploaded_file.x12");
   const [file835Subtext, setFile835Subtext] = useState("No 835 files selected.");
-  const [file837Subtext, setFile837Subtext] = useState("No 837 reference selected.");
-  const [selected837Files, setSelected837Files] = useState([]);
-  const [file837InputKey, setFile837InputKey] = useState(0);
-  const [processing837, setProcessing837] = useState(false);
   const [activeValidatedFileId, setActiveValidatedFileId] = useState(null);
 
   const [validating, setValidating] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
+  const [pushingSftpId, setPushingSftpId] = useState(null);
   const [startingBatch, setStartingBatch] = useState(false);
   const [batchAlert, setBatchAlert] = useState(null);
   const [partialDetails, setPartialDetails] = useState(null);
@@ -67,9 +64,6 @@ export default function ConversionsView({
   const handle835FileChange = async (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
-    setSelected837Files([]);
-    setFile837Subtext("No 837 files selected.");
-    setFile837InputKey(key => key + 1);
 
     if (files.length === 1) {
       const file = files[0];
@@ -101,32 +95,6 @@ export default function ConversionsView({
       setEdiText(loadedFiles.map((f) => f.content).join("\n"));
       resetConversionForm();
     }
-  };
-
-  // 837 File Input change
-  const handle837FileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      setSelected837Files(files);
-      setFile837Subtext(`${files.length} 837 file(s) selected: ${files.map(file => file.name).join(", ")}`);
-      resetConversionForm();
-    }
-  };
-
-  const handleProcess837 = async () => {
-    if (!selectedClientId || !selected837Files.length) {
-      setBatchAlert({ type: "error", title: "837 Processing Error", message: "Select a client and one or more 837 files." });
-      return;
-    }
-    setProcessing837(true); setBatchAlert(null);
-    try {
-      const data = await process837Upload(selectedClientId, selected837Files);
-      const claims = (data.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0);
-      setBatchAlert({ type: "success", title: "837 Processing Complete", message: `${data.processed_count} file(s) processed, ${data.duplicate_count} already present, and ${claims} claims indexed.${data.failed_count ? ` ${data.failed_count} file(s) failed.` : ""}` });
-      setSelected837Files([]); setFile837Subtext("No 837 files selected."); setFile837InputKey(key => key + 1);
-    } catch (error) {
-      setBatchAlert({ type: "error", title: "837 Processing Error", message: error.message });
-    } finally { setProcessing837(false); }
   };
 
   const resetConversionForm = () => {
@@ -301,6 +269,41 @@ export default function ConversionsView({
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
+    }
+  };
+
+  // Retry MIR SFTP delivery directly from the conversion history table.
+  const handleSftpStatusClick = async (file) => {
+    if (!file?.id || file.present_in_sftp || pushingSftpId) return;
+
+    const hasMirOutput = Boolean(file.output_path) && file.status === "ARCHIVED";
+    if (!hasMirOutput) {
+      setBatchAlert({
+        type: "error",
+        title: "SFTP Push Unavailable",
+        message: "Process this run into a MIR file before attempting SFTP delivery.",
+      });
+      return;
+    }
+
+    setPushingSftpId(file.id);
+    setBatchAlert(null);
+    try {
+      const data = await pushEdiFileToSftp(file.id);
+      setBatchAlert({
+        type: "success",
+        title: "SFTP Push Complete",
+        message: data.message || "MIR file pushed to SFTP successfully.",
+      });
+      if (onRefreshData) await onRefreshData();
+    } catch (error) {
+      setBatchAlert({
+        type: "error",
+        title: "SFTP Push Failed",
+        message: error?.message || "Failed to push MIR to SFTP.",
+      });
+    } finally {
+      setPushingSftpId(null);
     }
   };
 
@@ -502,16 +505,19 @@ export default function ConversionsView({
           <h2>Start a conversion</h2>
           <div className="step-pills">
             <span className={`step-pill ${step1State}`} id="pillStep1">
-              1 &bull; {selected837Files.length ? "UPLOAD 837" : "UPLOAD 835"}
+              1 &bull; UPLOAD 835
             </span>
-            {selected837Files.length ? <><span className="step-arrow">&rarr;</span><span className="step-pill">2 &bull; PROCESS 837</span></> : <><span className="step-arrow">&rarr;</span><span className={`step-pill ${step2State}`} id="pillStep2">2 &bull; VALIDATE</span><span className="step-arrow">&rarr;</span><span className={`step-pill ${step3State}`} id="pillStep3">3 &bull; PROCESS MIR</span></>}
+            <span className="step-arrow">&rarr;</span>
+            <span className={`step-pill ${step2State}`} id="pillStep2">2 &bull; VALIDATE</span>
+            <span className="step-arrow">&rarr;</span>
+            <span className={`step-pill ${step3State}`} id="pillStep3">3 &bull; PROCESS MIR</span>
           </div>
         </div>
 
         <div className="conversion-boxes">
           {/* REQUIRED 835 INPUT BOX */}
-          <div className="c-box">
-            <div className="c-box-label">{selected837Files.length ? "835 INPUT • NOT USED IN 837 MODE" : "REQUIRED • 835 INPUT"}</div>
+          <div className="c-box" style={{ flex: "1 1 auto" }}>
+            <div className="c-box-label">REQUIRED &bull; 835 INPUT</div>
             <input
               type="file"
               accept=".835,.853,.x12,.txt,.edi,*/*"
@@ -539,19 +545,9 @@ export default function ConversionsView({
             )}
           </div>
 
-          {/* OPTIONAL 837 REFERENCE BOX */}
-          <div className="c-box">
-            <div className="c-box-label">837 INPUT &bull; SINGLE OR BATCH</div>
-            <input key={file837InputKey} type="file" multiple accept=".837,.x12,.edi,.txt,.dat,*/*" onChange={handle837FileChange} />
-            <div className="subtext">{file837Subtext}</div>
-          </div>
-
           {/* ACTION BUTTONS WITH ICONS */}
           <div className="c-actions">
-            {selected837Files.length ? <button type="button" className="btn-gray" onClick={handleProcess837} disabled={processing837}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-              <span>{processing837 ? "Processing 837…" : "Process 837"}</span>
-            </button> : <><button
+            <button
               type="button"
               className="btn-gray"
               onClick={handleValidate}
@@ -592,7 +588,7 @@ export default function ConversionsView({
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
               <span>{processing ? "Processing MIR..." : "Process MIR"}</span>
-            </button></>}
+            </button>
 
             <button
               type="button"
@@ -618,7 +614,7 @@ export default function ConversionsView({
           </div>
         </div>
 
-        {/* BATCH CONVERSION ALERT BANNER */}
+        {/* BATCH CONVERSION / SFTP ALERT BANNER */}
         {batchAlert && (
           <div
             className={`status-banner ${batchAlert.type === "success" ? "valid" : "invalid"}`}
@@ -626,7 +622,7 @@ export default function ConversionsView({
           >
             <div>
               <div style={{ fontWeight: 700, fontSize: "14px" }}>
-                {batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error"}
+                {batchAlert.title || (batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error")}
               </div>
               <div style={{ fontSize: "12px", marginTop: "2px" }}>
                 {batchAlert.message}
@@ -797,7 +793,7 @@ export default function ConversionsView({
                     {sortKey === "filename" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
                 </th>
-                <th>837 REF</th>
+                <th>SFTP STATUS</th>
                 <th
                   className={`sortable ${sortKey === "claims" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("claims")}
@@ -871,8 +867,32 @@ export default function ConversionsView({
                       <td className="num" style={{ color: "var(--ink-2)" }}>
                         {f.original_filename}
                       </td>
-                      <td className="num" style={{ color: "var(--ink-3)" }}>
-                        —
+                      <td className="num" style={{ whiteSpace: "nowrap" }}>
+                        {f.present_in_sftp ? (
+                          <span className="tag ok" title="MIR successfully delivered to the configured outbound SFTP location.">
+                            PUSHED
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="tag work"
+                            onClick={() => handleSftpStatusClick(f)}
+                            disabled={pushingSftpId === f.id || !hasMirOutput}
+                            title={
+                              hasMirOutput
+                                ? "Not delivered to SFTP. Click to retry the MIR push."
+                                : "MIR output must be created before SFTP delivery can be attempted."
+                            }
+                            style={{
+                              border: 0,
+                              font: "inherit",
+                              cursor: hasMirOutput && pushingSftpId !== f.id ? "pointer" : "not-allowed",
+                              opacity: hasMirOutput ? 1 : 0.55,
+                            }}
+                          >
+                            {pushingSftpId === f.id ? "PUSHING..." : "NOT PUSHED"}
+                          </button>
+                        )}
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
                       <td className="num" style={{ color: "var(--ink-2)" }}>

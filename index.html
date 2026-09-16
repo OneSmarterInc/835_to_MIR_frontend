@@ -16,6 +16,11 @@
         display: none !important;
       }
 
+      /* Conversion page now has one 835 input panel plus action buttons. */
+      .start-conversion-card .conversion-boxes {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+      }
+
       /* Checks > Conversion: keep short status/import labels on one line. */
       .table-screen .datatable th:nth-child(2),
       .table-screen .datatable td:nth-child(2) {
@@ -145,6 +150,12 @@
         background: #aeb3b9 !important;
         color: #111820 !important;
         box-shadow: 0 0 0 2px #737a82 !important;
+      }
+
+      @media (max-width: 860px) {
+        .start-conversion-card .conversion-boxes {
+          grid-template-columns: 1fr !important;
+        }
       }
 
       @media (max-width: 760px) {
