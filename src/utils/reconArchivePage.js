@@ -147,44 +147,59 @@ async function openPreview(filename) {
 function enhanceArchive(backdrop) {
   const modal = backdrop.querySelector('.result-files-modal');
   const heading = modal?.querySelector('#uploaded-recon-title');
-  if (!modal || !heading || backdrop.dataset.reconArchiveEnhanced === '1') return;
-  backdrop.dataset.reconArchiveEnhanced = '1';
-  backdrop.classList.add('recon-archive-page-shell');
-  modal.classList.add('recon-archive-page');
-  modal.removeAttribute('role');
-  modal.removeAttribute('aria-modal');
+  if (!modal || !heading) return;
 
-  const titleBar = modal.querySelector('.result-detail-title');
-  const close = titleBar?.querySelector('button');
-  if (close) {
-    close.className = 'recon-archive-back';
-    close.textContent = '← Back to Reconciliation';
+  // Header enhancement can happen while the React view is still loading files.
+  // Do this once, but do not mark the table itself as complete until the file
+  // rows actually exist. Previously the enhancement was marked complete too
+  // early, which left the original card list visible and prevented the eye
+  // viewer/table conversion from ever running after the data arrived.
+  if (backdrop.dataset.reconArchiveShellEnhanced !== '1') {
+    backdrop.dataset.reconArchiveShellEnhanced = '1';
+    backdrop.classList.add('recon-archive-page-shell');
+    modal.classList.add('recon-archive-page');
+    modal.removeAttribute('role');
+    modal.removeAttribute('aria-modal');
+
+    const titleBar = modal.querySelector('.result-detail-title');
+    const close = titleBar?.querySelector('button');
+    if (close) {
+      close.className = 'recon-archive-back';
+      close.textContent = '← Back to Reconciliation';
+    }
+
+    if (isAdministrator() && titleBar && close && !titleBar.querySelector('.recon-archive-header-client')) {
+      const clientBox = document.createElement('div');
+      clientBox.className = 'recon-archive-header-client';
+      clientBox.innerHTML = '<label>Client</label><select aria-label="Select client"></select>';
+      titleBar.insertBefore(clientBox, close);
+      const clientSelect = clientBox.querySelector('select');
+      loadClients(clientSelect);
+      clientSelect.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        if (clientSelect.value) url.searchParams.set('client', clientSelect.value);
+        else url.searchParams.delete('client');
+        url.searchParams.set('recon_archive', '1');
+        window.location.assign(url.toString());
+      });
+    }
+
+    if (!modal.querySelector('.recon-archive-tools')) {
+      const tools = document.createElement('div');
+      tools.className = 'recon-archive-tools';
+      tools.innerHTML = `<label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, date, status, claims, size, import mode…" aria-label="Search uploaded RECON files"></label>`;
+      titleBar?.after(tools);
+    }
   }
 
-  if (isAdministrator() && titleBar && close) {
-    const clientBox = document.createElement('div');
-    clientBox.className = 'recon-archive-header-client';
-    clientBox.innerHTML = '<label>Client</label><select aria-label="Select client"></select>';
-    titleBar.insertBefore(clientBox, close);
-    const clientSelect = clientBox.querySelector('select');
-    loadClients(clientSelect);
-    clientSelect.addEventListener('change', () => {
-      const url = new URL(window.location.href);
-      if (clientSelect.value) url.searchParams.set('client', clientSelect.value);
-      else url.searchParams.delete('client');
-      url.searchParams.set('recon_archive', '1');
-      window.location.assign(url.toString());
-    });
-  }
-
-  const tools = document.createElement('div');
-  tools.className = 'recon-archive-tools';
-  tools.innerHTML = `<label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, date, status, claims, size, import mode…" aria-label="Search uploaded RECON files"></label>`;
-  titleBar?.after(tools);
-
+  if (backdrop.dataset.reconArchiveEnhanced === '1') return;
   const list = modal.querySelector('.result-files-list');
   if (!list) return;
   const sourceRows = [...list.querySelectorAll('.result-file-row')];
+  if (!sourceRows.length) return;
+
+  backdrop.dataset.reconArchiveEnhanced = '1';
+  const tools = modal.querySelector('.recon-archive-tools');
   const tableWrap = document.createElement('div');
   tableWrap.className = 'recon-archive-table-wrap';
   const table = document.createElement('table');
@@ -232,7 +247,7 @@ function enhanceArchive(backdrop) {
   tableWrap.append(pagination);
   list.replaceWith(tableWrap);
 
-  const search = tools.querySelector('.recon-archive-search input');
+  const search = tools?.querySelector('.recon-archive-search input');
   const pageSizeSelect = pagination.querySelector('select');
   const previous = pagination.querySelector('[data-direction="previous"]');
   const next = pagination.querySelector('[data-direction="next"]');
@@ -240,7 +255,7 @@ function enhanceArchive(backdrop) {
   let page = 1;
 
   const filteredRows = () => {
-    const value = search.value.trim().toLowerCase();
+    const value = (search?.value || '').trim().toLowerCase();
     return [...tbody.rows].filter((row) => !value || row.dataset.search.includes(value));
   };
 
@@ -256,7 +271,7 @@ function enhanceArchive(backdrop) {
     next.disabled = page >= pages;
   };
 
-  search.addEventListener('input', () => { page = 1; renderPage(); });
+  search?.addEventListener('input', () => { page = 1; renderPage(); });
   pageSizeSelect.addEventListener('change', () => { page = 1; renderPage(); });
   previous.addEventListener('click', () => { page -= 1; renderPage(); });
   next.addEventListener('click', () => { page += 1; renderPage(); });
