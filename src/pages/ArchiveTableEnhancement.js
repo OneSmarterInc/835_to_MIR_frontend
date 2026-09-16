@@ -2,8 +2,6 @@ function formatArchiveDateTime(text) {
   const value = String(text || '').trim();
   if (!value) return value;
 
-  // Intl output normally contains a comma between date and time. Keep a
-  // regex fallback because some browsers/locales omit that comma.
   const commaIndex = value.indexOf(',');
   if (commaIndex !== -1) {
     const date = value.slice(0, commaIndex).trim();
@@ -30,48 +28,88 @@ function setCellText(cell, formatter) {
 
   const next = formatter(current);
   const target = cell.firstElementChild || cell;
-
-  // Only touch the visible text node. This keeps the React-owned table/cell
-  // structure intact while letting the browser size the row naturally.
   if (target.textContent !== next) target.textContent = next;
 
   cell.style.whiteSpace = 'pre-line';
-  cell.style.overflowWrap = 'normal';
-  cell.style.wordBreak = 'normal';
+  cell.style.overflowWrap = 'anywhere';
+  cell.style.wordBreak = 'break-word';
   cell.style.verticalAlign = 'top';
   cell.style.lineHeight = '1.35';
 }
 
 function applyArchiveColumnWidths(table, headers, refIndex) {
-  // Removing a TD/TH with display:none while leaving a fixed-layout colgroup
-  // causes the remaining cells to be assigned to the wrong column widths.
-  // Switch this archive table to auto layout and hide the matching COL too.
-  table.style.tableLayout = 'auto';
+  // Fit the entire Archive table inside the available viewport. Long values
+  // wrap vertically instead of forcing a horizontal scrollbar.
+  table.style.tableLayout = 'fixed';
   table.style.width = '100%';
-  table.style.maxWidth = 'none';
+  table.style.maxWidth = '100%';
+  table.style.minWidth = '0';
 
   const wrapper = table.parentElement;
   if (wrapper) {
-    wrapper.style.overflowX = 'auto';
+    wrapper.style.width = '100%';
     wrapper.style.maxWidth = '100%';
+    wrapper.style.overflowX = 'hidden';
   }
 
   const cols = Array.from(table.querySelectorAll('colgroup col'));
-  if (cols[refIndex]) {
-    cols[refIndex].style.display = 'none';
-    cols[refIndex].style.width = '0';
-  }
 
-  // Stable widths for the nine visible archive columns. The 835 and MIR
-  // columns get the most room, which prevents batch filenames from colliding
-  // with neighboring values.
-  const visibleWidths = ['14%', '7%', '24%', '18%', '6%', '8%', '8%', '10%', '5%'];
+  // Widths for the nine visible columns after removing 837 REF.
+  // DATE, RUN, 835, MIR, CLAIMS, IMPORT, SFTP, STATUS, ACTION = 100%.
+  const visibleWidths = ['14%', '7%', '24%', '17%', '5%', '7%', '7%', '13%', '6%'];
   let visibleIndex = 0;
+
   headers.forEach((header, index) => {
-    if (index === refIndex) return;
+    if (index === refIndex) {
+      header.style.display = 'none';
+      header.style.width = '0';
+      header.style.minWidth = '0';
+      header.style.maxWidth = '0';
+      if (cols[index]) {
+        cols[index].style.display = 'none';
+        cols[index].style.width = '0';
+        cols[index].style.minWidth = '0';
+        cols[index].style.maxWidth = '0';
+      }
+      return;
+    }
+
     const width = visibleWidths[visibleIndex++] || 'auto';
     header.style.width = width;
-    header.style.minWidth = index === 2 ? '260px' : '';
+    header.style.minWidth = '0';
+    header.style.maxWidth = 'none';
+    header.style.whiteSpace = 'normal';
+    header.style.overflowWrap = 'anywhere';
+    header.style.wordBreak = 'break-word';
+
+    if (cols[index]) {
+      cols[index].style.display = '';
+      cols[index].style.width = width;
+      cols[index].style.minWidth = '0';
+      cols[index].style.maxWidth = 'none';
+    }
+  });
+}
+
+function styleArchiveCell(cell) {
+  if (!cell) return;
+  cell.style.height = 'auto';
+  cell.style.minWidth = '0';
+  cell.style.maxWidth = '100%';
+  cell.style.boxSizing = 'border-box';
+  cell.style.verticalAlign = 'top';
+  cell.style.whiteSpace = 'normal';
+  cell.style.overflowWrap = 'anywhere';
+  cell.style.wordBreak = 'break-word';
+  cell.style.overflow = 'hidden';
+
+  cell.querySelectorAll('.tag').forEach((tag) => {
+    tag.style.maxWidth = '100%';
+    tag.style.whiteSpace = 'normal';
+    tag.style.overflowWrap = 'anywhere';
+    tag.style.wordBreak = 'break-word';
+    tag.style.textAlign = 'center';
+    tag.style.lineHeight = '1.2';
   });
 }
 
@@ -85,30 +123,28 @@ function enhanceArchiveTable(table) {
   if (dateIndex === -1 || inputIndex === -1 || refIndex === -1) return;
 
   applyArchiveColumnWidths(table, headers, refIndex);
-  headers[refIndex].style.display = 'none';
 
   Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
     const cells = Array.from(row.children);
     if (!cells.length) return;
 
-    if (cells[refIndex]) cells[refIndex].style.display = 'none';
+    if (cells[refIndex]) {
+      cells[refIndex].style.display = 'none';
+      cells[refIndex].style.width = '0';
+      cells[refIndex].style.minWidth = '0';
+      cells[refIndex].style.maxWidth = '0';
+    }
 
     setCellText(cells[dateIndex], formatArchiveDateTime);
     setCellText(cells[inputIndex], formatArchive835Files);
 
-    // Keep filenames readable and prevent content from spilling into the MIR
-    // or claims columns.
-    if (cells[inputIndex]) {
-      cells[inputIndex].style.minWidth = '260px';
-      cells[inputIndex].style.whiteSpace = 'pre-line';
-    }
-
     row.style.height = 'auto';
-    Array.from(row.children).forEach((cell) => {
-      cell.style.height = 'auto';
-      cell.style.verticalAlign = 'top';
-      cell.style.boxSizing = 'border-box';
+    cells.forEach((cell, index) => {
+      if (index !== refIndex) styleArchiveCell(cell);
     });
+
+    if (cells[dateIndex]) cells[dateIndex].style.whiteSpace = 'pre-line';
+    if (cells[inputIndex]) cells[inputIndex].style.whiteSpace = 'pre-line';
   });
 }
 
@@ -132,8 +168,6 @@ if (document.readyState === 'loading') {
   queueEnhancement();
 }
 
-// React replaces rows during filtering, pagination and refresh. Re-apply the
-// archive-only presentation when those nodes change.
 new MutationObserver(queueEnhancement).observe(document.documentElement, {
   childList: true,
   subtree: true,
