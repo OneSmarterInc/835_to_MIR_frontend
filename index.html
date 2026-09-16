@@ -27,6 +27,32 @@
         display: none !important;
       }
 
+      /* Conversion SFTP status: make NOT PUSHED use the same compact badge
+         treatment as PUSHED, with the existing yellow warning palette. */
+      #v-batches table button.tag.work {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        display: inline-block !important;
+        padding: 2px 7px !important;
+        border: 0 !important;
+        border-radius: 2px !important;
+        background: var(--ochre-bg) !important;
+        color: var(--ochre) !important;
+        font-family: var(--display) !important;
+        font-size: 10px !important;
+        font-weight: inherit !important;
+        line-height: normal !important;
+        letter-spacing: .08em !important;
+        text-transform: uppercase !important;
+        white-space: nowrap !important;
+        opacity: 1 !important;
+        box-shadow: none !important;
+      }
+
+      #v-batches table button.tag.work:disabled {
+        opacity: 1 !important;
+      }
+
       /* Checks > Conversion: keep short status/import labels on one line. */
       .table-screen .datatable th:nth-child(2),
       .table-screen .datatable td:nth-child(2) {
