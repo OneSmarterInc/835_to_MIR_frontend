@@ -131,6 +131,17 @@ function findSuggestionSection(card) {
   }) || null;
 }
 
+function ensureSuggestionSection(card) {
+  const existing = findSuggestionSection(card);
+  if (existing) return existing;
+
+  const section = document.createElement('section');
+  section.className = 'mpl-report-section mpl-ai-suggestion-section';
+  section.dataset.aiSuggestionCreated = '1';
+  card.append(section);
+  return section;
+}
+
 function buildHeading(section, sourceLabel = '') {
   const row = document.createElement('div');
   row.className = 'mpl-report-section-title';
@@ -208,12 +219,13 @@ async function enhanceClaimCards() {
 
   const pending = [];
   cards.forEach((card) => {
-    const section = findSuggestionSection(card);
     const claimNumber = claimNumberForCard(card);
-    if (!section || !claimNumber) return;
+    if (!claimNumber) return;
+    const section = ensureSuggestionSection(card);
 
-    // Remove the Python list immediately. The user-facing recommendation is
-    // AI's professional restatement of the Python-generated guidance.
+    // Remove any Python recommendation list immediately. The user-facing
+    // recommendation is the AI restatement, even when Python produced no
+    // separate Recommended resolution section for this claim.
     if (!section.dataset.aiSuggestionState) markLoading(section);
     if (section.dataset.aiSuggestionState !== 'done') {
       pending.push({ card, section, claimNumber });
@@ -225,7 +237,7 @@ async function enhanceClaimCards() {
 
   pending.forEach(({ card, section, claimNumber }) => {
     if (!document.documentElement.contains(card)) return;
-    const liveSection = findSuggestionSection(card) || section;
+    const liveSection = findSuggestionSection(card) || ensureSuggestionSection(card) || section;
     const suggestion = payload?.claims?.find(
       (item) => String(item.claim_number || '').trim() === claimNumber,
     );
