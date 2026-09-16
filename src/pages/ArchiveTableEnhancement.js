@@ -113,12 +113,35 @@ function styleArchiveCell(cell) {
   });
 }
 
+function shrinkArchiveActionButtons(cell) {
+  if (!cell) return;
+
+  const group = cell.querySelector('.file-action-buttons');
+  if (group) {
+    group.style.gap = '5px';
+  }
+
+  cell.querySelectorAll('.file-action-button').forEach((button) => {
+    button.style.width = '30px';
+    button.style.minWidth = '30px';
+    button.style.height = '30px';
+    button.style.padding = '0';
+    button.style.borderRadius = '6px';
+  });
+
+  cell.querySelectorAll('.file-action-button svg').forEach((icon) => {
+    icon.style.width = '13px';
+    icon.style.height = '13px';
+  });
+}
+
 function enhanceArchiveTable(table) {
   const headers = Array.from(table.querySelectorAll('thead th'));
   const headerTexts = headers.map((header) => String(header.textContent || '').trim().toUpperCase());
   const dateIndex = headerTexts.findIndex((text) => text.includes('835 DATE / TIME'));
   const inputIndex = headerTexts.findIndex((text) => text.includes('835 INPUT'));
   const refIndex = headerTexts.findIndex((text) => text.includes('837 REF'));
+  const actionIndex = headerTexts.findIndex((text) => text === 'ACTION');
 
   if (dateIndex === -1 || inputIndex === -1 || refIndex === -1) return;
 
@@ -145,6 +168,7 @@ function enhanceArchiveTable(table) {
 
     if (cells[dateIndex]) cells[dateIndex].style.whiteSpace = 'pre-line';
     if (cells[inputIndex]) cells[inputIndex].style.whiteSpace = 'pre-line';
+    if (actionIndex !== -1) shrinkArchiveActionButtons(cells[actionIndex]);
   });
 }
 
