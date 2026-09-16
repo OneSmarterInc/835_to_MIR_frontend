@@ -28,11 +28,16 @@ function cleanText(node) {
   return String(node?.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
+function notifyNavigation() {
+  window.dispatchEvent(new Event('onesmarter:navigation'));
+}
+
 function pushUrl(mutator) {
   const url = new URL(window.location.href);
   mutator(url);
   if (url.toString() === window.location.href) return;
   originalPushState.call(window.history, { ...(window.history.state || {}), oneSmarterNav: true }, '', url.toString());
+  notifyNavigation();
 }
 
 function setView(view) {
@@ -60,19 +65,19 @@ function clickWithoutHistory(element) {
 }
 
 function closeViewsNotInHistory(desiredView) {
-  const reconPreview = document.querySelector('.recon-file-preview-page');
-  if (reconPreview && desiredView !== 'recon-file') {
-    clickWithoutHistory(reconPreview.querySelector('.recon-archive-back'));
-  }
-
-  const reconArchive = document.querySelector('.result-detail-backdrop.recon-archive-page-shell');
+  // Native React RECON archive overlay is URL-driven and removes itself. The
+  // original ResultView detail layer underneath still needs its own React close
+  // action when history leaves the archive.
+  const reconArchive = [...document.querySelectorAll('.result-detail-backdrop')].find(
+    (node) => node.querySelector('#uploaded-recon-title'),
+  );
   if (reconArchive && !['recon-archive', 'recon-file'].includes(desiredView)) {
-    clickWithoutHistory(reconArchive.querySelector('.recon-archive-page .recon-archive-back'));
+    clickWithoutHistory(reconArchive.querySelector('.result-detail-title button'));
   }
 
-  const reconAction = document.querySelector('.recon-popup-backdrop.recon-page-shell');
+  const reconAction = document.querySelector('.recon-popup-backdrop');
   if (reconAction && desiredView !== 'recon-action') {
-    clickWithoutHistory(reconAction.querySelector('.recon-page-back-button'));
+    clickWithoutHistory(reconAction.querySelector('.recon-popup-header .modal-cross-btn'));
   }
 
   const fileViewer = document.querySelector('.file-viewer-page-shell');
@@ -110,6 +115,7 @@ function syncTopLevelScreenFromUrl() {
 function restoreFromLocation() {
   const desiredView = new URLSearchParams(window.location.search).get('view') || '';
   closeViewsNotInHistory(desiredView);
+  notifyNavigation();
   window.requestAnimationFrame(syncTopLevelScreenFromUrl);
 }
 
@@ -117,6 +123,10 @@ function interceptNavigationClick(event) {
   if (restoring || event.defaultPrevented) return;
   const button = event.target.closest('button');
   if (!button) return;
+
+  // The React RECON archive owns its own eye/download/back interactions and
+  // updates history directly. Do not duplicate those state transitions here.
+  if (button.closest('.recon-archive-react-page, .recon-react-preview')) return;
 
   const clientTab = button.closest('#navDrawer') ? button.dataset.v : '';
   if (clientTab) {
@@ -144,10 +154,6 @@ function interceptNavigationClick(event) {
     setView('recon-archive');
     return;
   }
-  if (button.matches('.recon-archive-icon[title="View file"]')) {
-    setView('recon-file');
-    return;
-  }
   if (button.matches('.mpl-eye-button')) {
     setView('mpl-source');
     return;
@@ -165,9 +171,7 @@ function interceptNavigationClick(event) {
   const view = params.get('view');
   const isBackForCurrentView =
     (view === 'file-viewer' && button.matches('.file-viewer-back, .file-viewer-page-footer .btn.primary')) ||
-    (view === 'recon-action' && button.matches('.recon-page-back-button')) ||
-    (view === 'recon-archive' && button.matches('.recon-archive-page .recon-archive-back')) ||
-    (view === 'recon-file' && button.matches('.recon-file-preview-page .recon-archive-back')) ||
+    (view === 'recon-action' && button.matches('.recon-popup-header .modal-cross-btn')) ||
     (view === 'mpl-source' && button.matches('.mpl-file-viewer [aria-label="Close file viewer"]'));
 
   if (isBackForCurrentView) {
@@ -205,10 +209,14 @@ export function installBrowserHistoryNavigation() {
         (currentNav !== nextNav || currentClient !== nextClient);
 
       if (changesEstablishedAdminNavigation) {
-        return originalPushState.call(this, { ...(state || {}), oneSmarterNav: true }, title, next.toString());
+        const result = originalPushState.call(this, { ...(state || {}), oneSmarterNav: true }, title, next.toString());
+        notifyNavigation();
+        return result;
       }
     } catch {}
-    return originalReplaceState.call(this, state, title, url);
+    const result = originalReplaceState.call(this, state, title, url);
+    notifyNavigation();
+    return result;
   };
 
   document.addEventListener('click', interceptNavigationClick, true);
@@ -218,6 +226,7 @@ export function installBrowserHistoryNavigation() {
     syncTopLevelScreenFromUrl();
     const desiredView = new URLSearchParams(window.location.search).get('view') || '';
     closeViewsNotInHistory(desiredView);
+    notifyNavigation();
   };
   window.setTimeout(initialSync, 0);
 
