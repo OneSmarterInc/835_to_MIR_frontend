@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import Uploaded837FilesView from './Uploaded837FilesView';
-import { fetch837ClaimDetail, fetch837Files, process837Upload, push837ClaimToSftp, search837Claims } from '../services/api';
+import { fetch837ClaimDetail, fetch837Files, process837Upload, push837ClaimToSftp } from '../services/api';
+import { searchUniversalClaims } from '../services/claimSearchApi';
 import { EASTERN_TIME_ZONE, formatInZone } from '../../utils/timezone';
 import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
 const dateTime = value => value ? formatInZone(new Date(value), EASTERN_TIME_ZONE, true) : '—';
 const DEFAULT_837_FILENAME_FORMAT = 'YYYYMMDDhhmmss.837';
+const CLAIM_PAGE_SIZE = 25;
 const namingStorageKey = clientId => `onesmarter_837_filename_format_${clientId || 'default'}`;
 const resolve837FilenameFormat = (value, now = new Date()) => {
   const pad = number => String(number).padStart(2, '0');
@@ -179,10 +181,14 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   const [claimId, setClaimId] = useState(null);
   const [claimSummary, setClaimSummary] = useState(null);
   const [sourceClaim, setSourceClaim] = useState(null);
+  const [claimPage, setClaimPage] = useState(1);
+  const [claimRefresh, setClaimRefresh] = useState(0);
+  const [claimMeta, setClaimMeta] = useState({ count: 0, pages: 0, has_previous: false, has_next: false });
   const [show837Files, setShow837Files] = useState(() => new URLSearchParams(window.location.search).get('search_view') === '837-files');
 
   useEffect(() => {
-    setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice('');
+    setQuery(''); setSearchField('all'); setRows([]); setError(''); setNotice(''); setClaimPage(1);
+    setClaimMeta({ count: 0, pages: 0, has_previous: false, has_next: false });
     const savedFormat = activeClientId ? localStorage.getItem(namingStorageKey(activeClientId)) : '';
     setActive837Filename(savedFormat || DEFAULT_837_FILENAME_FORMAT);
   }, [activeClientId]);
@@ -210,23 +216,35 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
   }, []);
 
   useEffect(() => {
-    if (!activeClientId || !query.trim()) { setRows([]); setLoading(false); return undefined; }
+    if (!activeClientId) {
+      setRows([]); setClaimMeta({ count: 0, pages: 0, has_previous: false, has_next: false }); setLoading(false);
+      return undefined;
+    }
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true); setError('');
       try {
-        const data = await search837Claims(activeClientId, query.trim(), searchField, 100, controller.signal);
-        if (!controller.signal.aborted) setRows(data.results || []);
+        const data = await searchUniversalClaims(activeClientId, query.trim(), searchField, claimPage, CLAIM_PAGE_SIZE, controller.signal);
+        if (!controller.signal.aborted) {
+          setRows(data.results || []);
+          setClaimMeta({
+            count: Number(data.count || 0),
+            pages: Number(data.pages || 0),
+            has_previous: Boolean(data.has_previous),
+            has_next: Boolean(data.has_next),
+          });
+          if (Number(data.page || claimPage) !== claimPage) setClaimPage(Number(data.page || 1));
+        }
       }
       catch (err) {
         if (err.name !== 'AbortError' && !controller.signal.aborted) {
-          setError(err.message); setRows([]);
+          setError(err.message); setRows([]); setClaimMeta({ count: 0, pages: 0, has_previous: false, has_next: false });
         }
       }
       finally { if (!controller.signal.aborted) setLoading(false); }
-    }, 350);
+    }, query.trim() ? 350 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [activeClientId, query, searchField]);
+  }, [activeClientId, query, searchField, claimPage, claimRefresh]);
 
   const processUpload = async () => {
     if (!activeClientId || !uploads.length) return;
@@ -236,7 +254,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       const claims = (data.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0);
       const failure = data.failed_count ? ` ${data.failed_count} file(s) failed.` : '';
       setNotice(`${data.processed_count} file(s) processed, ${data.duplicate_count} already present, ${claims} claims indexed.${failure}`);
-      setUploads([]);
+      setUploads([]); setClaimPage(1); setClaimRefresh(value => value + 1);
       const input = document.getElementById('search-837-upload');
       if (input) input.value = '';
     } catch (err) { setError(err.message); }
@@ -283,6 +301,9 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     return <Uploaded837FilesView clients={clients} activeClientId={activeClientId} onSelectClient={onSelectClient} onBack={close837Files} />;
   }
 
+  const pageStart = claimMeta.count ? ((claimPage - 1) * CLAIM_PAGE_SIZE) + 1 : 0;
+  const pageEnd = claimMeta.count ? Math.min(claimPage * CLAIM_PAGE_SIZE, claimMeta.count) : 0;
+
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
       <div className="claim-search-heading-copy"><div className="claim-search-eyebrow">Claims workspace</div><h1>Universal Claim Search</h1><p>Locate and review claim records across 835, MIR, RECON, and 837 files for the selected client.</p></div>
@@ -292,14 +313,18 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     {notice && <div className="claim837-message success">{notice}</div>}{error && <div className="claim837-message error">{error}</div>}
     <div className="claim-search-actions">
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
-      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => setQuery(event.target.value)} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, member, patient, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
-      <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => setSearchField(event.target.value)}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option><option value="837">837 filename</option></select></label>
-      <button type="button" className="btn" disabled={!activeClientId} onClick={open837Files}>837 Uploaded Files</button>
-      <div className="claim-search-match-count">{query.trim() ? `${rows.length} match${rows.length === 1 ? '' : 'es'}` : 'Search claims'}</div>
+      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => { setQuery(event.target.value); setClaimPage(1); }} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, member, patient, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
+      <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => { setSearchField(event.target.value); setClaimPage(1); }}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option><option value="837">837 filename</option></select></label>
+      <button type="button" className="btn" disabled={!activeClientId} onClick={open837Files} style={{ background: 'var(--ink)', borderColor: 'var(--ink)', color: '#fff', fontWeight: 700 }}>837 Uploaded Files</button>
+      <div className="claim-search-match-count">{loading ? 'Loading claims' : `${claimMeta.count.toLocaleString()} ${query.trim() ? 'matches' : 'claims'}`}</div>
     </div>
     <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table"><thead><tr><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>835</th><th>MIR</th><th>RECON</th><th>837</th></tr></thead><tbody>
-      {!rows.length ? <tr><td colSpan="7" className="empty">{query.trim() && !loading ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'Universal claim search results will appear here.'}</td></tr> : rows.map(row => { const openRow = () => { if (row.has_837 === false) setSourceClaim(row); else { setClaimSummary(row); setClaimId(row.id); } }; return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
+      {!rows.length ? <tr><td colSpan="7" className="empty">{loading ? 'Loading claims…' : query.trim() ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'No claims found for the selected client.'}</td></tr> : rows.map(row => { const openRow = () => { if (row.has_837 === false) setSourceClaim(row); else { setClaimSummary(row); setClaimId(row.id); } }; return <tr key={row.id} className="universal-claim-row" onClick={openRow}><td><button className="claim837-link" type="button" onClick={(event) => { event.stopPropagation(); openRow(); }}>{row.highmark_claim_number || '—'}</button></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => { const source = row.lifecycle?.[type] || {}; return <td key={type} className="universal-source-cell">{source.exists ? <><b className="universal-source-file" title={source.file_name}>{source.file_name || 'File recorded'}</b><small>{dateTime(source.arrived_at)}</small></> : <span className="universal-source-empty">—</span>}</td>; })}</tr>; })}
     </tbody></table></div></div>
+    <div className="claim-files-pagination">
+      <span>{claimMeta.count ? `${pageStart.toLocaleString()}–${pageEnd.toLocaleString()} of ${claimMeta.count.toLocaleString()} claims` : '0 claims'} · Page {claimMeta.pages ? claimPage : 0} of {claimMeta.pages}</span>
+      <div><button type="button" className="btn" disabled={!claimMeta.has_previous || loading} onClick={() => setClaimPage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!claimMeta.has_next || loading} onClick={() => setClaimPage(page => page + 1)}>Next</button></div>
+    </div>
     {claimId && <Claim837Modal claimId={claimId} namingFormat={active837Filename} summary={claimSummary} onClose={() => { setClaimId(null); setClaimSummary(null); }} />}
     {sourceClaim && <UniversalClaimModal row={sourceClaim} onClose={() => setSourceClaim(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
