@@ -40,7 +40,7 @@ function formatDate(value) {
     timeZone: 'America/New_York',
     month: '2-digit', day: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
-  }).replace(',', ',');
+  });
 }
 
 function filenameFromResponse(response, fallback) {
@@ -181,6 +181,12 @@ export default function ReconArchiveOverlay() {
   }, []);
 
   useEffect(() => {
+    if (view === 'recon-file' && !selectedFile) {
+      changeView('recon-archive', { replace: true });
+    }
+  }, [view, selectedFile]);
+
+  useEffect(() => {
     if (!open || !admin || clients.length) return;
     fetch('/admin-panel/api/clients/', { credentials: 'include', headers: authHeaders() })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('Unable to load clients.')))
@@ -221,13 +227,10 @@ export default function ReconArchiveOverlay() {
 
   if (!open) return null;
 
-  if (selectedFile || view === 'recon-file') {
-    if (selectedFile) {
-      return createPortal(<ReconFilePreview file={selectedFile} onBack={() => { setSelectedFile(null); changeView('recon-archive', { replace: true }); }} />, document.body);
-    }
-    changeView('recon-archive', { replace: true });
-    return null;
+  if (selectedFile) {
+    return createPortal(<ReconFilePreview file={selectedFile} onBack={() => { setSelectedFile(null); changeView('recon-archive', { replace: true }); }} />, document.body);
   }
+  if (view === 'recon-file') return null;
 
   const selectClient = (value) => {
     const url = new URL(window.location.href);
