@@ -110,13 +110,32 @@ function ReconFilePreview({ file, onBack }) {
   }, [file.id]);
 
   const occurrences = useMemo(() => findOccurrences(text, query), [text, query]);
-  useEffect(() => { setIndex(0); matchRefs.current = []; }, [query, text]);
+
   useEffect(() => {
-    if (!occurrences.length) return;
+    setIndex(0);
+    matchRefs.current = [];
+  }, [query, text]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (!term || !occurrences.length) return undefined;
     const next = Math.min(index, occurrences.length - 1);
-    if (next !== index) { setIndex(next); return; }
-    requestAnimationFrame(() => matchRefs.current[next]?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }));
-  }, [index, occurrences.length]);
+    if (next !== index) {
+      setIndex(next);
+      return undefined;
+    }
+
+    // Wait until React has committed the newly highlighted <mark> nodes.
+    // This guarantees that typing a fresh search immediately jumps to match 1.
+    const timer = window.setTimeout(() => {
+      matchRefs.current[next]?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'smooth',
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [query, text, index, occurrences.length]);
 
   const rendered = useMemo(() => {
     const term = query.trim();
