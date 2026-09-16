@@ -64,7 +64,19 @@ function ensureAnalyzeAgainButton() {
   const actions = document.querySelector('.mpl-detail-page-actions');
   const noticeId = activeNoticeId();
   if (!actions || !noticeId) return;
-  if (actions.querySelector('[data-mpl-analyze-again="1"]')) return;
+
+  const injected = actions.querySelector('[data-mpl-analyze-again="1"]');
+  const nativeAnalyzeButtons = [...actions.querySelectorAll('button')].filter(
+    (candidate) => candidate !== injected && (candidate.textContent || '').trim() === 'Analyze Again',
+  );
+
+  // Prefer the native React action. The enhancement only supplies a fallback
+  // for older detail views that do not render their own Analyze Again button.
+  if (nativeAnalyzeButtons.length) {
+    injected?.remove();
+    return;
+  }
+  if (injected) return;
 
   const button = document.createElement('button');
   button.type = 'button';
@@ -101,6 +113,13 @@ function ensureAnalyzeAgainButton() {
   const download = actions.querySelector('.mpl-msg-download');
   if (download) download.insertAdjacentElement('afterend', button);
   else actions.append(button);
+}
+
+function hideAnalysisMeta() {
+  document.querySelectorAll('.mpl-detail-meta > span').forEach((item) => {
+    const text = (item.textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
+    if (text.startsWith('ANALYSIS ')) item.remove();
+  });
 }
 
 function findSuggestionSection(card) {
@@ -194,7 +213,7 @@ async function enhanceClaimCards() {
     if (!section || !claimNumber) return;
 
     // Remove the Python list immediately. The user-facing recommendation is
-    // Qwen's professional restatement of the Python-generated guidance.
+    // AI's professional restatement of the Python-generated guidance.
     if (!section.dataset.aiSuggestionState) markLoading(section);
     if (section.dataset.aiSuggestionState !== 'done') {
       pending.push({ card, section, claimNumber });
@@ -224,6 +243,7 @@ function scheduleRefresh() {
   window.requestAnimationFrame(() => {
     refreshQueued = false;
     ensureStyles();
+    hideAnalysisMeta();
     ensureAnalyzeAgainButton();
     hideLegacyTopAiBlock();
     enhanceClaimCards();
