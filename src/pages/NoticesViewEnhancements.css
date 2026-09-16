@@ -209,7 +209,43 @@
   outline-offset: 2px;
 }
 
-/* Qwen output is a lightweight professional restatement of the Python recommendations. */
+/* AI suggestions are now delivered in claim_reports and rendered by React.
+   Reuse the existing recommendation section markup while presenting the
+   user-facing AI terminology and paragraph + bullets layout. */
+.mpl-detail-page .mpl-detail-meta > span:nth-child(4) {
+  display: none !important;
+}
+
+.mpl-report-card .mpl-report-section:has(.mpl-resolution-list) .mpl-report-section-title h4 {
+  font-size: 0 !important;
+}
+
+.mpl-report-card .mpl-report-section:has(.mpl-resolution-list) .mpl-report-section-title h4::after {
+  content: "AI suggestion";
+  font-size: 12px;
+}
+
+.mpl-report-card .mpl-report-section:has(.mpl-resolution-list) .mpl-report-section-title > span {
+  font-size: 0 !important;
+}
+
+.mpl-report-card .mpl-report-section:has(.mpl-resolution-list) .mpl-report-section-title > span::after {
+  content: "AI";
+  font-size: 10px;
+}
+
+.mpl-report-card .mpl-resolution-list li:first-child {
+  list-style: none;
+  margin-left: -20px;
+  margin-bottom: 10px;
+  color: #334a61;
+  line-height: 1.65;
+}
+
+.mpl-report-card .mpl-resolution-list li:not(:first-child) {
+  margin-top: 5px;
+}
+
 .mpl-notice-ai-response > p {
   white-space: pre-line;
   line-height: 1.65;
