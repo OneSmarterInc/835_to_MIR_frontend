@@ -21,6 +21,12 @@
         grid-template-columns: minmax(0, 1fr) auto !important;
       }
 
+      /* Remove the legacy 30-day operational-view banner from the shared
+         Conversion screen on both administrator and client portals. */
+      #v-batches > .stub {
+        display: none !important;
+      }
+
       /* Checks > Conversion: keep short status/import labels on one line. */
       .table-screen .datatable th:nth-child(2),
       .table-screen .datatable td:nth-child(2) {
