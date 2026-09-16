@@ -19,24 +19,26 @@ function isAdministrator() {
   return path.includes('administrator') || path.includes('adminstrator');
 }
 
-function parseMeta(row) {
-  const smalls = [...row.querySelectorAll('small')].map((node) => (node.textContent || '').trim());
-  const bits = (smalls[0] || '').split('·').map((value) => value.trim());
-  return {
-    filename: row.querySelector('b')?.textContent?.trim() || 'RECON file',
-    date: bits[0] || '—',
-    status: bits[1] || '—',
-    claims: bits[2] || '—',
-    size: bits[3] || '—',
-    importMode: (smalls[1] || '').replace(/^Import Mode:\s*/i, '') || '—',
-  };
+function formatEastern(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return String(value);
+  const text = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: '2-digit', day: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+    timeZoneName: 'short',
+  }).format(date);
+  return text.replace(/\bEDT\b/g, 'EST');
 }
 
 async function loadClients(select) {
   if (!select || select.dataset.loaded === '1') return;
   select.dataset.loaded = '1';
   try {
-    const response = await fetch('/admin-panel/api/clients/', { headers: authHeaders(), credentials: 'include' });
+    const response = await fetch('/admin-panel/api/clients/', {
+      headers: authHeaders(), credentials: 'include',
+    });
     if (!response.ok) throw new Error('Unable to load clients');
     const data = await response.json();
     const clients = data.results || data.clients || (Array.isArray(data) ? data : []);
@@ -51,17 +53,6 @@ async function loadClients(select) {
   } catch {
     select.closest('.recon-archive-header-client')?.remove();
   }
-}
-
-async function resolveFileId(filename) {
-  const params = new URLSearchParams();
-  const clientId = currentClientId();
-  if (clientId) params.set('client_id', clientId);
-  else if (isAdministrator()) params.set('scope', 'global');
-  const response = await fetch(`/edi835/api/recon/files/?${params}`, { headers: authHeaders(), credentials: 'include' });
-  if (!response.ok) throw new Error('Unable to load RECON file details.');
-  const data = await response.json();
-  return (data.files || []).find((file) => String(file.original_filename || '') === String(filename || ''))?.id || null;
 }
 
 function renderHighlighted(preview, text, query, index) {
@@ -94,24 +85,17 @@ function renderHighlighted(preview, text, query, index) {
   return refs;
 }
 
-async function openPreview(filename) {
-  let fileId;
-  try {
-    fileId = await resolveFileId(filename);
-    if (!fileId) throw new Error('RECON file record was not found.');
-  } catch (error) {
-    console.error(error);
-    return;
-  }
+async function openPreview(fileId, filename) {
+  const existing = document.querySelector('.recon-file-preview-page');
+  existing?.remove();
 
   const page = document.createElement('section');
   page.className = 'recon-file-preview-page';
   page.innerHTML = `<header><div><span>RECON FILE VIEWER</span><h2></h2></div><button type="button" class="recon-archive-back">← Back to Uploaded RECON files</button></header><div class="recon-file-preview-toolbar"><input type="search" placeholder="Search file…" aria-label="Search RECON file"><button type="button" class="recon-file-nav" aria-label="Previous match">↑</button><span>0 / 0</span><button type="button" class="recon-file-nav" aria-label="Next match">↓</button></div><div class="recon-file-preview-body"><pre>Loading file…</pre></div>`;
-  page.querySelector('h2').textContent = filename;
+  page.querySelector('h2').textContent = filename || 'RECON file';
   document.body.append(page);
 
-  const back = page.querySelector('.recon-archive-back');
-  back.addEventListener('click', () => page.remove());
+  page.querySelector('.recon-archive-back').addEventListener('click', () => page.remove());
   const input = page.querySelector('input');
   const buttons = page.querySelectorAll('.recon-file-nav');
   const counter = page.querySelector('.recon-file-preview-toolbar span');
@@ -127,7 +111,7 @@ async function openPreview(filename) {
     refs = renderHighlighted(preview, text, input.value, index);
     counter.textContent = input.value.trim() ? `${refs.length ? index + 1 : 0} / ${refs.length}` : '0 / 0';
     buttons.forEach((button) => { button.disabled = !refs.length; });
-    if (refs.length) refs[index]?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    refs[index]?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
   };
 
   input.addEventListener('input', () => { index = 0; refresh(); });
@@ -135,7 +119,9 @@ async function openPreview(filename) {
   buttons[1].addEventListener('click', () => { if (!refs.length) return; index = (index + 1) % refs.length; refresh(); });
 
   try {
-    const response = await fetch(`/edi835/api/recon/files/${fileId}/download/`, { headers: authHeaders(), credentials: 'include' });
+    const response = await fetch(`/edi835/api/recon/files/${encodeURIComponent(fileId)}/download/`, {
+      headers: authHeaders(), credentials: 'include',
+    });
     if (!response.ok) throw new Error(`Unable to open file (${response.status}).`);
     text = await response.text();
     preview.textContent = text || '(Empty file)';
@@ -144,138 +130,176 @@ async function openPreview(filename) {
   }
 }
 
+async function downloadFile(file) {
+  const response = await fetch(`/edi835/api/recon/files/${encodeURIComponent(file.id)}/download/`, {
+    headers: authHeaders(), credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`Download failed (${response.status}).`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.original_filename || 'recon-file';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function ensureArchiveShell(backdrop, modal) {
+  if (backdrop.dataset.reconArchiveShellEnhanced === '1') return;
+  backdrop.dataset.reconArchiveShellEnhanced = '1';
+  backdrop.classList.add('recon-archive-page-shell');
+  modal.classList.add('recon-archive-page');
+  modal.removeAttribute('role');
+  modal.removeAttribute('aria-modal');
+
+  const titleBar = modal.querySelector('.result-detail-title');
+  const close = titleBar?.querySelector('button');
+  if (close) {
+    close.className = 'recon-archive-back';
+    close.textContent = '← Back to Reconciliation';
+  }
+
+  if (isAdministrator() && titleBar && close && !titleBar.querySelector('.recon-archive-header-client')) {
+    const clientBox = document.createElement('div');
+    clientBox.className = 'recon-archive-header-client';
+    clientBox.innerHTML = '<label>Client</label><select aria-label="Select client"></select>';
+    titleBar.insertBefore(clientBox, close);
+    const clientSelect = clientBox.querySelector('select');
+    loadClients(clientSelect);
+    clientSelect.addEventListener('change', () => {
+      const url = new URL(window.location.href);
+      if (clientSelect.value) url.searchParams.set('client', clientSelect.value);
+      else url.searchParams.delete('client');
+      url.searchParams.set('recon_archive', '1');
+      window.location.assign(url.toString());
+    });
+  }
+}
+
+function createArchiveUi(modal) {
+  let tools = modal.querySelector('.recon-archive-tools');
+  if (!tools) {
+    tools = document.createElement('div');
+    tools.className = 'recon-archive-tools';
+    tools.innerHTML = `<label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, status, or import mode…" aria-label="Search uploaded RECON files"></label>`;
+    modal.querySelector('.result-detail-title')?.after(tools);
+  }
+
+  let wrap = modal.querySelector('.recon-archive-table-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'recon-archive-table-wrap';
+    wrap.innerHTML = `<table class="recon-archive-table"><thead><tr><th>Date / Time</th><th>Filename</th><th>Status</th><th>Claims</th><th>Bytes</th><th>Import Mode</th><th>Action</th></tr></thead><tbody></tbody></table><div class="recon-archive-pagination"><label>Rows per page: <select aria-label="Rows per page"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option></select></label><div><button type="button" class="recon-archive-page-button" data-direction="previous">Previous</button><span class="recon-archive-page-status">Page 1 of 1</span><button type="button" class="recon-archive-page-button" data-direction="next">Next</button></div></div>`;
+    modal.append(wrap);
+  }
+
+  modal.querySelectorAll('.result-files-list,.result-empty').forEach((node) => { node.style.display = 'none'; });
+  return { tools, wrap };
+}
+
 function enhanceArchive(backdrop) {
   const modal = backdrop.querySelector('.result-files-modal');
   const heading = modal?.querySelector('#uploaded-recon-title');
   if (!modal || !heading) return;
 
-  // Header enhancement can happen while the React view is still loading files.
-  // Do this once, but do not mark the table itself as complete until the file
-  // rows actually exist. Previously the enhancement was marked complete too
-  // early, which left the original card list visible and prevented the eye
-  // viewer/table conversion from ever running after the data arrived.
-  if (backdrop.dataset.reconArchiveShellEnhanced !== '1') {
-    backdrop.dataset.reconArchiveShellEnhanced = '1';
-    backdrop.classList.add('recon-archive-page-shell');
-    modal.classList.add('recon-archive-page');
-    modal.removeAttribute('role');
-    modal.removeAttribute('aria-modal');
+  ensureArchiveShell(backdrop, modal);
+  const { tools, wrap } = createArchiveUi(modal);
+  if (wrap.dataset.bound === '1') return;
+  wrap.dataset.bound = '1';
 
-    const titleBar = modal.querySelector('.result-detail-title');
-    const close = titleBar?.querySelector('button');
-    if (close) {
-      close.className = 'recon-archive-back';
-      close.textContent = '← Back to Reconciliation';
-    }
-
-    if (isAdministrator() && titleBar && close && !titleBar.querySelector('.recon-archive-header-client')) {
-      const clientBox = document.createElement('div');
-      clientBox.className = 'recon-archive-header-client';
-      clientBox.innerHTML = '<label>Client</label><select aria-label="Select client"></select>';
-      titleBar.insertBefore(clientBox, close);
-      const clientSelect = clientBox.querySelector('select');
-      loadClients(clientSelect);
-      clientSelect.addEventListener('change', () => {
-        const url = new URL(window.location.href);
-        if (clientSelect.value) url.searchParams.set('client', clientSelect.value);
-        else url.searchParams.delete('client');
-        url.searchParams.set('recon_archive', '1');
-        window.location.assign(url.toString());
-      });
-    }
-
-    if (!modal.querySelector('.recon-archive-tools')) {
-      const tools = document.createElement('div');
-      tools.className = 'recon-archive-tools';
-      tools.innerHTML = `<label class="recon-archive-search"><span>Search</span><input type="search" placeholder="Search filename, date, status, claims, size, import mode…" aria-label="Search uploaded RECON files"></label>`;
-      titleBar?.after(tools);
-    }
-  }
-
-  if (backdrop.dataset.reconArchiveEnhanced === '1') return;
-  const list = modal.querySelector('.result-files-list');
-  if (!list) return;
-  const sourceRows = [...list.querySelectorAll('.result-file-row')];
-  if (!sourceRows.length) return;
-
-  backdrop.dataset.reconArchiveEnhanced = '1';
-  const tools = modal.querySelector('.recon-archive-tools');
-  const tableWrap = document.createElement('div');
-  tableWrap.className = 'recon-archive-table-wrap';
-  const table = document.createElement('table');
-  table.className = 'recon-archive-table';
-  table.innerHTML = '<thead><tr><th>Date / Time</th><th>Filename</th><th>Status</th><th>Claims</th><th>Bytes</th><th>Import Mode</th><th>Action</th></tr></thead><tbody></tbody>';
-  const tbody = table.querySelector('tbody');
-
-  sourceRows.forEach((row) => {
-    const meta = parseMeta(row);
-    const download = row.querySelector('button');
-    const tr = document.createElement('tr');
-    tr.dataset.search = `${meta.filename} ${meta.date} ${meta.status} ${meta.claims} ${meta.size} ${meta.importMode}`.toLowerCase();
-    tr.innerHTML = `<td></td><td><strong></strong></td><td><span class="recon-archive-status"></span></td><td class="num"></td><td class="num"></td><td></td><td class="recon-archive-actions"></td>`;
-    tr.children[0].textContent = meta.date;
-    tr.children[1].querySelector('strong').textContent = meta.filename;
-    tr.children[2].querySelector('span').textContent = meta.status;
-    tr.children[3].textContent = meta.claims.replace(/\s*claims?$/i, '');
-    tr.children[4].textContent = meta.size.replace(/\s*bytes?$/i, '');
-    tr.children[5].textContent = meta.importMode;
-    const actions = tr.querySelector('.recon-archive-actions');
-
-    const eye = document.createElement('button');
-    eye.type = 'button';
-    eye.className = 'recon-archive-icon';
-    eye.title = 'View file';
-    eye.setAttribute('aria-label', `View ${meta.filename}`);
-    eye.innerHTML = EYE_SVG;
-    eye.addEventListener('click', () => openPreview(meta.filename));
-    actions.append(eye);
-
-    if (download) {
-      download.className = 'recon-archive-icon';
-      download.title = 'Download file';
-      download.setAttribute('aria-label', `Download ${meta.filename}`);
-      download.innerHTML = DOWNLOAD_SVG;
-      actions.append(download);
-    }
-    tbody.append(tr);
-  });
-  tableWrap.append(table);
-
-  const pagination = document.createElement('div');
-  pagination.className = 'recon-archive-pagination';
-  pagination.innerHTML = `<label>Rows per page: <select aria-label="Rows per page"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label><div><button type="button" class="recon-archive-page-button" data-direction="previous">Previous</button><span class="recon-archive-page-status">Page 1 of 1</span><button type="button" class="recon-archive-page-button" data-direction="next">Next</button></div>`;
-  tableWrap.append(pagination);
-  list.replaceWith(tableWrap);
-
-  const search = tools?.querySelector('.recon-archive-search input');
-  const pageSizeSelect = pagination.querySelector('select');
-  const previous = pagination.querySelector('[data-direction="previous"]');
-  const next = pagination.querySelector('[data-direction="next"]');
-  const pageStatus = pagination.querySelector('.recon-archive-page-status');
+  const tbody = wrap.querySelector('tbody');
+  const search = tools.querySelector('input');
+  const pageSize = wrap.querySelector('select');
+  const previous = wrap.querySelector('[data-direction="previous"]');
+  const next = wrap.querySelector('[data-direction="next"]');
+  const status = wrap.querySelector('.recon-archive-page-status');
   let page = 1;
+  let searchTimer = null;
+  let controller = null;
 
-  const filteredRows = () => {
-    const value = (search?.value || '').trim().toLowerCase();
-    return [...tbody.rows].filter((row) => !value || row.dataset.search.includes(value));
+  const load = async () => {
+    controller?.abort();
+    controller = new AbortController();
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(Number(pageSize.value) || 25),
+    });
+    const clientId = currentClientId();
+    if (clientId) params.set('client_id', clientId);
+    else if (isAdministrator()) params.set('scope', 'global');
+    if (search.value.trim()) params.set('search', search.value.trim());
+
+    tbody.innerHTML = '<tr><td colspan="7">Loading uploaded RECON files…</td></tr>';
+    try {
+      const response = await fetch(`/edi835/api/recon/files/?${params}`, {
+        headers: authHeaders(), credentials: 'include', signal: controller.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.error || `Unable to load RECON files (${response.status}).`);
+
+      page = Number(data.page || 1);
+      tbody.textContent = '';
+      (data.files || []).forEach((file) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td></td><td><strong></strong></td><td><span class="recon-archive-status"></span></td><td class="num"></td><td class="num"></td><td></td><td class="recon-archive-actions"></td>';
+        tr.children[0].textContent = formatEastern(file.uploaded_at);
+        tr.children[1].querySelector('strong').textContent = file.original_filename || 'RECON file';
+        tr.children[2].querySelector('span').textContent = file.status || '—';
+        tr.children[3].textContent = Number(file.claim_count || 0).toLocaleString();
+        tr.children[4].textContent = Number(file.file_size || 0).toLocaleString();
+        tr.children[5].textContent = String(file.import_mode || 'MANUAL').toUpperCase();
+        const actions = tr.querySelector('.recon-archive-actions');
+
+        const eye = document.createElement('button');
+        eye.type = 'button';
+        eye.className = 'recon-archive-icon';
+        eye.title = 'View file';
+        eye.setAttribute('aria-label', `View ${file.original_filename || 'RECON file'}`);
+        eye.innerHTML = EYE_SVG;
+        eye.addEventListener('click', () => openPreview(file.id, file.original_filename));
+        actions.append(eye);
+
+        const download = document.createElement('button');
+        download.type = 'button';
+        download.className = 'recon-archive-icon';
+        download.title = 'Download file';
+        download.setAttribute('aria-label', `Download ${file.original_filename || 'RECON file'}`);
+        download.innerHTML = DOWNLOAD_SVG;
+        download.addEventListener('click', async () => {
+          download.disabled = true;
+          try { await downloadFile(file); }
+          catch (error) { console.error(error); }
+          finally { download.disabled = false; }
+        });
+        actions.append(download);
+        tbody.append(tr);
+      });
+
+      if (!(data.files || []).length) {
+        tbody.innerHTML = '<tr><td colspan="7">No RECON files match this search.</td></tr>';
+      }
+      const pages = Number(data.total_pages || 1);
+      status.textContent = `Page ${page} of ${pages} · ${Number(data.total || 0).toLocaleString()} files`;
+      previous.disabled = page <= 1;
+      next.disabled = page >= pages;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      tbody.innerHTML = `<tr><td colspan="7"></td></tr>`;
+      tbody.querySelector('td').textContent = error.message || 'Unable to load RECON files.';
+    }
   };
 
-  const renderPage = () => {
-    const matches = filteredRows();
-    const pageSize = Number(pageSizeSelect.value) || 10;
-    const pages = Math.max(1, Math.ceil(matches.length / pageSize));
-    page = Math.min(Math.max(1, page), pages);
-    const visible = new Set(matches.slice((page - 1) * pageSize, page * pageSize));
-    [...tbody.rows].forEach((row) => { row.hidden = !visible.has(row); });
-    pageStatus.textContent = `Page ${page} of ${pages}`;
-    previous.disabled = page <= 1;
-    next.disabled = page >= pages;
-  };
-
-  search?.addEventListener('input', () => { page = 1; renderPage(); });
-  pageSizeSelect.addEventListener('change', () => { page = 1; renderPage(); });
-  previous.addEventListener('click', () => { page -= 1; renderPage(); });
-  next.addEventListener('click', () => { page += 1; renderPage(); });
-  renderPage();
+  search.addEventListener('input', () => {
+    page = 1;
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(load, 250);
+  });
+  pageSize.addEventListener('change', () => { page = 1; load(); });
+  previous.addEventListener('click', () => { if (page > 1) { page -= 1; load(); } });
+  next.addEventListener('click', () => { page += 1; load(); });
+  load();
 }
 
 export function installReconArchivePage() {
