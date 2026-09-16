@@ -1,0 +1,16 @@
+.universal-source-actions{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.universal-source-action{display:inline-grid;place-items:center;width:38px;height:36px;padding:0;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink);cursor:pointer}
+.universal-source-action:hover{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.universal-source-action svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.universal-source-action svg path[fill]{fill:currentColor;stroke:none}
+.claim-source-download-backdrop{position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:24px;background:rgba(13,23,36,.58)}
+.claim-source-download-dialog{width:min(520px,94vw);overflow:hidden;border-radius:4px;background:var(--paper);box-shadow:0 24px 70px rgba(0,0,0,.3)}
+.claim-source-download-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#111c2d;border-bottom:3px solid #18a38b;color:#fff}
+.claim-source-download-dialog>header span{font:700 9px/1.2 var(--display);letter-spacing:.12em;color:#8fa3bd}
+.claim-source-download-dialog>header h3{margin:4px 0 0;color:#fff;font-size:18px}
+.claim-source-download-dialog>header button{font-size:25px;line-height:1;color:#fff;background:transparent;border:0;cursor:pointer}
+.claim-source-download-body{padding:20px}
+.claim-source-download-body p{margin:0 0 5px;overflow-wrap:anywhere;color:var(--ink)}
+.claim-source-download-body small{color:var(--ink-3)}
+.claim-source-download-dialog>footer{display:flex;justify-content:flex-end;gap:9px;padding:15px 20px;border-top:1px solid var(--line);background:var(--surface)}
+@media(max-width:620px){.claim-source-download-dialog>footer{flex-direction:column}.claim-source-download-dialog>footer .btn{width:100%;justify-content:center}}
