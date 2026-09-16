@@ -6,7 +6,10 @@ import EyeIcon from '../../components/EyeIcon';
 import { fetch837Files, process837Upload } from '../services/api';
 import { searchUniversalClaims } from '../services/claimSearchApi';
 import { portalFetch } from '../../utils/api';
+import { formatEasternDate, formatEasternTime } from '../../utils/timezone';
 import './ClaimSearchView.css';
+import './ClaimSourceActions.css';
+import './UniversalClaimOccurrenceTable.css';
 
 const DEFAULT_837_FILENAME_FORMAT = 'YYYYMMDDhhmmss.837';
 const CLAIM_PAGE_SIZE = 25;
@@ -62,6 +65,14 @@ function claimSliceUrl(source, claimNumber, internalNumber) {
   const params = new URLSearchParams({ claim_number: claimNumber });
   if (internalNumber) params.set('internal_claim_number', internalNumber);
   return `${base}?${params.toString()}`;
+}
+
+function OccurrenceDateTime({ value }) {
+  if (!value) return <span className="universal-source-empty">—</span>;
+  return <div className="occurrence-datetime">
+    <strong>{formatEasternDate(value)}</strong>
+    <span>{formatEasternTime(value, true)} <span className="est-label">EST</span></span>
+  </div>;
 }
 
 function Rename837Modal({ initialFilename, renaming, onClose, onConfirm }) {
@@ -120,13 +131,14 @@ function SourceDownloadDialog({ source, claimNumber, internalNumber, onClose }) 
 function SourceActions({ type, source, claimNumber, internalNumber, onView, onDownload }) {
   if (!source?.exists || !source?.download_url) return <span className="universal-source-empty">—</span>;
   const label = String(type || '').toUpperCase();
+  const resolvedInternal = label === '837' ? '' : (source.internal_claim_number || internalNumber || '');
   return <div className="universal-source-actions" title={source.file_name || `${label} source file`}>
     <button type="button" className="universal-source-action" onClick={() => onView({
       type: label,
       filename: source.file_name,
       download_url: source.download_url,
       claim_slice_url: source.claim_slice_url,
-      internal_claim_number: source.internal_claim_number || internalNumber || '',
+      internal_claim_number: resolvedInternal,
       date: source.arrived_at,
       status: source.status || '',
     })} aria-label={`View ${label} source file`} title={`View ${label} file`}><EyeIcon /></button>
@@ -135,7 +147,7 @@ function SourceActions({ type, source, claimNumber, internalNumber, onView, onDo
       filename: source.file_name,
       download_url: source.download_url,
       claim_slice_url: source.claim_slice_url,
-      internal_claim_number: source.internal_claim_number || internalNumber || '',
+      internal_claim_number: resolvedInternal,
     })} aria-label={`Download ${label} source file`} title={`Download ${label} file`}><DownloadIcon /></button>
   </div>;
 }
@@ -260,22 +272,25 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
 
   return <section className="view on claim-search-view">
     <div className="claim-search-heading-row">
-      <div className="claim-search-heading-copy"><div className="claim-search-eyebrow">Claims workspace</div><h1>Universal Claim Search</h1><p>Locate and review claim records across 835, MIR, RECON, and 837 files for the selected client.</p></div>
+      <div className="claim-search-heading-copy"><div className="claim-search-eyebrow">Claims workspace</div><h1>Universal Claim Search</h1><p>Locate and review claim records across 837, 835, MIR, and RECON files for the selected client.</p></div>
       <div className="claim-search-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={onSelectClient} fullWidth /></div>
     </div>
     <div className="claim-search-upload"><div><label>837 files</label><input id="search-837-upload" type="file" multiple onChange={event => setUploads(Array.from(event.target.files || []))} />{uploads.length > 0 && <small>{uploads.length} file(s) selected</small>}</div><button type="button" className="btn primary" disabled={!activeClientId || !uploads.length || processing} onClick={processUpload}>{processing ? 'Processing 837…' : 'Upload & Process'}</button></div>
     {notice && <div className="claim837-message success">{notice}</div>}{error && <div className="claim837-message error">{error}</div>}
     <div className="claim-search-actions">
       <button type="button" className="btn secondary claim-search-rename" disabled={!activeClientId || renaming} onClick={() => setRenameOpen(true)}>{renaming ? 'Renaming 837…' : 'Rename SFTP 837 Files'}</button>
-      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => { setQuery(event.target.value); setClaimPage(1); }} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, member, patient, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
-      <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => { setSearchField(event.target.value); setClaimPage(1); }}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option><option value="837">837 filename</option></select></label>
+      <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => { setQuery(event.target.value); setClaimPage(1); }} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
+      <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => { setSearchField(event.target.value); setClaimPage(1); }}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="837">837 filename</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option></select></label>
       <button type="button" className="btn" disabled={!activeClientId} onClick={open837Files} style={{ background: 'var(--ink)', borderColor: 'var(--ink)', color: '#fff', fontWeight: 700 }}>837 Uploaded Files</button>
       <div className="claim-search-match-count">{loading ? 'Loading claims' : `${claimMeta.count.toLocaleString()} ${query.trim() ? 'matches' : 'claims'}`}</div>
     </div>
-    <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table"><thead><tr><th>Highmark claim number</th><th>Internal claim number</th><th>Patient</th><th>835</th><th>MIR</th><th>RECON</th><th>837</th></tr></thead><tbody>
-      {!rows.length ? <tr><td colSpan="7" className="empty">{loading ? 'Loading claims…' : query.trim() ? 'No matching claims found in 835, MIR, RECON, or 837.' : 'No claims found for the selected client.'}</td></tr> : rows.map(row => <tr key={row.id} className="universal-claim-row"><td><strong className="universal-claim-number">{row.highmark_claim_number || '—'}</strong></td><td>{row.internal_claim_number || '—'}</td><td>{row.patient_name || '—'}<small>{row.member_id || ''}</small></td>{['835', 'mir', 'recon', '837'].map(type => <td key={type} className="universal-source-cell"><SourceActions type={type} source={row.lifecycle?.[type] || {}} claimNumber={row.highmark_claim_number} internalNumber={row.internal_claim_number} onView={source => setViewer({ claimNumber: row.highmark_claim_number, source })} onDownload={source => setDownloadTarget({ claimNumber: row.highmark_claim_number, internalNumber: row.internal_claim_number, source })} /></td>)}</tr>)}
+    <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table occurrence-table"><thead><tr><th>Date / Time</th><th>Highmark claim number</th><th>Internal claim number</th><th>837</th><th>835</th><th>MIR</th><th>RECON</th></tr></thead><tbody>
+      {!rows.length ? <tr><td colSpan="7" className="empty">{loading ? 'Loading claims…' : query.trim() ? 'No matching claims found in 837, 835, MIR, or RECON.' : 'No claims found for the selected client.'}</td></tr> : rows.map(row => <tr key={row.id} className="universal-claim-row"><td><OccurrenceDateTime value={row.row_arrived_at} /></td><td><strong className="universal-claim-number">{row.highmark_claim_number || '—'}</strong></td><td>{row.internal_claim_number || '—'}</td>{['837', '835', 'mir', 'recon'].map(type => <td key={type} className="universal-source-cell"><SourceActions type={type} source={row.lifecycle?.[type] || {}} claimNumber={row.highmark_claim_number} internalNumber={type === '837' ? '' : row.internal_claim_number} onView={source => setViewer({ claimNumber: row.highmark_claim_number, source })} onDownload={source => setDownloadTarget({ claimNumber: row.highmark_claim_number, internalNumber: type === '837' ? '' : row.internal_claim_number, source })} /></td>)}</tr>)}
     </tbody></table></div></div>
-    <div className="claim-files-pagination"><span>{claimMeta.count ? `${pageStart.toLocaleString()}–${pageEnd.toLocaleString()} of ${claimMeta.count.toLocaleString()} claims` : '0 claims'} · Page {claimMeta.pages ? claimPage : 0} of {claimMeta.pages}</span><div><button type="button" className="btn" disabled={!claimMeta.has_previous || loading} onClick={() => setClaimPage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!claimMeta.has_next || loading} onClick={() => setClaimPage(page => page + 1)}>Next</button></div></div>
+    <div className="universal-pagination">
+      <div className="universal-pagination-summary">{claimMeta.count ? <><strong>{pageStart.toLocaleString()}–{pageEnd.toLocaleString()}</strong><span>of {claimMeta.count.toLocaleString()} claims</span></> : <strong>0 claims</strong>}<span className="universal-pagination-page">Page {claimMeta.pages ? claimPage : 0} of {claimMeta.pages}</span></div>
+      <div className="universal-pagination-actions"><button type="button" className="btn" disabled={!claimMeta.has_previous || loading} onClick={() => setClaimPage(page => Math.max(1, page - 1))}>Previous</button><button type="button" className="btn" disabled={!claimMeta.has_next || loading} onClick={() => setClaimPage(page => page + 1)}>Next</button></div>
+    </div>
     {viewer && <ClaimSourceViewer claimNumber={viewer.claimNumber} sources={[viewer.source]} onClose={() => setViewer(null)} />}
     {downloadTarget && <SourceDownloadDialog source={downloadTarget.source} claimNumber={downloadTarget.claimNumber} internalNumber={downloadTarget.internalNumber} onClose={() => setDownloadTarget(null)} />}
     {renameOpen && <Rename837Modal initialFilename={active837Filename} renaming={renaming} onClose={() => !renaming && setRenameOpen(false)} onConfirm={renameSftp837Files} />}
