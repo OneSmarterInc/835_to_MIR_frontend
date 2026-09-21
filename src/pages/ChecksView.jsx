@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { safeFetchJson } from "../utils/api";
 import ConversionErrorFindings from "../components/ConversionErrorFindings";
 import HeldReleaseHistory from "../components/HeldReleaseHistory";
+import AlertEmailSchedule from "../components/AlertEmailSchedule";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function parseDetails(raw) {
@@ -43,7 +44,7 @@ function formatDuplicateEligibleTimestamp(previousSentAt, fallbackEligibleSendAt
   const fourthDay = new Date(Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
-    Number(parts.day) + 3,
+    Number(parts.day) + 4,
     12,
     0,
     0
@@ -80,6 +81,7 @@ function buildHeldClaims(findings, recordedHeldCount = 0) {
       claimNumber,
       reasons: [],
       previousMirFilename: null,
+      previousSource835Filename: null,
       previousSentAt: null,
       eligibleSendAt: null,
       resolvedMirFilename: null,
@@ -95,6 +97,7 @@ function buildHeldClaims(findings, recordedHeldCount = 0) {
     const reason = finding.reason || finding.message || "Claim requires conversion review.";
     existing.reasons.push(`${code}: ${reason}`);
     if (finding.previous_mir_filename) existing.previousMirFilename = finding.previous_mir_filename;
+    if (finding.previous_source_835_filename) existing.previousSource835Filename = finding.previous_source_835_filename;
     if (finding.previous_sent_at) existing.previousSentAt = finding.previous_sent_at;
     if (finding.eligible_send_at) existing.eligibleSendAt = finding.eligible_send_at;
     if (finding.hold_resolved_mir_filename) existing.resolvedMirFilename = finding.hold_resolved_mir_filename;
@@ -119,6 +122,7 @@ function buildHeldClaims(findings, recordedHeldCount = 0) {
         claimNumber: "Claim number unavailable",
         reasons: ["Conversion hold details were not recorded for this historical run."],
         previousMirFilename: null,
+        previousSource835Filename: null,
         previousSentAt: null,
         eligibleSendAt: null,
         resolvedMirFilename: null,
@@ -140,7 +144,7 @@ function buildHeldClaims(findings, recordedHeldCount = 0) {
   }));
 }
 
-export default function ChecksView({ trackedFiles = [], showHeading = true }) {
+export default function ChecksView({ trackedFiles = [], showHeading = true, clientId = "" }) {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -197,7 +201,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
       });
 
     return () => { alive = false; };
-  }, [activeChecksTab, trackedFiles]);
+  }, [activeChecksTab, trackedFiles, clientId]);
 
   const allFiles = useMemo(
     () => [...(trackedFiles || [])].sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0)),
@@ -310,7 +314,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
 
   return (
     <section className="view on table-screen">
-      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, and held-claim SFTP releases." />}
+      {showHeading && <WorkspaceHeader eyebrow="Validation workspace" title="Checks" description="Review validation failures, claim-level conversion holds, held-claim SFTP releases, and alert-email history." />}
 
       <div className="checks-gate-grid" style={{ gap: "12px", alignItems: "stretch" }}>
         {gateCard({ gateKey: "gate1", eyebrow: "Gate 1 · Inbound", metrics: <>{row("Claims read", currentClaims.toLocaleString(), () => openMetric("Claims read", "837 as received", currentClaims, "Number of claims read for the current run."))}{row("Findings", allFindings.length.toLocaleString(), () => openMetric("Findings", "837 as received", allFindings.length, "Validation findings currently recorded for this run."))}</>, footer: "The rule totals above come from the backend validation catalog, not from frontend constants." })}
@@ -322,6 +326,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
         <button type="button" className={activeChecksTab === "validations" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("validations"); closeConversionFindings(); }}>Validations</button>
         <button type="button" className={activeChecksTab === "conversion" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("conversion"); setSelectedGroup(null); }}>Conversion</button>
         <button type="button" className={activeChecksTab === "held-releases" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("held-releases"); setSelectedGroup(null); closeConversionFindings(); }}>Held SFTP Releases</button>
+        <button type="button" className={activeChecksTab === "alert-emails" ? "btn primary" : "btn"} onClick={() => { setActiveChecksTab("alert-emails"); setSelectedGroup(null); closeConversionFindings(); }}>Alert Emails</button>
       </div>
 
       {activeChecksTab === "validations" ? (
@@ -386,7 +391,10 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
                             ) : null}
                           </td>
                           <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
-                          <td style={{ minWidth: "220px", fontWeight: 600 }}>{claim.previousMirFilename || "—"}</td>
+                          <td style={{ minWidth: "220px", fontWeight: 600 }}>
+                            <div>{claim.previousMirFilename || "—"}</div>
+                            {claim.previousSource835Filename && <div style={{ marginTop: "4px", fontSize: "11px", fontWeight: 400, color: "var(--ink-3)" }}>835: {claim.previousSource835Filename}</div>}
+                          </td>
                           <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previousSentAt)}</td>
                           <td style={{ whiteSpace: "nowrap" }}>{formatDuplicateEligibleTimestamp(claim.previousSentAt, claim.eligibleSendAt)}</td>
                         </tr>
@@ -398,8 +406,10 @@ export default function ChecksView({ trackedFiles = [], showHeading = true }) {
             </div>
           )}
         </section>
-      ) : (
+      ) : activeChecksTab === "held-releases" ? (
         <HeldReleaseHistory />
+      ) : (
+        <AlertEmailSchedule clientId={clientId} />
       )}
 
       {selectedGroup && activeChecksTab === "validations" && (

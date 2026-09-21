@@ -15,6 +15,208 @@
       .start-conversion-card .metrics .metric:first-child {
         display: none !important;
       }
+
+      /* Conversion page now has one 835 input panel plus action buttons. */
+      .start-conversion-card .conversion-boxes {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+      }
+
+      /* Remove the legacy 30-day operational-view banner from the shared
+         Conversion screen on both administrator and client portals. */
+      #v-batches > .stub {
+        display: none !important;
+      }
+
+      /* Conversion SFTP status: make NOT PUSHED use the same compact badge
+         treatment as PUSHED, with the existing yellow warning palette. */
+      #v-batches table button.tag.work {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        display: inline-block !important;
+        padding: 2px 7px !important;
+        border: 0 !important;
+        border-radius: 2px !important;
+        background: var(--ochre-bg) !important;
+        color: var(--ochre) !important;
+        font-family: var(--display) !important;
+        font-size: 10px !important;
+        font-weight: inherit !important;
+        line-height: normal !important;
+        letter-spacing: .08em !important;
+        text-transform: uppercase !important;
+        white-space: nowrap !important;
+        opacity: 1 !important;
+        box-shadow: none !important;
+      }
+
+      #v-batches table button.tag.work:disabled {
+        opacity: 1 !important;
+      }
+
+      /* Checks > Conversion: keep short status/import labels on one line. */
+      .table-screen .datatable th:nth-child(2),
+      .table-screen .datatable td:nth-child(2) {
+        min-width: 92px;
+        white-space: nowrap !important;
+      }
+
+      .table-screen .datatable th:nth-child(3),
+      .table-screen .datatable td:nth-child(3) {
+        min-width: 106px;
+        white-space: nowrap !important;
+      }
+
+      .table-screen .datatable td:nth-child(2) .badge,
+      .table-screen .datatable td:nth-child(3) .badge {
+        display: inline-block;
+        min-width: max-content;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+      }
+
+      /* Archived source viewer: compact search toolbar matching claim navigation. */
+      .mpl-file-content-heading {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+      }
+
+      .mpl-file-content-heading > strong {
+        flex: 0 0 auto;
+        margin-right: auto;
+      }
+
+      .mpl-file-search {
+        display: flex !important;
+        align-items: center !important;
+        flex: 0 0 auto;
+        gap: 5px !important;
+        margin-left: 0 !important;
+      }
+
+      .mpl-file-search label {
+        display: block !important;
+        order: 1;
+      }
+
+      .mpl-file-search .sr-only {
+        display: none !important;
+      }
+
+      .mpl-file-search input {
+        box-sizing: border-box !important;
+        width: 225px !important;
+        height: 30px !important;
+        padding: 0 9px !important;
+        border: 1px solid #9fb2c4 !important;
+        border-radius: 2px !important;
+        background: #fff !important;
+        color: #1c2b3d !important;
+        outline: 0 !important;
+        font: 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+      }
+
+      .mpl-file-search input:focus {
+        border-color: #087363 !important;
+        box-shadow: 0 0 0 2px rgba(8, 115, 99, .12) !important;
+      }
+
+      .mpl-file-search > span {
+        order: 3;
+        min-width: 42px !important;
+        color: #34485f !important;
+        font: 700 10px/1 ui-monospace, monospace !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+      }
+
+      .mpl-file-search > button {
+        display: grid !important;
+        place-items: center !important;
+        width: 27px !important;
+        height: 25px !important;
+        padding: 0 !important;
+        border: 1px solid #9fb2c4 !important;
+        border-radius: 2px !important;
+        background: #fff !important;
+        color: #087363 !important;
+        font: 800 14px/1 ui-monospace, monospace !important;
+        cursor: pointer !important;
+      }
+
+      .mpl-file-search > button:first-of-type {
+        order: 2;
+      }
+
+      .mpl-file-search > button:last-of-type {
+        order: 4;
+      }
+
+      .mpl-file-search > button:hover:not(:disabled) {
+        border-color: #087363 !important;
+        background: #e8f6f2 !important;
+      }
+
+      .mpl-file-search > button:disabled {
+        opacity: .35 !important;
+        cursor: not-allowed !important;
+      }
+
+      .mpl-file-content-heading > small {
+        max-width: 280px;
+        overflow: hidden;
+        color: #647991;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mpl-source-code mark.file-search {
+        background: #d8dadd !important;
+        color: #17202b !important;
+        box-shadow: 0 0 0 1px #b7bbc0 !important;
+      }
+
+      .mpl-source-code mark.file-search.active {
+        background: #aeb3b9 !important;
+        color: #111820 !important;
+        box-shadow: 0 0 0 2px #737a82 !important;
+      }
+
+      @media (max-width: 860px) {
+        .start-conversion-card .conversion-boxes {
+          grid-template-columns: 1fr !important;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .mpl-file-content-heading {
+          flex-wrap: wrap !important;
+        }
+
+        .mpl-file-content-heading > strong {
+          width: 100%;
+          margin-right: 0;
+        }
+
+        .mpl-file-search {
+          width: 100%;
+        }
+
+        .mpl-file-search label {
+          flex: 1;
+        }
+
+        .mpl-file-search input {
+          width: 100% !important;
+        }
+
+        .mpl-file-content-heading > small {
+          width: 100%;
+          max-width: none;
+        }
+      }
     </style>
   </head>
   <body>

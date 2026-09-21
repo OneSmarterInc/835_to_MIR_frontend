@@ -1,10 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import ChecksView from '../../pages/ChecksView';
 import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 export default function AdminChecksView({ trackedFiles = [], clients = [], activeClientId = '', onSelectClient }) {
   const selectedClient = clients.find((client) => String(client.id) === String(activeClientId));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    window.__MIR_ADMIN_CHECKS_CLIENT_ID = activeClientId ? String(activeClientId) : '';
+    return () => {
+      if (window.__MIR_ADMIN_CHECKS_CLIENT_ID === String(activeClientId || '')) {
+        delete window.__MIR_ADMIN_CHECKS_CLIENT_ID;
+      }
+    };
+  }, [activeClientId]);
 
   const clientFiles = useMemo(() => {
     if (!activeClientId) return [];

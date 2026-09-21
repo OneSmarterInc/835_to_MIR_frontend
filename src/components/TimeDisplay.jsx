@@ -2,6 +2,10 @@ import React from 'react';
 
 import { dateTimeZoneParts } from '../utils/timezone';
 
+function forceEstLabel(value) {
+  return String(value || '').replace(/\bEDT\b/g, 'EST');
+}
+
 export default function TimeDisplay({ value, includeSeconds = false, easternOnly = false, className = '' }) {
   const parts = dateTimeZoneParts(value, { includeSeconds });
   if (!parts.valid) return <span className={className}>{parts.fallback}</span>;
@@ -26,7 +30,7 @@ export default function TimeDisplay({ value, includeSeconds = false, easternOnly
         className={`timezone-display ${className}`.trim()}
         style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'normal' }}
       >
-        {parts.eastern.value}
+        {forceEstLabel(parts.eastern.value)}
       </span>
     );
   }

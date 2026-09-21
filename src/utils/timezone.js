@@ -32,7 +32,7 @@ function validDate(value) {
 }
 
 export function formatInZone(date, timeZone, includeSeconds = false) {
-  return new Intl.DateTimeFormat('en-US', {
+  const formatted = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
@@ -42,6 +42,13 @@ export function formatInZone(date, timeZone, includeSeconds = false) {
     ...(includeSeconds ? { second: '2-digit' } : {}),
     timeZoneName: 'short',
   }).format(date);
+
+  // Product convention: all US Eastern timestamps are labeled EST in the UI.
+  // Keep the America/New_York clock calculation while normalizing the visible
+  // daylight abbreviation so users see one consistent Eastern label year-round.
+  return timeZone === EASTERN_TIME_ZONE
+    ? formatted.replace(/\bEDT\b/g, 'EST')
+    : formatted;
 }
 
 export function formatDateTimeWithZones(value, options = {}) {

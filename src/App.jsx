@@ -279,7 +279,14 @@ export default function App() {
 
 
   useEffect(()=>{
-    refreshDashboardData();
+    // Do not compete with the session bootstrap request. On a small Gunicorn
+    // deployment these three dashboard calls could queue ahead of /api/user/
+    // and leave the entire application on the loading screen.
+    if(!userState?.authenticated || isAdminRoute){
+      return undefined;
+    }
+
+    const initialRefresh=setTimeout(refreshDashboardData,0);
 
     // Lightweight metrics/SFTP state can age a little while the user is idle.
     // Heavy tracked-file history is not polled; it refreshes on focus or after
@@ -300,11 +307,17 @@ export default function App() {
     document.addEventListener("visibilitychange",refreshWhenActive);
 
     return ()=>{
+      clearTimeout(initialRefresh);
       clearInterval(timer);
       window.removeEventListener("focus",refreshWhenActive);
       document.removeEventListener("visibilitychange",refreshWhenActive);
     };
-  },[refreshDashboardData, refreshOperationalData]);
+  },[
+    userState?.authenticated,
+    isAdminRoute,
+    refreshDashboardData,
+    refreshOperationalData
+  ]);
 
 
 

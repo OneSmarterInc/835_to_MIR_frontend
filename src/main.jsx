@@ -2,8 +2,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './utils/requestGovernor.js'
+import './pages/NoticesViewEnhancements.css'
+import './pages/ArchiveTableEnhancement.js'
+import './pages/ChecksConversionEnhancement.js'
+import './components/ReconciliationPageEnhancement.css'
+import './components/ReconArchivePage.css'
 import App from './App.jsx'
 import { AppDialogProvider } from './components/AppDialog.jsx'
+import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
+import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
+import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
@@ -45,9 +53,15 @@ if (BACKEND_URL) {
   };
 }
 
+installBrowserHistoryNavigation();
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AppDialogProvider><App /></AppDialogProvider>
+    <AppDialogProvider>
+      <App />
+      <ReconArchiveOverlay />
+      <MplAnalyzeAgainAction />
+    </AppDialogProvider>
   </StrictMode>,
 )
 //test
