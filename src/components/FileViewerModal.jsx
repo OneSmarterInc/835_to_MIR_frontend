@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { portalFetch } from "../utils/api";
+import { encodeDemoFileContent } from "../utils/demoEncoder";
 import "./FileViewerPage.css";
 
 function findOccurrences(content, search) {
@@ -70,8 +71,8 @@ export default function FileViewerModal({ fileId, onClose }) {
       })
       .then((data) => {
         setFilename(data.filename || "File Viewer");
-        setEdiText(format835ForViewer(data.edi_text || noDataMessage));
-        setMirText(data.mir_text || noDataMessage);
+        setEdiText(encodeDemoFileContent(format835ForViewer(data.edi_text || noDataMessage), "835"));
+        setMirText(encodeDemoFileContent(data.mir_text || noDataMessage, "MIR"));
         setLoadedFileId(fileId);
         setLoading(false);
       })
