@@ -18,7 +18,7 @@ function withAdminChecksClient(url) {
 
 export function portalFetch(url, options = {}) {
   let requestUrl = withAdminChecksClient(url);
-  if (typeof requestUrl === "string" && /^https?:\/\/i.test(requestUrl)) {
+  if (typeof requestUrl === "string" && /^https?:\/\//i.test(requestUrl)) {
     const parsed = new URL(requestUrl);
     requestUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
   }
