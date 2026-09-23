@@ -79,7 +79,7 @@ export function encodeDemoValue(value) {
   const text = String(value);
 
   return text
-    .split(/(\\s+)/)
+    .split(/(\s+)/)
     .map((part) => part.replace(/[A-Za-z0-9]/g, (ch) => {
       if (ch >= '0' && ch <= '9') return DIGIT_MAP[Number(ch)];
       const mapped = LETTER_MAP[LETTERS.indexOf(ch.toUpperCase())];
