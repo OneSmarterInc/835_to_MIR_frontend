@@ -1,5 +1,3 @@
-import { encodeDemoData } from '../../utils/demoEncoder';
-
 function getAuthHeaders() {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = {};
@@ -24,5 +22,5 @@ export async function searchUniversalClaims(clientId, query = '', field = 'all',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load universal claims.');
-  return encodeDemoData(data);
+  return data;
 }
