@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getDemoRevealValue, getDemoMaskedValue } from "../utils/demoEncoder";
+import { getDemoRevealValue } from "../utils/demoEncoder";
 import { isDemoModeEnabled } from "../utils/demoSubstitution";
 
 function getTextPositionFromPoint(event) {
