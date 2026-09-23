@@ -19,10 +19,8 @@ export function encodeDemoText(value) {
 function maskText(node) {
   if (!node.nodeValue?.trim() || node.parentElement?.closest(SKIP)) return;
   const previous = originalText.get(node);
-  if (previous === node.nodeValue) return;
-  const raw = previous && encodeDemoText(previous) === node.nodeValue
-    ? previous
-    : node.nodeValue;
+  if (previous && encodeDemoText(previous) === node.nodeValue) return;
+  const raw = node.nodeValue;
   originalText.set(node, raw);
   node.nodeValue = encodeDemoText(raw);
 }
