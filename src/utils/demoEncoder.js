@@ -2,6 +2,10 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
 const DIGIT_MAP = '3749062815';
 
+const demoRevealMap = typeof window !== 'undefined'
+  ? (window.__mirDemoRevealMap ||= new Map())
+  : null;
+
 // Demo mode only masks values that belong to the healthcare file data.
 // UI labels, statuses, workflow metadata, filenames, timestamps, and technical IDs stay unchanged.
 const PHI_KEY_PATTERNS = [
