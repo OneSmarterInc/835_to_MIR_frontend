@@ -81,11 +81,18 @@ export function encodeDemoValue(value) {
 
   return text
     .split(/(\s+)/)
-    .map((part) => part.replace(/[A-Za-z0-9]/g, (ch) => {
-      if (ch >= '0' && ch <= '9') return DIGIT_MAP[Number(ch)];
-      const mapped = LETTER_MAP[LETTERS.indexOf(ch.toUpperCase())];
-      return ch === ch.toLowerCase() ? mapped.toLowerCase() : mapped;
-    }))
+    .map((part) => {
+      const encoded = part.replace(/[A-Za-z0-9]/g, (ch) => {
+        if (ch >= '0' && ch <= '9') return DIGIT_MAP[Number(ch)];
+        const mapped = LETTER_MAP[LETTERS.indexOf(ch.toUpperCase())];
+        return ch === ch.toLowerCase() ? mapped.toLowerCase() : mapped;
+      });
+
+      const visibleCount = encoded.length >= 8 ? 4 : Math.max(1, Math.min(3, encoded.length - 1));
+      const maskLength = Math.max(0, encoded.length - visibleCount);
+
+      return maskLength ? '*'.repeat(maskLength) + encoded.slice(-visibleCount) : encoded;
+    })
     .join('');
 }
 
