@@ -129,6 +129,13 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
       );
 
       line = line.replace(
+        /^(M)(\d{15,20})([A-Z0-9]{4,20})(?=\s|$)/i,
+        (_, prefix, claimNumber, internalNumber) => (
+          prefix + encodeX12Field(claimNumber) + encodeX12Field(internalNumber)
+        )
+      );
+
+      line = line.replace(
         /(\s)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z])?(\s*)(\d{8})(?=\s|$)/g,
         (_, prefix, lastName, between1, firstName, between2, middleName, between3, dob) => (
           prefix +
