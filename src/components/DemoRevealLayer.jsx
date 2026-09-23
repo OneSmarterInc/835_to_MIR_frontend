@@ -33,7 +33,7 @@ function scanMaskedValues() {
     if (
       !parent ||
       parent.closest(".demo-reveal-layer") ||
-      parent.closest("button,a,input,select,textarea,[contenteditable="true"]")
+      parent.closest('button,a,input,select,textarea,[contenteditable="true"]')
     ) continue;
 
     const text = node.nodeValue || "";
