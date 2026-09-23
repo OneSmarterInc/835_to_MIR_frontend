@@ -81,6 +81,18 @@ function applyDemoEncodingToJsonResponse(response) {
   })();
   if (/\/api\/file-content\//.test(responsePath)) return response;
 
+  // Archived source viewers fetch the original file with ?view=1 and apply
+  // PHI masking themselves at the field/segment level. Do not globally encode
+  // this response first, or every field in the source file gets masked.
+  try {
+    const responseUrl = new URL(response.url, window.location.origin);
+    if (responseUrl.searchParams.get("view") === "1" && /\/download\/?$/.test(responseUrl.pathname)) {
+      return response;
+    }
+  } catch {
+    // Keep the normal JSON handling if the response URL cannot be parsed.
+  }
+
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) return response;
 
