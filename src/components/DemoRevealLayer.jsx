@@ -3,6 +3,23 @@ import { createPortal } from "react-dom";
 import { getDemoRevealValue } from "../utils/demoEncoder";
 import { isDemoModeEnabled } from "../utils/demoSubstitution";
 
+function getOverlayBackground(element) {
+  let current = element;
+
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    const background = style.backgroundColor;
+
+    if (background && background !== "transparent" && !background.includes("rgba(0, 0, 0, 0)")) {
+      return background;
+    }
+
+    current = current.parentElement;
+  }
+
+  return window.getComputedStyle(document.body).backgroundColor || "#fff";
+}
+
 function scanMaskedValues() {
   if (typeof document === "undefined") return [];
 
@@ -13,7 +30,11 @@ function scanMaskedValues() {
 
   while ((node = walker.nextNode())) {
     const parent = node.parentElement;
-    if (!parent || parent.closest(".demo-reveal-layer")) continue;
+    if (
+      !parent ||
+      parent.closest(".demo-reveal-layer") ||
+      parent.closest("button,a,input,select,textarea,[contenteditable="true"]")
+    ) continue;
 
     const text = node.nodeValue || "";
     const tokenPattern = /\S+/g;
@@ -34,11 +55,17 @@ function scanMaskedValues() {
       const rect = range.getBoundingClientRect();
       if (!rect.width || !rect.height) continue;
 
+      const background = getOverlayBackground(node.parentElement);
+      const computed = window.getComputedStyle(node.parentElement);
       map.push({
         id: token + "::" + occurrence,
         token,
         encodedValue,
         rect,
+        background,
+        color: computed.color,
+        font: computed.font,
+        lineHeight: computed.lineHeight,
       });
     }
   }
@@ -138,10 +165,10 @@ export default function DemoRevealLayer() {
               border: "0",
               borderBottom: isRevealed ? "1px solid currentColor" : "1px dotted currentColor",
               borderRadius: "1px",
-              background: "transparent",
-              color: "inherit",
-              font: "inherit",
-              lineHeight: "inherit",
+              background: target.background || "#fff",
+              color: target.color || "inherit",
+              font: target.font || "inherit",
+              lineHeight: target.lineHeight || "inherit",
               textAlign: "left",
               whiteSpace: "pre",
               overflow: "hidden",
