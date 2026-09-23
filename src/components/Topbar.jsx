@@ -1,16 +1,7 @@
 import React, { useState } from "react";
-import { isDemoModeEnabled, toggleDemoMode } from "../utils/demoSubstitution";
 
 export default function Topbar({ user, onToggleDrawer, onLogout }) {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [demoMode, setDemoMode] = useState(isDemoModeEnabled());
-
-  const handleDemoToggle = () => {
-    const next = !demoMode;
-    setDemoMode(next);
-    toggleDemoMode(next);
-  };
-
   return (
     <>
       <div className="topbar">
@@ -25,16 +16,6 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
 
         {user && user.name && (
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px" }}>
-              Demo Data
-              <input
-                type="checkbox"
-                checked={demoMode}
-                onChange={handleDemoToggle}
-                title="Enable demo data encoding"
-              />
-            </label>
-
             <div className="tenant">
               <span className="dot"></span>
               <span>{user.name}</span>
