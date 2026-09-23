@@ -156,6 +156,8 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
       if (fields[1]) fields[1] = encodeX12Field(fields[1]);
     } else if (tag === 'CLM') {
       if (fields[1]) fields[1] = encodeX12Field(fields[1]);
+    } else if (tag === 'N1') {
+      if (fields[2]) fields[2] = encodeX12Field(fields[2]);
     } else if (tag === 'NM1') {
       [3, 4, 5, 8, 9].forEach(index => {
         if (fields[index]) fields[index] = encodeX12Field(fields[index]);
