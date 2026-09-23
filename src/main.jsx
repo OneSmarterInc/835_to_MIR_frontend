@@ -13,7 +13,6 @@ import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
 import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 import { encodeDemoData } from './utils/demoEncoder.js'
-import { startDemoRevealLayer } from './utils/demoRevealLayer.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
@@ -56,7 +55,6 @@ window.fetch = function (url, options = {}) {
 
 
 installBrowserHistoryNavigation();
-startDemoRevealLayer();
 
 const demoStorageKey = 'mir-demo-substitution';
 
