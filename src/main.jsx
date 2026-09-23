@@ -78,7 +78,7 @@ function applyDemoEncodingToJsonResponse(response) {
       return '';
     }
   })();
-  if (/\\/api\\/file-content\\//.test(responsePath)) return response;
+  if (/\/api\/file-content\//.test(responsePath)) return response;
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) return response;
