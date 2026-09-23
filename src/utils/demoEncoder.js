@@ -136,7 +136,11 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
     const fields = segment.split(elementDelimiter);
     const tag = String(fields[0] || '').trim().toUpperCase();
 
-    if (tag === 'NM1') {
+    if (tag === 'CLP') {
+      if (fields[1]) fields[1] = encodeX12Field(fields[1]);
+    } else if (tag === 'CLM') {
+      if (fields[1]) fields[1] = encodeX12Field(fields[1]);
+    } else if (tag === 'NM1') {
       [3, 4, 5, 8, 9].forEach(index => {
         if (fields[index]) fields[index] = encodeX12Field(fields[index]);
       });
@@ -150,6 +154,10 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
       }
     } else if (tag === 'PER') {
       for (let index = 2; index < fields.length; index += 2) {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      }
+    } else if (tag === 'DTP') {
+      for (let index = 2; index < fields.length; index += 1) {
         if (fields[index]) fields[index] = encodeX12Field(fields[index]);
       }
     } else if (tag === 'REF') {
