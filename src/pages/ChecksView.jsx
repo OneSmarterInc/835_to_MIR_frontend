@@ -369,7 +369,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true, clie
                 <div style={{ padding: "24px", color: "var(--ink-2)" }}>{selectedConversionError}</div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <table className="datatable checks-held-claims-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead><tr><th>CLAIM</th><th>RESOLUTION</th><th>HOLD REASON</th><th>PREVIOUS MIR FILE</th><th>PREVIOUSLY SENT</th><th>ELIGIBLE TO SEND</th></tr></thead>
                     <tbody>
                       {selectedConversionFile._heldClaims.length === 0 ? (
@@ -390,7 +390,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true, clie
                               </div>
                             ) : null}
                           </td>
-                          <td style={{ minWidth: "360px" }}>{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`} style={{ marginBottom: reasonIndex === claim.reasons.length - 1 ? 0 : "5px" }}>{reason}</div>)}</td>
+                          <td className="checks-hold-reason-cell">{[...new Set(claim.reasons)].map((reason, reasonIndex) => <div key={`${claim.claimNumber}-${reasonIndex}`}>{reason}</div>)}</td>
                           <td style={{ minWidth: "220px", fontWeight: 600 }}>
                             <div>{claim.previousMirFilename || "—"}</div>
                             {claim.previousSource835Filename && <div style={{ marginTop: "4px", fontSize: "11px", fontWeight: 400, color: "var(--ink-3)" }}>835: {claim.previousSource835Filename}</div>}
