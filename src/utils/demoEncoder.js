@@ -120,10 +120,10 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
   if (!['835', '837', 'MIR', 'RECON'].includes(type)) return rawContent;
 
   if (type === 'MIR' || type === 'RECON') {
-    return rawContent.split(/(\\r?\\n)/).map(part => {
-      if (/^\\r?\\n$/.test(part)) return part;
+    return rawContent.split(/(\r?\n)/).map(part => {
+      if (/^\r?\n$/.test(part)) return part;
       return part
-        .replace(/(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|patient_name)(\\s*[:=]\\s*)([^,|;\\t]+)/gi, (_, key, separator, value) => (
+        .replace(/(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\\s*[:=]\\s*)([^,|;\\t]+)/gi, (_, key, separator, value) => (
           key + separator + encodeX12Field(value)
         ));
     }).join('');
