@@ -57,6 +57,11 @@ function scanMaskedValues() {
 
       const background = getOverlayBackground(node.parentElement);
       const computed = window.getComputedStyle(node.parentElement);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (context) context.font = computed.font;
+      const encodedWidth = context ? context.measureText(encodedValue).width : rect.width;
+      const revealScale = encodedWidth > rect.width ? Math.max(0.55, rect.width / encodedWidth) : 1;
       map.push({
         id: token + "::" + occurrence,
         token,
@@ -66,6 +71,7 @@ function scanMaskedValues() {
         color: computed.color,
         font: computed.font,
         lineHeight: computed.lineHeight,
+        revealScale,
       });
     }
   }
@@ -172,8 +178,10 @@ export default function DemoRevealLayer() {
               lineHeight: target.lineHeight || "inherit",
               textAlign: "left",
               whiteSpace: "pre",
-              overflow: "visible",
+              overflow: "hidden",
               cursor: "pointer",
+              transform: isRevealed && target.revealScale < 1 ? "scaleX(" + target.revealScale + ")" : "none",
+              transformOrigin: "left center",
               boxShadow: isRevealed ? "0 1px 3px rgba(0,0,0,0.18)" : "none",
               textDecoration: isRevealed ? "none" : "underline",
               textDecorationStyle: isRevealed ? "solid" : "dotted",
