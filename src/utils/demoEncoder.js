@@ -178,11 +178,11 @@ export function encodeDemoFileContent(rawContent, fileType = '', mask = true) {
     const tag = String(fields[0] || '').trim().toUpperCase();
 
     if (tag === 'CLP') {
-      if (fields[1]) fields[1] = encodeX12Field(fields[1], mask));
+      if (fields[1]) fields[1] = encodeX12Field(fields[1], mask);
     } else if (tag === 'CLM') {
-      if (fields[1]) fields[1] = encodeX12Field(fields[1], mask));
+      if (fields[1]) fields[1] = encodeX12Field(fields[1], mask);
     } else if (tag === 'N1') {
-      if (fields[2]) fields[2] = encodeX12Field(fields[2], mask));
+      if (fields[2]) fields[2] = encodeX12Field(fields[2], mask);
     } else if (tag === 'NM1') {
       [3, 4, 5, 8, 9].forEach(index => {
         if (fields[index]) fields[index] = encodeX12Field(fields[index]);
