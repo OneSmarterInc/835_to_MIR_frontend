@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getDemoRevealValue } from "../utils/demoEncoder";
+import { getDemoRevealValue, getDemoMaskedValue } from "../utils/demoEncoder";
 import { isDemoModeEnabled } from "../utils/demoSubstitution";
 
 function getTextPositionFromPoint(event) {
@@ -49,7 +49,24 @@ function revealTokenAtPoint(event) {
     const start = match.index;
     const end = start + token.length;
 
-    node.nodeValue = text.slice(0, start) + encodedValue + text.slice(end);
+    const fragment = document.createDocumentFragment();
+
+    if (start > 0) {
+      fragment.appendChild(document.createTextNode(text.slice(0, start)));
+    }
+
+    const revealedValue = document.createElement("span");
+    revealedValue.className = "demo-revealed-value";
+    revealedValue.textContent = encodedValue;
+    revealedValue.title = "Demo value revealed";
+    revealedValue.style.cursor = "pointer";
+    fragment.appendChild(revealedValue);
+
+    if (end < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(end)));
+    }
+
+    node.parentNode.replaceChild(fragment, node);
     return;
   }
 }
@@ -58,10 +75,20 @@ export default function DemoRevealLayer() {
   useEffect(() => {
     if (!isDemoModeEnabled()) return undefined;
 
+    const style = document.createElement("style");
+    style.setAttribute("data-demo-reveal-style", "true");
+    style.textContent = `
+      .demo-revealed-value {
+        cursor: pointer !important;
+      }
+    `;
+    document.head.appendChild(style);
+
     const handleClick = (event) => {
       if (event.defaultPrevented) return;
       if (event.target.closest(".demo-reveal-layer")) return;
       if (event.target.closest('button,a,input,select,textarea,[contenteditable="true"]')) return;
+      if (event.target.closest(".demo-revealed-value")) return;
 
       revealTokenAtPoint(event);
     };
@@ -70,6 +97,7 @@ export default function DemoRevealLayer() {
 
     return () => {
       document.removeEventListener("click", handleClick, true);
+      style.remove();
     };
   }, []);
 
