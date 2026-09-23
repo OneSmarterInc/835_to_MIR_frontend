@@ -136,7 +136,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
       })
       .then(data => {
         if (!cancelled) {
-          setContent(encodeDemoFileContent(String(data.content || ''), selected.type));
+          setContent(String(data.content || ''));
           setClaimRows(Array.isArray(data.claim_rows) ? data.claim_rows : []);
         }
       })
