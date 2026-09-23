@@ -79,6 +79,11 @@ function isPhiKey(key) {
   return PHI_EXACT_KEYS.has(normalized) || PHI_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
+export function getDemoRevealValue(maskedValue) {
+  if (!demoRevealMap || typeof maskedValue !== 'string') return null;
+  return demoRevealMap.get(maskedValue) || null;
+}
+
 export function encodeDemoValue(value, mask = true) {
   if (typeof value !== 'string' && typeof value !== 'number') return value;
   const text = String(value);
