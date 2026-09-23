@@ -1721,3 +1721,59 @@ td.num {
   .code-dictionary-stats, .code-dictionary-filter-grid { grid-template-columns: 1fr; }
   .code-dictionary-stat { justify-content: space-between; }
 }
+
+
+/* Checks > Conversion > Held claim details */
+.checks-held-claims-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.checks-held-claims-table th:nth-child(1),
+.checks-held-claims-table td:nth-child(1) { width: 150px; }
+.checks-held-claims-table th:nth-child(2),
+.checks-held-claims-table td:nth-child(2) { width: 210px; }
+.checks-held-claims-table th:nth-child(3),
+.checks-held-claims-table td:nth-child(3) { width: 420px; }
+.checks-held-claims-table th:nth-child(4),
+.checks-held-claims-table td:nth-child(4) { width: 240px; }
+.checks-held-claims-table th:nth-child(5),
+.checks-held-claims-table td:nth-child(5) { width: 190px; }
+.checks-held-claims-table th:nth-child(6),
+.checks-held-claims-table td:nth-child(6) { width: 190px; }
+
+.checks-held-claims-table .checks-hold-reason-cell {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.checks-held-claims-table .checks-hold-reason-cell > div {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin-bottom: 5px;
+}
+
+.checks-held-claims-table .checks-hold-reason-cell > div:last-child {
+  margin-bottom: 0;
+}
+
+.checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar {
+  height: 8px;
+}
+
+.checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+
+.checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar-thumb {
+  background: var(--ink-3);
+  border-radius: 999px;
+}
+
+.checks-held-claims-table .checks-hold-reason-cell {
+  scrollbar-color: var(--ink-3) var(--paper);
+  scrollbar-width: auto;
+}
