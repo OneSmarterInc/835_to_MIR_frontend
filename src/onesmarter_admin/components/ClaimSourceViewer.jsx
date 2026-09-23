@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { portalFetch } from '../../utils/api';
 import { encodeDemoFileContent } from '../../utils/demoEncoder';
+import { isDemoModeEnabled } from '../../utils/demoSubstitution';
 import '../../pages/NoticesView.css';
 import './ClaimSourceViewer.css';
 
@@ -118,6 +119,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
   const [searchIndex, setSearchIndex] = useState(0);
   const [sliceBusy, setSliceBusy] = useState(false);
   const [sliceMessage, setSliceMessage] = useState('');
+  const [revealAll, setRevealAll] = useState(false);
   const selected = sources[selectedIndex];
   const is837 = String(selected?.type || '').toUpperCase() === '837';
 
@@ -126,7 +128,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
     let cancelled = false;
     setLoading(true); setError(''); setContent(''); setClaimRows([]);
     highmarkRefs.current = []; searchRefs.current = [];
-    setHighmarkIndex(0); setFileSearch(''); setSearchIndex(0); setSliceMessage('');
+    setHighmarkIndex(0); setFileSearch(''); setSearchIndex(0); setSliceMessage(''); setRevealAll(false);
     portalFetch(`${selected.download_url}?view=1`)
       .then(async response => {
         if (!response.ok) throw new Error('Unable to load the archived file.');
@@ -172,7 +174,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join('|')})`, 'gi') : null;
   const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
     .flatMap(row => String(row || '').replace(/\r\n?/g, '\n').replace(/[~∼˜]/g, '\n').split('\n'))
-    .map(row => encodeDemoFileContent(row.trim(), selected.type))
+    .map(row => encodeDemoFileContent(row.trim(), selected.type, !revealAll))
     .filter(row => row.length);
 
   const moveHighmark = direction => {
@@ -236,6 +238,11 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
+        {isDemoModeEnabled() && (
+          <button type="button" className="mpl-btn primary" onClick={() => setRevealAll(current => !current)}>
+            {revealAll ? 'Mask All' : 'Reveal All'}
+          </button>
+        )}
         <a className="mpl-btn primary" href={selected.download_url}>Download file</a>
         <button type="button" className="mpl-claim-slice-download" onClick={downloadClaimSlice} disabled={sliceBusy} aria-label="Download sliced claim file" title="Download sliced claim file"><DownloadIcon /></button>
         {sliceMessage && <span className="mpl-claim-slice-message" role="alert">{sliceMessage}</span>}
