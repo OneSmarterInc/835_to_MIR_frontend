@@ -12,6 +12,7 @@ import { AppDialogProvider } from './components/AppDialog.jsx'
 import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
 import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
+import { encodeDemoData } from './utils/demoEncoder.js'
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
