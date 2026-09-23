@@ -75,7 +75,7 @@ function isPhiKey(key) {
   return PHI_EXACT_KEYS.has(normalized) || PHI_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
-export function encodeDemoValue(value) {
+export function encodeDemoValue(value, mask = true) {
   if (typeof value !== 'string' && typeof value !== 'number') return value;
   const text = String(value);
 
@@ -91,7 +91,7 @@ export function encodeDemoValue(value) {
       const visibleCount = encoded.length >= 8 ? 4 : Math.max(1, Math.min(3, encoded.length - 1));
       const maskLength = Math.max(0, encoded.length - visibleCount);
 
-      return maskLength ? '*'.repeat(maskLength) + encoded.slice(-visibleCount) : encoded;
+      return mask && maskLength ? '*'.repeat(maskLength) + encoded.slice(-visibleCount) : encoded;
     })
     .join('');
 }
@@ -115,11 +115,11 @@ export function encodeDemoData(value, key = '') {
 }
 
 
-function encodeX12Field(value) {
-  return encodeDemoValue(value);
+function encodeX12Field(value, mask = true) {
+  return encodeDemoValue(value, mask);
 }
 
-export function encodeDemoFileContent(rawContent, fileType = '') {
+export function encodeDemoFileContent(rawContent, fileType = '', mask = true) {
   if (typeof rawContent !== 'string') return rawContent;
   if (typeof window === 'undefined' || localStorage.getItem('mir-demo-substitution') !== 'true') return rawContent;
 
@@ -132,22 +132,22 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
 
       let line = part.replace(
         /(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\s*[:=]\s*)([^,|;\t]+)/gi,
-        (_, key, separator, value) => key + separator + encodeX12Field(value)
+        (_, key, separator, value) => key + separator + encodeX12Field(value, mask)
       );
 
       line = line.replace(
         /^(M)([A-Z0-9]{15,40})(?=\s|$)/i,
-        (_, prefix, identifiers) => prefix + encodeX12Field(identifiers)
+        (_, prefix, identifiers) => prefix + encodeX12Field(identifiers, mask)
       );
 
       line = line.replace(
         /(\s)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z])?(\s*)(\d{8})(?=\s|$)/g,
         (_, prefix, lastName, between1, firstName, between2, middleName, between3, dob) => (
           prefix +
-          encodeX12Field(lastName) +
+          encodeX12Field(lastName, mask) +
           between1 +
-          encodeX12Field(firstName) +
-          (middleName ? between2 + encodeX12Field(middleName) : between2) +
+          encodeX12Field(firstName, mask) +
+          (middleName ? between2 + encodeX12Field(middleName, mask) : between2) +
           between3 +
           dob
         )
@@ -158,11 +158,11 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
           /^(\s*)(\S+)(\s+)(\S+)(\s+)(\S+)(?=\s|$)/,
           (_, prefix, claimId, between1, memberId, between2, serviceDates) =>
             prefix +
-            encodeX12Field(claimId) +
+            encodeX12Field(claimId, mask) +
             between1 +
-            encodeX12Field(memberId) +
+            encodeX12Field(memberId, mask) +
             between2 +
-            encodeX12Field(serviceDates)
+            encodeX12Field(serviceDates, mask)
         );
       }
 
