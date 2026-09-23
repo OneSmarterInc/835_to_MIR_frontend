@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { portalFetch } from "../utils/api";
-import { encodeDemoData } from "../utils/demoEncoder";
 import "./ResultView.css";
 import TimeDisplay from "../components/TimeDisplay";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
@@ -26,7 +25,7 @@ async function apiJson(url, options = {}) {
   }
   const data = await response.json();
   if (!response.ok || data.success === false) throw new Error(data.error || `Request failed (${response.status}).`);
-  return encodeDemoData(data);
+  return data;
 }
 const money = (value) => Number(value || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
 const hasMirAndRecon = (row) => Boolean(row?.mir_claim_id && (row?.recon_filename || row?.recon_matches?.length));
