@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReconArchiveOverlay.css';
+import { encodeDemoFileContent } from '../utils/demoEncoder.js';
 
 const EyeIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>;
 const DownloadIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>;
@@ -102,7 +103,7 @@ function ReconFilePreview({ file, onBack }) {
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.success) throw new Error(data.error || `Unable to open file (${response.status}).`);
-        return String(data.content || '');
+        return encodeDemoFileContent(String(data.content || ''), 'RECON');
       })
       .then((value) => setText(value || '(Empty file)'))
       .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
