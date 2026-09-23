@@ -11,7 +11,7 @@ const PHI_KEY_PATTERNS = [
   /^(name|first_name|last_name|middle_name|full_name)(_|$)/i,
   /^(address|street|street_address|city|county|zip|zipcode|postal|phone|telephone|fax|email)(_|$)/i,
   /^(ssn|social_security|mrn|member_number|member_id|subscriber_id|beneficiary_id|patient_id|account_number|policy_number)(_|$)/i,
-  /^(diagnosis|procedure|service|revenue|icd|cpt|hcpcs|drg|charge|allowed|paid|payment|deductible|copay|coinsurance|patient_responsibility|amount_to_pay|remaining_amount|recon_paid_amount|difference_amount)(_|$)/i,
+  /^(diagnosis|procedure|service|revenue|icd|cpt|hcpcs|drg)(_|$)/i,
   /^(gender|sex|age)(_|$)/i,
 ];
 
