@@ -2,7 +2,7 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
 const DIGIT_MAP = '3749062815';
 
-// Fields used internally for API lookups must never be masked.
+// Fields used for navigation, matching, and API lookups must never be masked.
 const PASSTHROUGH_KEYS = new Set([
   'id',
   'file_id',
@@ -10,6 +10,10 @@ const PASSTHROUGH_KEYS = new Set([
   'conversion_id',
   'mir_id',
   'claim_id',
+  'claim_number',
+  'claim_control_number',
+  'internal_claim_number',
+  'highmark_claim_number',
   'record_id',
   'client_id',
   'user_id',
@@ -17,7 +21,9 @@ const PASSTHROUGH_KEYS = new Set([
   'pk',
   'url',
   'path',
-  'download_url'
+  'download_url',
+  'source_file',
+  'filename'
 ]);
 
 export function encodeDemoValue(value) {
