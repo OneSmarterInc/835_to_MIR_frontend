@@ -36,7 +36,7 @@ function revealTokenAtPoint(event) {
   const text = node.nodeValue || "";
   if (!text) return;
 
-  const tokenPattern = /\\S+/g;
+  const tokenPattern = /\S+/g;
   let match;
 
   while ((match = tokenPattern.exec(text))) {
