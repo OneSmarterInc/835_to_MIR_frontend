@@ -1761,19 +1761,10 @@ td.num {
 }
 
 .checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar {
-  height: 8px;
-}
-
-.checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar-track {
-  background: var(--paper);
-}
-
-.checks-held-claims-table .checks-hold-reason-cell::-webkit-scrollbar-thumb {
-  background: var(--ink-3);
-  border-radius: 999px;
+  display: none;
 }
 
 .checks-held-claims-table .checks-hold-reason-cell {
-  scrollbar-color: var(--ink-3) var(--paper);
-  scrollbar-width: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
