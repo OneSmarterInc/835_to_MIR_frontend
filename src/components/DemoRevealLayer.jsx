@@ -66,6 +66,7 @@ function scanMaskedValues() {
         id: token + "::" + occurrence,
         node,
         token,
+        offset: match.index,
         encodedValue,
         rect,
         background,
@@ -135,8 +136,8 @@ export default function DemoRevealLayer() {
         if (!target.node || !target.node.isConnected) return target;
         const rect = document.createRange();
         const text = target.node.nodeValue || "";
-        const tokenIndex = text.indexOf(target.token);
-        if (tokenIndex < 0) return target;
+        const tokenIndex = target.offset;
+        if (text.slice(tokenIndex, tokenIndex + target.token.length) !== target.token) return target;
         rect.setStart(target.node, tokenIndex);
         rect.setEnd(target.node, tokenIndex + target.token.length);
         const nextRect = rect.getBoundingClientRect();
