@@ -3,7 +3,7 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const DIGITS = '0123456789';
 // Fixed shuffled alphabets keep repeated values consistent across pages and sessions.
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
-const DIGIT_MAP = '3749062851';
+const DIGIT_MAP = '3479062815';
 const originalText = new WeakMap();
 const originalAttributes = new WeakMap();
 const SKIP = 'script,style,noscript,textarea,select,option,svg,code,pre,[contenteditable],input';
