@@ -11,6 +11,7 @@ import App from './App.jsx'
 import { AppDialogProvider } from './components/AppDialog.jsx'
 import ReconArchiveOverlay from './components/ReconArchiveOverlay.jsx'
 import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
+import DemoRevealLayer from './components/DemoRevealLayer.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 import { encodeDemoData } from './utils/demoEncoder.js'
 
@@ -103,6 +104,7 @@ createRoot(document.getElementById('root')).render(
       <App />
       <ReconArchiveOverlay />
       <MplAnalyzeAgainAction />
+      <DemoRevealLayer />
     </AppDialogProvider>
   </StrictMode>,
 )
