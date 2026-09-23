@@ -129,10 +129,8 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
       );
 
       line = line.replace(
-        /^(M)(\d{15,20})([A-Z0-9]{4,20})(?=\s|$)/i,
-        (_, prefix, claimNumber, internalNumber) => (
-          prefix + encodeX12Field(claimNumber) + encodeX12Field(internalNumber)
-        )
+        /^(M)([A-Z0-9]{15,40})(?=\s|$)/i,
+        (_, prefix, identifiers) => prefix + encodeX12Field(identifiers)
       );
 
       line = line.replace(
