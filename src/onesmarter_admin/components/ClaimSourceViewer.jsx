@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { portalFetch } from '../../utils/api';
 import { encodeDemoFileContent } from '../../utils/demoEncoder';
-import { isDemoModeEnabled } from '../../utils/demoSubstitution';
 import '../../pages/NoticesView.css';
 import './ClaimSourceViewer.css';
 
@@ -238,11 +237,9 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
-        {isDemoModeEnabled() && (
-          <button type="button" className="mpl-btn primary" onClick={() => setRevealAll(current => !current)}>
-            {revealAll ? 'Mask All' : 'Reveal All'}
-          </button>
-        )}
+        <button type="button" className="mpl-btn primary" onClick={() => setRevealAll(current => !current)} title={revealAll ? 'Mask all PHI' : 'Reveal all PHI'}>
+          {revealAll ? 'Mask All' : 'Reveal All'}
+        </button>
         <a className="mpl-btn primary" href={selected.download_url}>Download file</a>
         <button type="button" className="mpl-claim-slice-download" onClick={downloadClaimSlice} disabled={sliceBusy} aria-label="Download sliced claim file" title="Download sliced claim file"><DownloadIcon /></button>
         {sliceMessage && <span className="mpl-claim-slice-message" role="alert">{sliceMessage}</span>}
