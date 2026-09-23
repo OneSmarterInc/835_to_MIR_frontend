@@ -1,3 +1,5 @@
+import { encodeDemoData } from './demoEncoder';
+
 const inFlightGetRequests = new Map();
 
 function withAdminChecksClient(url) {
@@ -28,12 +30,29 @@ function shouldDeduplicate(url, options = {}) {
   return method === "GET" && typeof url === "string" && url.includes("/edi835/api/tracked-files/");
 }
 
+function shouldEncodeIncomingData(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET") return false;
+
+  return typeof url === "string" && (
+    url.includes("/edi835/") ||
+    url.includes("/mir") ||
+    url.includes("/837") ||
+    url.includes("/recon")
+  );
+}
+
 async function fetchJsonOnce(url, options = {}) {
   const res = await portalFetch(url, options);
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) throw new Error(`Server returned non-JSON response (${res.status}).`);
+
   const data = await res.json();
-  return { res, data };
+  const displayData = shouldEncodeIncomingData(url, options)
+    ? encodeDemoData(data)
+    : data;
+
+  return { res, data: displayData };
 }
 
 export async function safeFetchJson(url, options = {}) {
@@ -43,6 +62,7 @@ export async function safeFetchJson(url, options = {}) {
   const key = `${String(options.method || "GET").toUpperCase()}:${scopedUrl}`;
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
+
   const request = fetchJsonOnce(scopedUrl, options).finally(() => inFlightGetRequests.delete(key));
   inFlightGetRequests.set(key, request);
   return request;
