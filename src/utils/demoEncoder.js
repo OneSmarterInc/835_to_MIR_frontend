@@ -106,3 +106,58 @@ export function encodeDemoData(value, key = '') {
 
   return isPhiKey(key) ? encodeDemoValue(value) : value;
 }
+
+
+function encodeX12Field(value) {
+  return encodeDemoValue(value);
+}
+
+export function encodeDemoFileContent(rawContent, fileType = '') {
+  if (typeof rawContent !== 'string') return rawContent;
+  if (typeof window === 'undefined' || localStorage.getItem('mir-demo-substitution') !== 'true') return rawContent;
+
+  const type = String(fileType || '').toUpperCase();
+  if (!['835', '837', 'MIR', 'RECON'].includes(type)) return rawContent;
+
+  if (type === 'MIR' || type === 'RECON') {
+    return rawContent.split(/(\\r?\\n)/).map(part => {
+      if (/^\\r?\\n$/.test(part)) return part;
+      return part
+        .replace(/(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|patient_name)(\\s*[:=]\\s*)([^,|;\\t]+)/gi, (_, key, separator, value) => (
+          key + separator + encodeX12Field(value)
+        ));
+    }).join('');
+  }
+
+  const segmentDelimiter = rawContent.startsWith('ISA') && rawContent.length > 105 ? rawContent[105] : '~';
+  const elementDelimiter = rawContent.startsWith('ISA') ? rawContent[3] : '*';
+  return rawContent.split(segmentDelimiter).map(segment => {
+    if (!segment.trim()) return segment;
+    const fields = segment.split(elementDelimiter);
+    const tag = String(fields[0] || '').trim().toUpperCase();
+
+    if (tag === 'NM1') {
+      [3, 4, 5, 8, 9].forEach(index => {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      });
+    } else if (['N2', 'N3', 'N4'].includes(tag)) {
+      for (let index = 1; index < fields.length; index += 1) {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      }
+    } else if (tag === 'DMG') {
+      for (let index = 2; index < fields.length; index += 1) {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      }
+    } else if (tag === 'PER') {
+      for (let index = 2; index < fields.length; index += 2) {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      }
+    } else if (tag === 'REF') {
+      for (let index = 2; index < fields.length; index += 1) {
+        if (fields[index]) fields[index] = encodeX12Field(fields[index]);
+      }
+    }
+
+    return fields.join(elementDelimiter);
+  }).join(segmentDelimiter);
+}
