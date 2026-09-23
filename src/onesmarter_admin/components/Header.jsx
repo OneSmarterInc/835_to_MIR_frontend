@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { isDemoModeEnabled, toggleDemoMode } from '../../utils/demoSubstitution';
 
 export default function Header({ onSignOut, currentUser, onToggleSidebar, isSidebarOpen = false }) {
   const displayName = currentUser?.name || currentUser?.email || 'Sahil Asarkar';
@@ -7,6 +8,13 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar, isSide
   const clientName = currentUser?.client || 'OneSmarter';
   const isSystemAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Super Admin' || currentUser?.is_staff || currentUser?.is_superuser;
   const displayTitle = isSystemAdmin ? displayName : clientName;
+  const [demoMode, setDemoMode] = useState(isDemoModeEnabled());
+
+  const handleDemoToggle = () => {
+    const next = !demoMode;
+    setDemoMode(next);
+    toggleDemoMode(next);
+  };
 
   useEffect(() => {
     const rail = document.querySelector('.shell > .rail');
@@ -58,6 +66,15 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar, isSide
           <div className="wordmark">ONESMARTER <span>/ MIR RELAY ADMIN</span></div>
         </div>
         <div className="spacer" />
+        <label className="admin-demo-toggle">
+          <span>Demo Data</span>
+          <input
+            type="checkbox"
+            checked={demoMode}
+            onChange={handleDemoToggle}
+            title="Enable demo data encoding"
+          />
+        </label>
         <div className="me"><div className="av">{initials}</div><div><div>{displayTitle}</div><div className="role">{role}</div></div></div>
         <button type="button" className="btn-topbar-logout" title="Sign Out" aria-label="Sign Out" onClick={onSignOut}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
