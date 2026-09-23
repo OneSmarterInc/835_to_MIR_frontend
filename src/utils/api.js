@@ -1,3 +1,5 @@
+import { encodeDemoData } from './demoEncoder';
+
 const inFlightGetRequests = new Map();
 
 function withAdminChecksClient(url) {
@@ -16,7 +18,7 @@ function withAdminChecksClient(url) {
 
 export function portalFetch(url, options = {}) {
   let requestUrl = withAdminChecksClient(url);
-  if (typeof requestUrl === "string" && /^https?:\/\//i.test(requestUrl)) {
+  if (typeof requestUrl === "string" && /^https?:\/\/i.test(requestUrl)) {
     const parsed = new URL(requestUrl);
     requestUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
   }
@@ -28,12 +30,27 @@ function shouldDeduplicate(url, options = {}) {
   return method === "GET" && typeof url === "string" && url.includes("/edi835/api/tracked-files/");
 }
 
+// Demo mode is a frontend display feature only.
+// Never transform outgoing URLs, payloads, POST bodies, or request parameters.
+// Transform only GET JSON responses before they are rendered.
+function shouldEncodeResponse(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET") return false;
+
+  return typeof url === 'string' && (
+    url.includes('/edi835/') ||
+    url.includes('/mir') ||
+    url.includes('/837') ||
+    url.includes('/recon')
+  );
+}
+
 async function fetchJsonOnce(url, options = {}) {
   const res = await portalFetch(url, options);
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) throw new Error(`Server returned non-JSON response (${res.status}).`);
   const data = await res.json();
-  return { res, data };
+  return { res, data: shouldEncodeResponse(url, options) ? encodeDemoData(data) : data };
 }
 
 export async function safeFetchJson(url, options = {}) {
