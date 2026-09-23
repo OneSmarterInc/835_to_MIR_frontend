@@ -49,11 +49,39 @@ if (BACKEND_URL) {
       }
     }
 
-    return originalFetch(url, options);
+    return originalFetch(url, options).then(applyDemoEncodingToJsonResponse);
   };
 }
 
 installBrowserHistoryNavigation();
+
+const demoStorageKey = 'mir-demo-substitution';
+
+window.addEventListener('storage', (event) => {
+  if (event.key === demoStorageKey) {
+    window.location.reload();
+  }
+});
+
+function applyDemoEncodingToJsonResponse(response) {
+  if (localStorage.getItem(demoStorageKey) !== 'true') return response;
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) return response;
+
+  const originalJson = response.clone().json();
+  let encodedPromise = null;
+
+  response.json = () => {
+    if (!encodedPromise) {
+      encodedPromise = originalJson.then((data) => encodeDemoData(data));
+    }
+    return encodedPromise;
+  };
+
+  return response;
+}
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
