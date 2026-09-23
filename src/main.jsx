@@ -67,6 +67,19 @@ window.addEventListener('storage', (event) => {
 function applyDemoEncodingToJsonResponse(response) {
   if (localStorage.getItem(demoStorageKey) !== 'true') return response;
 
+  // File viewer endpoints must return the original file payload so the viewer
+  // can build both masked and fully revealed demo representations. Encoding
+  // this JSON globally first would permanently turn the source into masked
+  // text, making "Reveal All" unable to restore the encoded value.
+  const responsePath = (() => {
+    try {
+      return new URL(response.url, window.location.origin).pathname;
+    } catch {
+      return '';
+    }
+  })();
+  if (/\\/api\\/file-content\\//.test(responsePath)) return response;
+
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) return response;
 
