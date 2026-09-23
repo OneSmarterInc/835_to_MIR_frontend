@@ -7,6 +7,7 @@ import SftpBrowserModal from "./components/SftpBrowserModal";
 import AccessDeniedScreen from "./components/AccessDeniedScreen";
 
 import { safeFetchJson } from "./utils/api";
+import { startDemoSubstitution } from "./utils/demoSubstitution";
 import { clearSessionExpiry, scheduleSessionExpiry } from "./utils/sessionExpiry";
 
 import LoginPage from "./pages/LoginPage";
@@ -33,6 +34,11 @@ export default function App() {
   const [userState,setUserState] = useState(null);
   const [loadingUser,setLoadingUser] = useState(true);
   const [authNext,setAuthNext] = useState(null);
+
+  useEffect(() => {
+    if (!userState?.authenticated || !userState.user?.totp_verified || userState.user?.first_login) return undefined;
+    return startDemoSubstitution();
+  }, [userState?.authenticated, userState?.user?.totp_verified, userState?.user?.first_login]);
 
 
   const [isAdminRoute,setIsAdminRoute] = useState(()=>{
