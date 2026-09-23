@@ -1,7 +1,5 @@
 // Cosmetic demo substitution. Keep API payloads and app state untouched.
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const DIGITS = '0123456789';
-// Fixed shuffled alphabets keep repeated values consistent across pages and sessions.
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
 const DIGIT_MAP = '3479062815';
 const originalText = new WeakMap();
@@ -39,10 +37,7 @@ function maskElement(element) {
 }
 
 function maskTree(root) {
-  if (root.nodeType === Node.TEXT_NODE) {
-    maskText(root);
-    return;
-  }
+  if (root.nodeType === Node.TEXT_NODE) return maskText(root);
   if (root.nodeType !== Node.ELEMENT_NODE || root.matches(SKIP)) return;
   maskElement(root);
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
@@ -54,14 +49,10 @@ function maskTree(root) {
 }
 
 export function startDemoSubstitution() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has('demo')) {
-    if (params.get('demo') === '1') sessionStorage.setItem('mir-demo-substitution', '1');
-    else sessionStorage.removeItem('mir-demo-substitution');
-  }
-  if (sessionStorage.getItem('mir-demo-substitution') !== '1') return () => {};
+  if (localStorage.getItem('mir-demo-substitution') !== 'true') return () => {};
   const root = document.getElementById('root');
   if (!root) return () => {};
+
   maskTree(root);
   const observer = new MutationObserver(records => {
     for (const record of records) {
@@ -70,9 +61,23 @@ export function startDemoSubstitution() {
       else for (const node of record.addedNodes) maskTree(node);
     }
   });
+
   observer.observe(root, {
-    subtree: true, childList: true, characterData: true,
-    attributes: true, attributeFilter: ['title', 'alt', 'aria-label'],
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['title', 'alt', 'aria-label'],
   });
+
   return () => observer.disconnect();
+}
+
+export function toggleDemoMode(enabled) {
+  localStorage.setItem('mir-demo-substitution', String(enabled));
+  window.location.reload();
+}
+
+export function isDemoModeEnabled() {
+  return localStorage.getItem('mir-demo-substitution') === 'true';
 }
