@@ -58,7 +58,8 @@ function revealTokenAtPoint(event) {
     const revealedValue = document.createElement("span");
     revealedValue.className = "demo-revealed-value";
     revealedValue.textContent = encodedValue;
-    revealedValue.title = "Demo value revealed";
+    revealedValue.dataset.maskedValue = token;
+    revealedValue.title = "Click to mask";
     revealedValue.style.cursor = "pointer";
     fragment.appendChild(revealedValue);
 
@@ -88,7 +89,17 @@ export default function DemoRevealLayer() {
       if (event.defaultPrevented) return;
       if (event.target.closest(".demo-reveal-layer")) return;
       if (event.target.closest('button,a,input,select,textarea,[contenteditable="true"]')) return;
-      if (event.target.closest(".demo-revealed-value")) return;
+      const revealedValue = event.target.closest(".demo-revealed-value");
+      if (revealedValue) {
+        const maskedValue = revealedValue.dataset.maskedValue;
+        if (maskedValue && revealedValue.parentNode) {
+          revealedValue.parentNode.replaceChild(
+            document.createTextNode(maskedValue),
+            revealedValue,
+          );
+        }
+        return;
+      }
 
       revealTokenAtPoint(event);
     };
