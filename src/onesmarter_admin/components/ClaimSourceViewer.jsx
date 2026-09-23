@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { portalFetch } from '../../utils/api';
+import { encodeDemoFileContent } from '../../utils/demoEncoder';
 import '../../pages/NoticesView.css';
 import './ClaimSourceViewer.css';
 
@@ -135,7 +136,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
       })
       .then(data => {
         if (!cancelled) {
-          setContent(String(data.content || ''));
+          setContent(encodeDemoFileContent(String(data.content || ''), selected.type));
           setClaimRows(Array.isArray(data.claim_rows) ? data.claim_rows : []);
         }
       })
