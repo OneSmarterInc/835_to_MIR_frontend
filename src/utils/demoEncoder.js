@@ -8,7 +8,7 @@ const PHI_KEY_PATTERNS = [
   /^(patient|subscriber|member|beneficiary)(_|$)/i,
   /^(claim|medical_record|account|policy|insurance|health_plan|authorization|prior_auth|encounter)(_|$)/i,
   /^(dob|birth_date|date_of_birth|service_date|service_from_date|service_to_date|admission_date|discharge_date|death_date)(_|$)/i,
-  /^(name|first_name|last_name|middle_name|full_name)(_|$)/i,
+  /^(patient_name|patient_first_name|patient_last_name|patient_middle_name|subscriber_name|member_name|beneficiary_name|provider_name|physician_name|doctor_name|contact_name)(_|$)/i,
   /^(address|street|street_address|city|county|zip|zipcode|postal|phone|telephone|fax|email)(_|$)/i,
   /^(ssn|social_security|mrn|member_number|member_id|subscriber_id|beneficiary_id|patient_id|account_number|policy_number)(_|$)/i,
   /^(diagnosis|procedure|service|revenue|icd|cpt|hcpcs|drg)(_|$)/i,
