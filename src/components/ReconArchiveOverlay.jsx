@@ -88,7 +88,7 @@ function findOccurrences(text, query) {
 function ReconFilePreview({ file, onBack }) {
   const [text, setText] = useState('');
   const [fullText, setFullText] = useState('');
-  const [revealAll, setRevealAll] = useState(false);
+  const [revealed, setRevealed] = useState(() => new Set());
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -111,7 +111,7 @@ function ReconFilePreview({ file, onBack }) {
       .then(({ masked, full }) => {
         setText(masked || '(Empty file)');
         setFullText(full || '(Empty file)');
-        setRevealAll(false);
+        setRevealed(new Set());
       })
       .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
       .finally(() => setLoading(false));
@@ -157,13 +157,13 @@ function ReconFilePreview({ file, onBack }) {
         const fullToken = fullTokens[tokenIndex] ?? token;
         const tokenKey = file.id + '-' + lineIndex + '-' + tokenIndex;
         const isMasked = token.includes('*') && fullToken !== token;
-        const displayed = isMasked && !revealAll ? token : fullToken;
+        const displayed = isMasked && !revealed.has(tokenKey) ? token : fullToken;
         const needle = query.trim().toLocaleLowerCase();
         const lower = displayed.toLocaleLowerCase();
 
         if (!needle) {
           return isMasked ? (
-            <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealAll(true)}>{displayed}</button>
+            <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealed((current) => new Set(current).add(tokenKey))}>{displayed}</button>
           ) : displayed;
         }
 
@@ -184,7 +184,7 @@ function ReconFilePreview({ file, onBack }) {
         ) : <React.Fragment key={tokenKey}>{content}</React.Fragment>;
       });
     });
-  }, [text, fullText, query, index, revealAll, file.id]);
+  }, [text, fullText, query, index, revealed, file.id]);
 
   const move = (direction) => {
     if (!occurrences.length) return;
