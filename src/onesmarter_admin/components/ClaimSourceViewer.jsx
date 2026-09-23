@@ -172,7 +172,8 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join('|')})`, 'gi') : null;
   const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
     .flatMap(row => String(row || '').replace(/\r\n?/g, '\n').replace(/[~∼˜]/g, '\n').split('\n'))
-    .map(row => row.trim()).filter(row => row.length);
+    .map(row => encodeDemoFileContent(row.trim(), selected.type))
+    .filter(row => row.length);
 
   const moveHighmark = direction => {
     if (!highmarkCount) return;
