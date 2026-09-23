@@ -122,10 +122,26 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
   if (type === 'MIR' || type === 'RECON') {
     return rawContent.split(/(\r?\n)/).map(part => {
       if (/^\r?\n$/.test(part)) return part;
-      return part
-        .replace(/(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\\s*[:=]\\s*)([^,|;\\t]+)/gi, (_, key, separator, value) => (
-          key + separator + encodeX12Field(value)
-        ));
+
+      let line = part.replace(
+        /(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\s*[:=]\s*)([^,|;\t]+)/gi,
+        (_, key, separator, value) => key + separator + encodeX12Field(value)
+      );
+
+      line = line.replace(
+        /(\s)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z][A-Za-z'’-]{1,40})(\s+)([A-Za-z])?(\s*)(\d{8})(?=\s|$)/g,
+        (_, prefix, lastName, between1, firstName, between2, middleName, between3, dob) => (
+          prefix +
+          encodeX12Field(lastName) +
+          between1 +
+          encodeX12Field(firstName) +
+          (middleName ? between2 + encodeX12Field(middleName) : between2) +
+          between3 +
+          dob
+        )
+      );
+
+      return line;
     }).join('');
   }
 
