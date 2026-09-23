@@ -95,7 +95,9 @@ export function encodeDemoValue(value, mask = true) {
       const visibleCount = encoded.length >= 8 ? 4 : Math.max(1, Math.min(3, encoded.length - 1));
       const maskLength = Math.max(0, encoded.length - visibleCount);
 
-      return mask && maskLength ? '*'.repeat(maskLength) + encoded.slice(-visibleCount) : encoded;
+      const masked = mask && maskLength ? '*'.repeat(maskLength) + encoded.slice(-visibleCount) : encoded;
+      if (mask && maskLength && demoRevealMap) demoRevealMap.set(masked, encoded);
+      return masked;
     })
     .join('');
 }
