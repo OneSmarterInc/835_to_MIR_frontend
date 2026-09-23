@@ -237,9 +237,6 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
           <div><dt>File received</dt><dd>{dateLabel(selected.date)}</dd></div>
           <div><dt>Status</dt><dd>{statusLabel(selected.status)}</dd></div>
         </dl>
-        <button type="button" className="mpl-btn primary" onClick={() => setRevealAll(current => !current)} title={revealAll ? 'Mask all PHI' : 'Reveal all PHI'}>
-          {revealAll ? 'Mask All' : 'Reveal All'}
-        </button>
         <a className="mpl-btn primary" href={selected.download_url}>Download file</a>
         <button type="button" className="mpl-claim-slice-download" onClick={downloadClaimSlice} disabled={sliceBusy} aria-label="Download sliced claim file" title="Download sliced claim file"><DownloadIcon /></button>
         {sliceMessage && <span className="mpl-claim-slice-message" role="alert">{sliceMessage}</span>}
@@ -251,7 +248,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
         <small>{is837 ? 'Yellow = Highmark claim' : 'Yellow = Highmark claim · Blue = internal claim'}</small>
       </div>
       <div className={`mpl-file-content ${['835', 'MIR', 'RECON', '837'].includes(String(selected.type).toUpperCase()) ? 'one-claim-per-line' : ''}`}>
-        <div className="mpl-file-content-heading"><strong>File content</strong><div className="mpl-file-search"><label><span className="sr-only">Search file content</span><input type="search" value={fileSearch} onChange={event => { setFileSearch(event.target.value); setSearchIndex(0); searchRefs.current = []; }} placeholder="Search file…" /></label><span>{searchTerm ? `${searchCount ? searchIndex + 1 : 0} / ${searchCount}` : '0 / 0'}</span><button type="button" onClick={() => moveSearch(-1)} disabled={!searchCount} aria-label="Previous search result" title="Previous search result">↑</button><button type="button" onClick={() => moveSearch(1)} disabled={!searchCount} aria-label="Next search result" title="Next search result">↓</button></div><small>{selected.filename}</small></div>
+        <div className="mpl-file-content-heading"><strong>File content</strong><button type="button" className="mpl-reveal-all-button" onClick={() => setRevealAll(current => !current)}>{revealAll ? 'Mask All' : 'Reveal All'}</button><div className="mpl-file-search"><label><span className="sr-only">Search file content</span><input type="search" value={fileSearch} onChange={event => { setFileSearch(event.target.value); setSearchIndex(0); searchRefs.current = []; }} placeholder="Search file…" /></label><span>{searchTerm ? `${searchCount ? searchIndex + 1 : 0} / ${searchCount}` : '0 / 0'}</span><button type="button" onClick={() => moveSearch(-1)} disabled={!searchCount} aria-label="Previous search result" title="Previous search result">↑</button><button type="button" onClick={() => moveSearch(1)} disabled={!searchCount} aria-label="Next search result" title="Next search result">↓</button></div><small>{selected.filename}</small></div>
         {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{displayRows.map(renderLine)}</div>}
       </div>
     </section>
