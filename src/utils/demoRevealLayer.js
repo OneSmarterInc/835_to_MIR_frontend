@@ -31,29 +31,42 @@ function wrapNode(node) {
   let remaining = node.nodeValue;
   const fragment = document.createDocumentFragment();
 
-  values.forEach(([masked, encoded]) => {
-    const index = remaining.indexOf(masked);
-    if (index < 0) return;
+  while (remaining) {
+    let bestIndex = -1;
+    let bestMasked = '';
+    let bestEncoded = '';
 
-    if (index > 0) fragment.appendChild(document.createTextNode(remaining.slice(0, index)));
+    values.forEach(([masked, encoded]) => {
+      const index = remaining.indexOf(masked);
+      if (index >= 0 && (bestIndex < 0 || index < bestIndex || (index === bestIndex && masked.length > bestMasked.length))) {
+        bestIndex = index;
+        bestMasked = masked;
+        bestEncoded = encoded;
+      }
+    });
+
+    if (bestIndex < 0) {
+      fragment.appendChild(document.createTextNode(remaining));
+      break;
+    }
+
+    if (bestIndex > 0) fragment.appendChild(document.createTextNode(remaining.slice(0, bestIndex)));
 
     const button = document.createElement('button');
     button.type = 'button';
     button.className = REVEAL_CLASS;
     button.title = 'Click to reveal this encoded value';
-    button.textContent = masked;
-    button.dataset.encodedValue = encoded;
+    button.textContent = bestMasked;
+    button.dataset.encodedValue = bestEncoded;
     button.addEventListener('click', () => {
-      button.textContent = button.dataset.encodedValue || masked;
+      button.textContent = button.dataset.encodedValue || bestMasked;
       button.classList.add(REVEALED_CLASS);
       button.removeAttribute('title');
     });
 
     fragment.appendChild(button);
-    remaining = remaining.slice(index + masked.length);
-  });
-
-  if (remaining) fragment.appendChild(document.createTextNode(remaining));
+    remaining = remaining.slice(bestIndex + bestMasked.length);
+  }
   if (fragment.childNodes.length) node.parentNode.replaceChild(fragment, node);
 }
 
