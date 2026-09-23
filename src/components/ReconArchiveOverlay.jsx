@@ -89,6 +89,7 @@ function ReconFilePreview({ file, onBack }) {
   const [text, setText] = useState('');
   const [fullText, setFullText] = useState('');
   const [revealed, setRevealed] = useState(() => new Set());
+  const [revealAll, setRevealAll] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -112,6 +113,7 @@ function ReconFilePreview({ file, onBack }) {
         setText(masked || '(Empty file)');
         setFullText(full || '(Empty file)');
         setRevealed(new Set());
+        setRevealAll(false);
       })
       .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
       .finally(() => setLoading(false));
@@ -157,7 +159,7 @@ function ReconFilePreview({ file, onBack }) {
         const fullToken = fullTokens[tokenIndex] ?? token;
         const tokenKey = file.id + '-' + lineIndex + '-' + tokenIndex;
         const isMasked = token.includes('*') && fullToken !== token;
-        const displayed = isMasked && !revealed.has(tokenKey) ? token : fullToken;
+        const displayed = isMasked && !revealAll && !revealed.has(tokenKey) ? token : fullToken;
         const needle = query.trim().toLocaleLowerCase();
         const lower = displayed.toLocaleLowerCase();
 
@@ -184,7 +186,7 @@ function ReconFilePreview({ file, onBack }) {
         ) : <React.Fragment key={tokenKey}>{content}</React.Fragment>;
       });
     });
-  }, [text, fullText, query, index, revealed, file.id]);
+  }, [text, fullText, query, index, revealed, revealAll, file.id]);
 
   const move = (direction) => {
     if (!occurrences.length) return;
@@ -194,6 +196,11 @@ function ReconFilePreview({ file, onBack }) {
   return <section className="recon-file-preview-page recon-react-preview">
     <header><div><span>RECON FILE VIEWER</span><h2>{file.original_filename}</h2></div><button type="button" className="recon-archive-back" onClick={onBack}>← Back to Uploaded RECON files</button></header>
     <div className="recon-file-preview-toolbar">
+      {typeof window !== 'undefined' && localStorage.getItem('mir-demo-substitution') === 'true' && (
+        <button type="button" className="recon-file-nav" onClick={() => setRevealAll(current => !current)} title={revealAll ? 'Mask all PHI' : 'Reveal all PHI'}>
+          {revealAll ? 'Mask All' : 'Reveal All'}
+        </button>
+      )}
       <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search file…" aria-label="Search RECON file" />
       <button type="button" className="recon-file-nav" onClick={() => move(-1)} disabled={!occurrences.length} aria-label="Previous match">↑</button>
       <span>{query.trim() ? `${occurrences.length ? index + 1 : 0} / ${occurrences.length}` : '0 / 0'}</span>
