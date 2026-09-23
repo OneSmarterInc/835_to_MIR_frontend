@@ -64,6 +64,7 @@ function scanMaskedValues() {
       const revealScale = encodedWidth > rect.width ? Math.max(0.55, rect.width / encodedWidth) : 1;
       map.push({
         id: token + "::" + occurrence,
+        node,
         token,
         encodedValue,
         rect,
@@ -124,6 +125,34 @@ export default function DemoRevealLayer() {
       if (scanFrame.current) window.cancelAnimationFrame(scanFrame.current);
     };
   }, [refreshTargets]);
+
+  useEffect(() => {
+    if (!revealed.size || !targets.length) return undefined;
+
+    let frameId = 0;
+    const syncPositions = () => {
+      setTargets((current) => current.map((target) => {
+        if (!target.node || !target.node.isConnected) return target;
+        const rect = document.createRange();
+        const text = target.node.nodeValue || "";
+        const tokenIndex = text.indexOf(target.token);
+        if (tokenIndex < 0) return target;
+        rect.setStart(target.node, tokenIndex);
+        rect.setEnd(target.node, tokenIndex + target.token.length);
+        const nextRect = rect.getBoundingClientRect();
+        if (!nextRect.width || !nextRect.height) return target;
+
+        return {
+          ...target,
+          rect: nextRect,
+        };
+      }));
+      frameId = window.requestAnimationFrame(syncPositions);
+    };
+
+    frameId = window.requestAnimationFrame(syncPositions);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [revealed, targets.length]);
 
   if (typeof document === "undefined" || !targets.length) return null;
 
