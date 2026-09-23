@@ -1,3 +1,6 @@
+// 2026-09-23 - Yash: Added withCsrf wrapper for CSRF protection
+import { withCsrf } from '../../utils/api';
+
 function getAuthHeaders() {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = {};
@@ -15,11 +18,11 @@ export async function searchUniversalClaims(clientId, query = '', field = 'all',
     page: String(page),
     page_size: String(pageSize),
   });
-  const res = await fetch(`/edi835/api/837/search/?${params}`, {
+  const res = await fetch(`/edi835/api/837/search/?${params}`, withCsrf({
     credentials: 'include',
     headers: getAuthHeaders(),
     signal,
-  });
+  }));
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load universal claims.');
   return data;

@@ -6,7 +6,8 @@ import FileViewerModal from "./components/FileViewerModal";
 import SftpBrowserModal from "./components/SftpBrowserModal";
 import AccessDeniedScreen from "./components/AccessDeniedScreen";
 
-import { safeFetchJson } from "./utils/api";
+// 2026-09-23 - Yash: Import withCsrf helper for CSRF header injection
+import { safeFetchJson, withCsrf } from "./utils/api";
 import { clearSessionExpiry, scheduleSessionExpiry } from "./utils/sessionExpiry";
 
 import LoginPage from "./pages/LoginPage";
@@ -336,13 +337,10 @@ export default function App() {
 
       await fetch(
         "/accounts/api/logout/",
-        {
-
+        withCsrf({
           method:"POST",
-
           credentials:"include"
-
-        }
+        })
       );
 
 

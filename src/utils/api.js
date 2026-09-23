@@ -18,13 +18,33 @@ function withAdminChecksClient(url) {
   return hash ? `${scoped}#${hash}` : scoped;
 }
 
+// 2026-09-23 - Yash: Added CSRF token cookie reader and header injection helper
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+function readCookie(name) {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : "";
+}
+
+export function withCsrf(options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (SAFE_METHODS.has(method)) return { credentials: "include", ...options };
+  const token = readCookie("csrftoken");
+  return {
+    credentials: "include",
+    ...options,
+    headers: { ...(options.headers || {}), "X-CSRFToken": token },
+  };
+}
+
 export function portalFetch(url, options = {}) {
   let requestUrl = withAdminChecksClient(url);
   if (typeof requestUrl === "string" && /^https?:\/\//i.test(requestUrl)) {
     const parsed = new URL(requestUrl);
     requestUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
   }
-  return fetch(requestUrl, { ...options, credentials: "include" });
+  return fetch(requestUrl, withCsrf(options));
 }
 
 function shouldDeduplicate(url, options = {}) {
