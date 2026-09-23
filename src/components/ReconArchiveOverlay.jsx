@@ -87,6 +87,8 @@ function findOccurrences(text, query) {
 
 function ReconFilePreview({ file, onBack }) {
   const [text, setText] = useState('');
+  const [fullText, setFullText] = useState('');
+  const [revealed, setRevealed] = useState(() => new Set());
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -103,9 +105,14 @@ function ReconFilePreview({ file, onBack }) {
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.success) throw new Error(data.error || `Unable to open file (${response.status}).`);
-        return encodeDemoFileContent(String(data.content || ''), 'RECON');
+        const raw = String(data.content || '');
+        return { masked: encodeDemoFileContent(raw, 'RECON', true), full: encodeDemoFileContent(raw, 'RECON', false) };
       })
-      .then((value) => setText(value || '(Empty file)'))
+      .then(({ masked, full }) => {
+        setText(masked || '(Empty file)');
+        setFullText(full || '(Empty file)');
+        setRevealed(new Set());
+      })
       .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
       .finally(() => setLoading(false));
     return () => controller.abort();
@@ -133,23 +140,51 @@ function ReconFilePreview({ file, onBack }) {
   }, [query, text, index, occurrences.length]);
 
   const rendered = useMemo(() => {
-    const term = query.trim();
-    if (!term || !text) return text;
-    const lower = text.toLocaleLowerCase();
-    const needle = term.toLocaleLowerCase();
-    const output = [];
-    let cursor = 0;
-    let matchIndex = 0;
-    while (cursor < text.length) {
-      const at = lower.indexOf(needle, cursor);
-      if (at < 0) { output.push(text.slice(cursor)); break; }
-      if (at > cursor) output.push(text.slice(cursor, at));
-      const current = matchIndex++;
-      output.push(<mark key={`${at}-${current}`} ref={(node) => { matchRefs.current[current] = node; }} className={current === index ? 'recon-file-search active' : 'recon-file-search'}>{text.slice(at, at + term.length)}</mark>);
-      cursor = at + term.length;
-    }
-    return output;
-  }, [text, query, index]);
+    const lines = String(text || '').split(/(\r?\n)/);
+    const fullLines = String(fullText || '').split(/(\r?\n)/);
+    let searchMatchIndex = 0;
+
+    return lines.map((line, lineIndex) => {
+      if (/^\r?\n$/.test(line)) return line;
+
+      const fullLine = fullLines[lineIndex] || line;
+      const maskedTokens = line.split(/(\s+)/);
+      const fullTokens = fullLine.split(/(\s+)/);
+
+      return maskedTokens.map((token, tokenIndex) => {
+        if (/^\s+$/.test(token) || !token) return token;
+
+        const fullToken = fullTokens[tokenIndex] ?? token;
+        const tokenKey = file.id + '-' + lineIndex + '-' + tokenIndex;
+        const isMasked = token.includes('*') && fullToken !== token;
+        const displayed = isMasked && !revealed.has(tokenKey) ? token : fullToken;
+        const needle = query.trim().toLocaleLowerCase();
+        const lower = displayed.toLocaleLowerCase();
+
+        if (!needle) {
+          return isMasked ? (
+            <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealed((current) => new Set(current).add(tokenKey))}>{displayed}</button>
+          ) : displayed;
+        }
+
+        const pieces = [];
+        let cursor = 0;
+        while (cursor < displayed.length) {
+          const at = lower.indexOf(needle, cursor);
+          if (at < 0) { pieces.push(displayed.slice(cursor)); break; }
+          if (at > cursor) pieces.push(displayed.slice(cursor, at));
+          const currentMatch = searchMatchIndex++;
+          pieces.push(<mark key={tokenKey + '-match-' + currentMatch} ref={(node) => { matchRefs.current[currentMatch] = node; }} className={currentMatch === index ? 'recon-file-search active' : 'recon-file-search'}>{displayed.slice(at, at + needle.length)}</mark>);
+          cursor = at + needle.length;
+        }
+
+        const content = pieces.length ? pieces : [displayed];
+        return isMasked ? (
+          <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealed((current) => new Set(current).add(tokenKey))}>{content}</button>
+        ) : <React.Fragment key={tokenKey}>{content}</React.Fragment>;
+      });
+    });
+  }, [text, fullText, query, index, revealed, file.id]);
 
   const move = (direction) => {
     if (!occurrences.length) return;
