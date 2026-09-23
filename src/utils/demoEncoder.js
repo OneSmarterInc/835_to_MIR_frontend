@@ -59,14 +59,6 @@ const PHI_EXACT_KEYS = new Set([
   'cpt_code',
   'hcpcs_code',
   'drg_code',
-  'charge_amount',
-  'allowed_amount',
-  'paid_amount',
-  'payment_amount',
-  'patient_responsibility',
-  'amount_to_pay',
-  'recon_paid_amount',
-  'difference_amount',
 ]);
 
 function normalizeKey(key) {
