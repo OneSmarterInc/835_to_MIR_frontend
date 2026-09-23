@@ -69,8 +69,17 @@ const PHI_EXACT_KEYS = new Set([
   'difference_amount',
 ]);
 
+function normalizeKey(key) {
+  return String(key || '')
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
 function isPhiKey(key) {
-  const normalized = String(key || '').trim().toLowerCase();
+  const normalized = normalizeKey(key);
   return PHI_EXACT_KEYS.has(normalized) || PHI_KEY_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
@@ -94,7 +103,7 @@ export function encodeDemoData(value, key = '') {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => encodeDemoData(item));
+    return value.map((item) => encodeDemoData(item, key));
   }
 
   if (value && typeof value === 'object') {
