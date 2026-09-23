@@ -2,6 +2,30 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
 const DIGIT_MAP = '3749062815';
 
+// Words/values that should remain readable in demo mode.
+// Useful for labels, statuses, error codes, and technical identifiers.
+const PASSTHROUGH_WORDS = new Set([
+  'claim',
+  'claims',
+  'number',
+  'unavailable',
+  'conversion',
+  'hold',
+  'holds',
+  'historical',
+  'run',
+  'resolved',
+  'unresolved',
+  'error',
+  'archived',
+  'manual',
+  'sftp',
+  'mir',
+  '835',
+  '837',
+  'x12'
+]);
+
 // Fields used for navigation, matching, and API lookups must never be masked.
 const PASSTHROUGH_KEYS = new Set([
   'id',
@@ -29,12 +53,19 @@ const PASSTHROUGH_KEYS = new Set([
 export function encodeDemoValue(value) {
   if (typeof value !== 'string') return value;
 
-  return value.replace(/[A-Za-z0-9]/g, (ch) => {
-    if (ch >= '0' && ch <= '9') return DIGIT_MAP[Number(ch)];
+  return value
+    .split(/(\s+)/)
+    .map((part) => {
+      if (PASSTHROUGH_WORDS.has(part.toLowerCase())) return part;
 
-    const mapped = LETTER_MAP[LETTERS.indexOf(ch.toUpperCase())];
-    return ch === ch.toLowerCase() ? mapped.toLowerCase() : mapped;
-  });
+      return part.replace(/[A-Za-z0-9]/g, (ch) => {
+        if (ch >= '0' && ch <= '9') return DIGIT_MAP[Number(ch)];
+
+        const mapped = LETTER_MAP[LETTERS.indexOf(ch.toUpperCase())];
+        return ch === ch.toLowerCase() ? mapped.toLowerCase() : mapped;
+      });
+    })
+    .join('');
 }
 
 export function encodeDemoData(value, key = '') {
