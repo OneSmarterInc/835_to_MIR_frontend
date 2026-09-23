@@ -148,7 +148,7 @@ export function encodeDemoFileContent(rawContent, fileType = '') {
 
       if (type === 'RECON') {
         line = line.replace(
-          /^(\\s*)(\\S+)(\\s+)(\\S+)(\\s+)(\\S+)(?=\\s|$)/,
+          /^(\s*)(\S+)(\s+)(\S+)(\s+)(\S+)(?=\s|$)/,
           (_, prefix, claimId, between1, memberId, between2, serviceDates) =>
             prefix +
             encodeX12Field(claimId) +
