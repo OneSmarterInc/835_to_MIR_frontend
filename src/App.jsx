@@ -167,14 +167,19 @@ export default function App() {
 
     try{
 
-
-      const {data}=await safeFetchJson(
+      // Never let the initial auth check hold the entire application on a
+      // blank loading screen when the backend/session endpoint is slow or
+      // unreachable. Fall back to the login screen after 8 seconds.
+      const userRequest = safeFetchJson(
         "/accounts/api/user/",
         {
           credentials:"include"
         }
       );
-
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Authentication check timed out.")), 8000)
+      );
+      const {data}=await Promise.race([userRequest, timeout]);
 
       setUserState(data);
 
