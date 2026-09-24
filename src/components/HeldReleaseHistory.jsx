@@ -17,6 +17,11 @@ function formatTimestamp(value) {
   });
 }
 
+function safeCount(value) {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? count : 0;
+}
+
 function statusLabel(release) {
   const status = String(release?.sftp_status || "UNKNOWN").toUpperCase();
   if (status === "PUSHED") return "PUSHED";
@@ -111,8 +116,8 @@ export default function HeldReleaseHistory() {
                     </button>
                   </td>
                   <td><span className="badge">{statusLabel(release)}</span></td>
-                  <td className="num">{Number(release.claim_count || 0).toLocaleString()}</td>
-                  <td className="num">{Number(release.service_count || 0).toLocaleString()}</td>
+                  <td className="num">{safeCount(release.claim_count).toLocaleString()}</td>
+                  <td className="num">{safeCount(release.service_count).toLocaleString()}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(release.completed_at || release.created_at)}</td>
                   <td>
                     <button type="button" className="btn" onClick={() => setSelectedId(selected ? "" : String(release.id))}>
@@ -163,7 +168,7 @@ export default function HeldReleaseHistory() {
                     <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.previous_sent_at)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.eligible_send_at)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(claim.released_at || selectedRelease.completed_at)}</td>
-                    <td className="num">{Number(claim.service_count || 0).toLocaleString()}</td>
+                    <td className="num">{safeCount(claim.service_count).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
