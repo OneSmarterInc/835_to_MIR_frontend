@@ -40,9 +40,6 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar, isSide
   };
 
   useEffect(() => {
-    // The shell starts with the rail visible; hide it so it behaves as an overlay drawer.
-    if (onToggleSidebar) onToggleSidebar();
-
     const isPointerOverDrawer = (event) => {
       const rail = document.querySelector('.shell > .rail');
       return !!rail && (rail.contains(event.target) || event.clientX <= 220);
