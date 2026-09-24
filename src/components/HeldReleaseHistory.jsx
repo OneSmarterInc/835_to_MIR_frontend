@@ -91,15 +91,13 @@ export default function HeldReleaseHistory() {
             <tr>
               <th>RELEASE MIR FILE</th>
               <th>SFTP STATUS</th>
-              <th>CLAIMS</th>
-              <th>SERVICES</th>
               <th>COMPLETED</th>
               <th>DETAIL</th>
             </tr>
           </thead>
           <tbody>
             {loading && releases.length === 0 ? (
-              <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading held-claim releases…</td></tr>
+              <tr><td colSpan="4" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading held-claim releases…</td></tr>
             ) : releases.length === 0 ? (
               <tr><td colSpan="6" style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>No held-claim MIR release files have been created yet.</td></tr>
             ) : releases.map((release) => {
@@ -116,8 +114,6 @@ export default function HeldReleaseHistory() {
                     </button>
                   </td>
                   <td><span className="badge">{statusLabel(release)}</span></td>
-                  <td className="num">{safeCount(release.claim_count).toLocaleString()}</td>
-                  <td className="num">{safeCount(release.service_count).toLocaleString()}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{formatTimestamp(release.completed_at || release.created_at)}</td>
                   <td>
                     <button type="button" className="btn" onClick={() => setSelectedId(selected ? "" : String(release.id))}>
