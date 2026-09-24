@@ -25,6 +25,7 @@ import ContactsView from "./pages/ContactsView";
 import AdminView from "./pages/AdminView";
 import ResultView from "./pages/ResultView";
 import ClientClaimSearchView from "./pages/ClientClaimSearchView";
+import SecurityView from "./pages/SecurityView";
 
 
 export default function App() {
@@ -172,12 +173,6 @@ export default function App() {
         {
           credentials:"include"
         }
-      );
-
-
-      console.log(
-        "USER STATUS:",
-        data
       );
 
 
@@ -810,6 +805,11 @@ export default function App() {
           {
             activeTab==="contacts" &&
             <ContactsView/>
+          }
+
+          {
+            activeTab==="security" &&
+            <SecurityView/>
           }
 
 

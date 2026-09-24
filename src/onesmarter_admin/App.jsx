@@ -28,11 +28,12 @@ import ClaimSearchView from './components/ClaimSearchView';
 import NoticesView from '../pages/NoticesView';
 import ClientSelectDropdown from './components/ClientSelectDropdown';
 import OffboardedClientBanner from './components/OffboardedClientBanner';
+import SecurityView from '../pages/SecurityView';
 import { clearSessionExpiry, scheduleSessionExpiry } from '../utils/sessionExpiry';
 
 import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
-const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'notices', 'files', 'promote', 'trust', 'ops'];
+const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'notices', 'files', 'promote', 'trust', 'ops', 'security'];
 
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
@@ -456,6 +457,9 @@ export default function App({ user, onLogout }) {
           {canView('access') && <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
             <span>Access</span>
           </button>}
+          {canView('security') && <button className={`navitem ${activeNav === 'security' ? 'on' : ''}`} onClick={() => setActiveNav('security')}>
+            <span>Security Keys</span>
+          </button>}
           {canView('defaults') && <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
             <span>Default Configs</span>
           </button>}
@@ -666,6 +670,10 @@ export default function App({ user, onLogout }) {
 
           {activeNav === 'access' && (
             <AccessView currentUser={currentUser} />
+          )}
+
+          {activeNav === 'security' && (
+            <SecurityView />
           )}
 
           {activeNav === 'defaults' && (
