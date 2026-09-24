@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isDemoModeEnabled, toggleDemoMode } from '../../utils/demoSubstitution';
 
 export default function Header({ onSignOut, currentUser, onToggleSidebar, isSidebarOpen = false }) {
