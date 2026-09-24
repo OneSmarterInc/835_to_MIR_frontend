@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { isDemoModeEnabled, toggleDemoMode } from '../../utils/demoSubstitution';
 
 export default function Header({ onSignOut, currentUser, onToggleSidebar, isSidebarOpen = false }) {
@@ -25,63 +25,6 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar, isSide
     rail.style.setProperty('pointer-events', isSidebarOpen ? 'auto' : 'none', 'important');
   }, [isSidebarOpen]);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const drawerOpenRef = useRef(false);
-
-  const setDrawerState = (open) => {
-    drawerOpenRef.current = open;
-    setDrawerOpen(open);
-  };
-
-  const toggleDrawer = () => {
-    const next = !drawerOpenRef.current;
-    setDrawerState(next);
-    onToggleSidebar?.();
-  };
-
-  useEffect(() => {
-    const isPointerOverDrawer = (event) => {
-      const rail = document.querySelector('.shell > .rail');
-      return !!rail && (rail.contains(event.target) || event.clientX <= 220);
-    };
-
-    const handleMouseMove = (event) => {
-      // Open from the left edge.
-      if (event.clientX <= 24 && !drawerOpenRef.current) {
-        setDrawerState(true);
-        onToggleSidebar?.();
-        return;
-      }
-
-      // Never close while the cursor is anywhere inside the drawer.
-      // Close only after the pointer has actually left the drawer.
-      if (drawerOpenRef.current && !isPointerOverDrawer(event) && event.clientX > 220) {
-        setDrawerState(false);
-        onToggleSidebar?.();
-      }
-    };
-
-    const handleClick = (event) => {
-      const rail = document.querySelector('.shell > .rail');
-      if (!rail || !rail.contains(event.target)) return;
-      const option = event.target.closest('a, button, [role="button"]');
-      if (option) {
-        window.setTimeout(() => {
-          if (drawerOpenRef.current) {
-            setDrawerState(false);
-            onToggleSidebar?.();
-          }
-        }, 150);
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('click', handleClick, true);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('click', handleClick, true);
-    };
-  }, [onToggleSidebar]);
 
   return (
     <>
