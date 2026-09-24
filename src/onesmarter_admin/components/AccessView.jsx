@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAccessInfo, fetchClients, createUser, updateUser, deleteUser } from '../services/api';
+import { fetchAccessInfo, fetchClients, createUser, updateUser, deleteUser, grantClientAccess, revokeClientAccess } from '../services/api';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import UserDetailsModal from './modals/UserDetailsModal';
+import TimeDisplay from '../../components/TimeDisplay';
+import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
+import { isAdministrativeAccount, isSuperAdminAccount } from '../utils/adminRoles';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 export default function AccessView({ currentUser }) {
   const [accessData, setAccessData] = useState(null);
@@ -29,8 +33,8 @@ export default function AccessView({ currentUser }) {
   async function loadClients() {
     try {
       const data = await fetchClients();
-      const list = data.results || data || [];
-      setClients(list);
+      const list = data.clients || data.results || (Array.isArray(data) ? data : []);
+      setClients(list.filter((client) => String(client.stage || '').toLowerCase() !== 'offboarded'));
     } catch (err) {
       console.error("Failed to fetch clients", err);
     }
@@ -49,11 +53,11 @@ export default function AccessView({ currentUser }) {
     }
   }
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   const handleCreateUser = async (userData) => {
     if ((userData.role === 'Admin' || userData.role === 'Super Admin') && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot create Admin or Super Admin accounts.");
+      await showAppAlert("Standard Admins cannot create Admin or Super Admin accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     await createUser(userData);
@@ -63,11 +67,11 @@ export default function AccessView({ currentUser }) {
 
   const handleEditUser = async (userId, updatedData) => {
     const targetUser = accessData?.staff?.find(u => u.id === userId);
-    const targetIsAdmin = targetUser?.role === 'Admin' || targetUser?.role === 'Super Admin' || targetUser?.is_staff || targetUser?.is_superuser;
+    const targetIsAdmin = isAdministrativeAccount(targetUser);
     const tryingToPromote = updatedData.role === 'Admin' || updatedData.role === 'Super Admin';
 
     if ((targetIsAdmin || tryingToPromote) && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot modify Admin/Super Admin roles or accounts.");
+      await showAppAlert("Standard Admins cannot modify Admin/Super Admin roles or accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     await updateUser(userId, updatedData);
@@ -76,9 +80,9 @@ export default function AccessView({ currentUser }) {
   };
 
   const handleDeleteUser = async (member) => {
-    const isTargetAdmin = member.role === 'Admin' || member.role === 'Super Admin' || member.is_staff || member.is_superuser;
+    const isTargetAdmin = isAdministrativeAccount(member);
     if (isTargetAdmin && !isSuperAdmin) {
-      alert("Access Denied: Standard Admins cannot delete Admin or Super Admin accounts.");
+      await showAppAlert("Standard Admins cannot delete Admin or Super Admin accounts.", { title: 'Access Denied', tone: 'error' });
       return;
     }
     const isCurrentUser = member.email === currentUser?.email;
@@ -86,7 +90,12 @@ export default function AccessView({ currentUser }) {
       ? `WARNING: You are about to delete your own administrative account (${member.email}). Are you sure you want to proceed?`
       : `Are you sure you want to delete the ${member.role.toLowerCase()} account (${member.email})?`;
       
-    if (window.confirm(confirmMsg)) {
+    if (await showAppConfirm(confirmMsg, {
+      title: isCurrentUser ? 'Delete Your Account?' : 'Delete Account?',
+      confirmLabel: 'Delete Account',
+      danger: true,
+      tone: 'error',
+    })) {
       try {
         setLoading(true);
         await deleteUser(member.id);
@@ -97,6 +106,28 @@ export default function AccessView({ currentUser }) {
         setLoading(false);
       }
     }
+  };
+
+  const handleScreenPermissions = async (member, adminScreens) => {
+    if (!isSuperAdmin || member.role !== 'Admin') return;
+    await updateUser(member.id, { admin_screens: adminScreens });
+    setSelectedUser((current) => ({ ...current, admin_screens: adminScreens }));
+    await loadAccess();
+  };
+
+  const handleGrantClientAccess = async (member, grant) => {
+    await grantClientAccess({ user_id: member.id, ...grant });
+    await loadAccess();
+  };
+
+  const handleRevokeClientAccess = async (grant, member) => {
+    const confirmed = await showAppConfirm(
+      `Revoke ${member?.person || member?.name || member?.email || 'this administrator'}'s access to ${grant.client_name} now?`,
+      { title: 'Revoke Client Data Access?', confirmLabel: 'Revoke Access', danger: true, tone: 'error' },
+    );
+    if (!confirmed) return;
+    await revokeClientAccess(grant.id);
+    await loadAccess();
   };
 
   const handleSort = (field) => {
@@ -150,36 +181,11 @@ export default function AccessView({ currentUser }) {
     });
   };
 
-  function formatDate(isoStr) {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      if (isNaN(d.getTime())) return isoStr;
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
-      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-    } catch (e) {
-      return isoStr;
-    }
-  }
-
   const sortedMembers = getSortedMembers();
 
   return (
-    <section className="view on" id="v-access">
-      <div className="hdr-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div className="eyebrow">Security Controls</div>
-          <h1 style={{ margin: 0 }}>Access Matrix</h1>
-          <p className="sub">Administrative staff role-based access and break-glass logging.</p>
-        </div>
-        <button className="btn primary" onClick={() => setShowCreateModal(true)}>
-          + Create User
-        </button>
-      </div>
+    <section className="view on table-screen" id="v-access">
+      <WorkspaceHeader eyebrow="Governance workspace" title="Access Matrix" description="Administrative staff role-based access and break-glass logging."><button className="btn primary" onClick={() => setShowCreateModal(true)}>+ Create User</button></WorkspaceHeader>
 
       <div className="metrics">
         <div className="metric">
@@ -189,9 +195,9 @@ export default function AccessView({ currentUser }) {
         </div>
         <div className="metric">
           <div className="v" style={{ fontSize: '18px' }}>
-            {accessData?.last_login ? formatDate(accessData.last_login) : accessData ? 'Never' : 'Loading...'}
+            {accessData?.last_login ? <TimeDisplay value={accessData.last_login} easternOnly /> : accessData ? 'Never' : 'Loading...'}
           </div>
-          <div className="l">Last Login</div>
+          <div className="l">Last Login (EST)</div>
           <div className="d">Dynamic database record</div>
         </div>
         <div className="metric">
@@ -204,7 +210,6 @@ export default function AccessView({ currentUser }) {
         <div className="metric">
           <div className="v">{accessData?.current_admin?.session_state || 'Active'}</div>
           <div className="l">Session State</div>
-          <div className="d">{accessData?.current_admin?.session_desc || '30-min auto-expire'}</div>
         </div>
       </div>
 
@@ -221,6 +226,7 @@ export default function AccessView({ currentUser }) {
       ) : (
         <>
           <h2 className="sec">Administrative Staff Access</h2>
+          <div className="admin-table-scroll">
           <table style={{ width: '100%' }}>
             <thead>
               <tr>
@@ -240,7 +246,7 @@ export default function AccessView({ currentUser }) {
                   Client {renderSortIcon('client')}
                 </th>
                 <th>MFA Status</th>
-                <th>Last Login</th>
+                <th>Last Login (EST)</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'center', width: '80px' }}>Actions</th>
               </tr>
@@ -270,10 +276,10 @@ export default function AccessView({ currentUser }) {
                       {member.mfa}
                     </span>
                   </td>
-                  <td className="num">{formatDate(member.last_login)}</td>
+                  <td className="num" style={{ minWidth: '210px' }}><TimeDisplay value={member.last_login} easternOnly /></td>
                   <td><span className="tag ok">{member.status}</span></td>
                   <td style={{ textAlign: 'center' }}>
-                    {((member.role === 'Admin' || member.role === 'Super Admin') && !(currentUser?.role === 'Super Admin' || currentUser?.is_superuser)) ? (
+                    {(isAdministrativeAccount(member) && !isSuperAdmin) ? (
                       <span style={{ color: 'var(--ink-3)', fontSize: '12px' }} title="Admins cannot manage other Admins/Super Admins">🔒</span>
                     ) : (
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -300,6 +306,7 @@ export default function AccessView({ currentUser }) {
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 
@@ -325,6 +332,13 @@ export default function AccessView({ currentUser }) {
         isOpen={showDetailsModal}
         onClose={() => { setShowDetailsModal(false); setSelectedUser(null); }}
         user={selectedUser}
+        availableScreens={accessData?.available_admin_screens || []}
+        canManageScreens={isSuperAdmin}
+        onSaveScreens={handleScreenPermissions}
+        clients={clients}
+        activeGrants={(accessData?.active_client_grants || []).filter((grant) => String(grant.user_id) === String(selectedUser?.id))}
+        onGrantClientAccess={handleGrantClientAccess}
+        onRevokeClientAccess={handleRevokeClientAccess}
       />
     </section>
   );

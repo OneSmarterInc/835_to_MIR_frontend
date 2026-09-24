@@ -1,0 +1,2313 @@
+[
+  {
+    "code": "CX001",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "COB not calculated due to error in primary calculation",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX002",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "Error encountered in COB secondary calculation",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX003",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "Review occurred in BCBS Calculator for primary calculation",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX004",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "Review occurred in COB Calculator for secondary calculation.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX100",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "A secondary claim payment for a claim submitted with an OPL=1 value has a COB Calculation Method code inconsistent with the relativity of the lesser of the Other Insurer's Allowance (OIA) and the BCBS Pre-Priced Allowance (BCA), or A secondary claim payment for a claim submitted with an OPL= 2 or 3 value has a COB Calculation Method (not CHG) code inconsistent with the requirement that the claim must be coordinated to submitted charges. -",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX110",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "The Other Carrier Payment plus the Patient Liability exceeds the Submitted Charge for the claim or a line item. This situation will not presently process through BCBS Plans correctly. Please DENY the claim back to BCBS with a 'OA23 ' and process the claim directly.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX120",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "The MIR COB Calculation Method is not 'BCA' or 'OIA\" or \"MED\". The COB calculations will not process correctly in the absence of one of these codes. Please correct the MIR and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "CX130",
+    "family": "CX",
+    "family_label": "COB calculation",
+    "family_note": "Errors determining COB primary and secondary payment calculations",
+    "definition": "The MIR COB Calculation Method is 'OIA\" or \"MED\" and the claim is inclusively priced at the claim level (837-PM 06 or 07). To process the COB secondary payment, the OIA or MED Allowance, Other Carrier Payment, Approved to Pay and Patient Liability must be summarized and applied to line 1 exclusively. (Rev. 04/2020)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DA017",
+    "family": "DA",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Adjustment Reason Code Must be a Valid Value - Consult BCBS to resolve",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DA046",
+    "family": "DA",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "ADJUSTMENT RECEIPT",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "DATE",
+    "family": "DA",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "MUST BE VALID AND >= LOCAL PLAN RECEIPT (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DBL34",
+    "family": "DBL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Patient Liability Must Equal Zero on MA HIPPS Zero Charge Claim - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DBL35",
+    "family": "DBL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Amount to Pay Must Be > 0 on MA HIPPS Zero Charge Claim With Paid Status - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DD024",
+    "family": "DD",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "INVALID DF MESSAGE CODE (LINE LEVEL) (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DP289",
+    "family": "DP",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Primacy Indicator Required and Must Be Valid Value/Space if Adjust Status = 2 - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL04",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "IF REJ CLM (ADJ STS=2) TOT NONCOV CHGS MUST=TOT PAT LIAB+TOT PP+TOT OA - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL07",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "",
+    "disposition": "undefined",
+    "source": "not in the sheet",
+    "guidance": [
+      "Seen in a notice, not defined in the sheet. Notice guidance: close direct with the Highmark team."
+    ]
+  },
+  {
+    "code": "DRL1G",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "PAYMT DISPOSITION MUST MATCH ORIG (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL1J",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "MIR CARC of R07 (DFMC of 1327) on MIR can only be used when DME Type of Service equal 9G0 or 9H0 if Professional Claim or Revenue Code of '0290' thru '0299' if Institutional Claim (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL1S",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "CARC R06 is only allowed (DF Message Code 1328) if any line on the claim has an 837 Message Code of",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL1X",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DF Message Code Not Valid Unless International Code = I- Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL1Y",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Incorrect DF Message Code Used with GOP- Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL2X",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Not All Inclusive Lines Have DF Message Code 1320- Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL2Y",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "EBP Final Settlement. No Member Cost Share Should Be Applied- Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4D",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "MIR Adjustment Reason Code R06 (which translate into DF 1328) not allowed for this claim with other CARC on claim or line level. (DF Exception",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4Q",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "TOTAL PAYMENT REDUCTION REASON CODE OA,",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4R",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "PAYMENT REDUCTION REASON CODE OA,",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4S",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "ONLY ONE TYPE OF LIABILITY DF MSG CD ALLOWED AT THE CLAIM - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4T",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "THIS DF MESSAGE CODE - CLAIM CANNOT HAVE NON COVERED DOLLARS - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4U",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "THIS DF MESSAGE CODE - LINE CANNOT HAVE NON COVERED DOLLARS - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4V",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "SF MSG CODE 1040 MUST BE PRESENT IF CARE COOR DF MSG CODE",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4W",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "SF MSG CD 1011 MUST BE PRESENT WHEN PRV TIMELY FILING DF MSG CD",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4X",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Payment Reduction Reason Code 'PL' Not Allowed if No Provider Sanction Amount on the SF - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL4Z",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 1309 or 1322 For Use Only When SFMC 1040 Assigned on All Lines- Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5A",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 1323 For Use Only When SFMC is",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5B",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DF MESSAGE CODE 1134 CAN ONLY BE ASSIGNED WHEN PM = 01 (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5C",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "CLAIM LEVEL DFMC REQUIRES TOTAL NON-COVERED CHARGE GREATER (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5D",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 0230 IS NOT ALLOWED FOR VA/MILITARY PROVIDERS DURING 6 YEAR PERIOD (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5E",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 0230 NOT ALLOWED FOR VA/MILITARY PROVIDERS - LINE DURING 6 YEARS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5F",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 0230 IS NOT ALLOWED FOR IHS PROVIDERS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5G",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DFMC 0230 IS NOT ALLOWED FOR IHS PROVIDERS - LINE (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5H",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "LINE LEVEL DFMC REQUIRES NON-COVERED CHARGE GREATER THAN ZERO (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL5M",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DF MSG CODE 1131/1132",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "DRL6B",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "DF MSG CODE 1083 NOT ALLOWED ON BCBS GLOBAL CLAIM (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL74",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "IF PAYMENT REDUCTION REASON CODE = K, DM MUST = 2,J,K OR L (These are BCBS codes)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DRL84",
+    "family": "DRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "may also be returned) (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "DT014",
+    "family": "DT",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Total Charges All Services is Required, Must Be Numeric and = Value on SF - Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DT019",
+    "family": "DT",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Tot Covered Charges Must Be Numeric and > or = 0 or Must Be > 0 if Adjudication Stat = 1- Consult BCBS for resolution",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DXR29",
+    "family": "DXR",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Invalid adjustment, previous MIR contained a R06 (DF contains a \"1083\" or \"1328\") reject/message code. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DXR32",
+    "family": "DXR",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "The claim adjustment cannot be process as a Streamlined adjustment, please coordinate with BCBS to obtain a BCBS initiated adjustment - ___________________________________________",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "DXR65",
+    "family": "DXR",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "may also be returned) (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "EC001",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the allowable amount for an ancillary charge when processing an Inpatient claim with an inclusive Pricing Method (DRG or Per Diem). Remove the limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC002",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the allowable amount for an ancillary charge when processing an Inpatient claim with an inclusive Pricing Method (DRG or Per Diem). Remove the limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC003",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to deny a line of an inclusively priced claim (DRG or Per Diem). Do not DENY the line and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC005",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to process an inclusively priced claim that has multiple lines and there are different coinsurance percentages entered at the line level. Informational, no action should be required.",
+    "disposition": "informational",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC006",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to process an inclusively priced claim that has multiple lines where a reduction percent was entered on more than one line and the percentages are not the same. Informational, no action should be required.",
+    "disposition": "informational",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC008",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "The Partial DENIAL amount assigned to the Patient is not allowed according to the BCBS Plan pricing restraints. Remove the partial denied amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC009",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the amount to be paid for specific services within an inclusively priced claim. Processing was stopped and no BCBS calculations were performed. Remove the limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC010",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to reduce the covered days; visits or units on an inclusively priced claim. Processing was stopped and no BCBS calculations were performed. Re-submit the claim with the original days, visits, units value(s).",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC011",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a benefit management penalty for a service(s) on an inclusively priced claim. Processing was stopped and no BCBS calculations were performed. Remove the penalty amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC012",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the amount to be paid for a service on an inclusively priced claim for benefit management reasons. Processing was stopped and no BCBS calculations were performed. Remove the penalty amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC013",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the number of days; visit or units allowed on an inclusively priced claim for benefit management reasons. Processing was stopped and no BCBS calculations were performed. Re-submit the claim with the original days, visits, units value(s).",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC014",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to limit the amount to be paid for a private room even though the private room is included in the inclusive price for this claim. Processing was stopped and no BCBS calculations were performed. Remove the private room limit amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC017",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "The Host BCBS Plan included a private room DRG rate that, if covered by the Subscriber's contract, should be used when calculating the payment. Re-submit the claim using the DRG rate and a CO41 CAS code to pay the private room differential or a PR78 to assign the differential to the patient.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC018",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "The claim contains various types of reductions that contradict one another. Processing was interrupted since BCBS could not calculate the patient liability and savings accurately. Re-process the claim to assure that the patient Liabilities are clearly delineated.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC019",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "The amount entered in the Patient Liability field is different than amount resulting from BCBS calculation. Verify the Patient liability and re-submit the claim with the correct amount.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC020",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to enter a reduction or limitation or partial denial amount on a line but the rule submitted by the Host Plan does not allow application of a reduction or limitation for this claim. Remove the limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC021",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to enter a limitation on a line that has no price amount. Remove the limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC022",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to reject the first line of HIPAA Price Method 04 claim and approve other lines. Resubmit the claim with all line either Approved to Pay or DENIED.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC026",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to selectively apply deductible(s) at the line level for a line or lines included in the set of lines included in an inclusively price (DRG or Per Diem). Re-examine the claim to assure that deductibles are only applied to pre-priced lines and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC028",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a payment maximum, but BCBS indicates that no payment will be calculated. Remove the maximum payment limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC029",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a payment maximum, but BCBS indicates that the BCBS payment amount is greater than charges. Reduce the maximum payment limiting amount to the submitted charge amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC030",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a payment maximum on the line level, but the line is inclusively priced. Remove the maximum payment limiting amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC031",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a payment maximum, but BCBS indicates that the BCBS payment amount is greater than charges. Reduce the maximum payment limiting amount to the submitted charge amount and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EC032",
+    "family": "EC",
+    "family_label": "BCBS edit, claim",
+    "family_note": "Conflict found in calculation input by BCBS edits",
+    "definition": "Attempting to apply a payment maximum of zero dollars, but the Host BCBS Plan has priced the claim so that BCBS will not calculate when this condition occurs. Remove the payment maximum limiting amount or DENY the line item and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI010",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Not Applicable to MPL interface. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI011",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Deductible Code on Line. Review deductible mapping and correct or contact MPL if correct.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI014",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Not Applicable to MPL interface. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI015",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Service Charge. Correct and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI016",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Non-Covered Service Charge. Correct and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI017",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Not Applicable to MPL interface. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI018",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid partial non-covered amount - amount is not zero, or not numeric or is less than zero. Correct and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI019",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Private Room Differential Code - not 'CO41 ' or 'PR78 '. Correct and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI020",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Private Room coverage amount. Correct and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI021",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Co-payment amount - not numeric, less than zero, or greater than the charges. Correct and resubmit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI022",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "Invalid Co-Insurance amount - not numeric, less than zero, greater than the charges, or to high a percentage of amount approved to pay. Correct and resubmit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI029",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "The Benefits Management non-covered Reduction Code invalid. Correct and resubmit the claim. Codes",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "EI131",
+    "family": "EI",
+    "family_label": "BCBS edit, line",
+    "family_note": "Conflict found in calculation of specific line input by BCBS edits",
+    "definition": "are not be applicable to the MPL Interface. Contact MPL if any appear.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "FM001",
+    "family": "FM",
+    "family_label": "Interface match",
+    "family_note": "Error matching to the MPL-BCBS Interface Files",
+    "definition": "The claim cannot be found on the MPL database. Verify ICN and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "FM002",
+    "family": "FM",
+    "family_label": "Interface match",
+    "family_note": "Error matching to the MPL-BCBS Interface Files",
+    "definition": "Record retrieved line maximum exceeded. Validate that the number of line items as mapped into the MIR Table Entry Count is equal to the number of adjudicated/submitted lines on the claim.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "FM003",
+    "family": "FM",
+    "family_label": "Interface match",
+    "family_note": "Error matching to the MPL-BCBS Interface Files",
+    "definition": "Streamline Adjustment not valid for this claim. Contact BCBS and request that they initiate an adjustment on your behalf. - ________________________________________________________",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "IRL4R",
+    "family": "IRL",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Cannot Indicate AN Approved GOP Applies When Fraud is Suspected (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP001",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "BCBS calculated Fund payment differs from Fund submitted payment amount. Review the Fund amount approved to pay amount submitted and determine if any of the line items processed different from the fund adjudicated results. If the results are incorrect, an adjustment will be required to resolve the difference in payment.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP002",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "BCBS calculated patient liability differs from Fund submitted patient liability amount. Review the Patient Liability amount submitted and determine if any of the line items processed different from the fund adjudicated results. If the results are incorrect, an adjustment will be required to resolve the difference in payment.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP003",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The claim does not cross-foot correctly. Review the mapping of the BCBS Allowance (MIR1017)- it should = the Approved to Pay Amount (MIR1018) + the Patient Liability Amount (MIR1019). Correct and re-submit.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP004",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "A BCBS initiated adjustment was returned will all lines DENIED. Review the adjusted results to confirm that all lines should have been DENIED and if correct re-submit the MIR with a CAS Adjudication Group Reason Code (MIR203) with an 'OA\" vs. the \"CR\" to force acceptance.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP005",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The BCBS Default Claim Resolution (DCR) process paid this claim at 100% of the out of area Plan allowance because it remained open for 60 days. Post the default payment amounts to your internal claim system and return the resulting MIR-MO to MPL for confirmation that the claim has been closed out.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP006",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "Fraud & Abuse coded claim: Please coordinate the submission of this claim through BCBS to assure that the liability associated with this denial is properly assigned. (F&A Notice 2019)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP007",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The BCBS \"Non Covered Provision\" has been applied. No Patient Liability assumed. Please note this is informational only. (ITS Rel 15.0)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP008",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The Excess Day Per day amount passed in the MIR is not an even multiple of the per day amount passed on the 837. Please correct the amount passed in the MIR and return the claim for processing.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP009",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "Fraud & Abuse coded claim: This claim has been processed as a denial and since the Provider is Par neither the Fund or member has any liability with regards to this claim. (F&A Notice 2019)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP010",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "Fraud & Abuse coded claim: This claim has been processed as a denial but since the Provider is Non-Par the Fund or member should use discretion with regards to any liability associated with this claim. | 2)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP011",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The Timely Filing claim MIR was submitted with not all lines DENIED and with Fund and/or Patient Liability amounts greater than zero. The claim was not processed - correct and return the MIR as a Timely Filing claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: reject with CON89 at both claim header and claim line level, ensure member liability in MIR1019 is zero, then resubmit."
+    ]
+  },
+  {
+    "code": "MP012",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The Timely Filing claim MIR was submitted DENIED with zero Fund and Patient liability but missing the \"N89\" CARC resulting in it defaulting to Timely Filing claim processing. This Exception is an advisement only. -",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP013",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "The claim contains a Highmark Plan code of (070' or '363' or '378' or '443' or '943') and the Sub-Group Number (MIR303) is spaces, and the Claim Adjustment Reason Code (CARC) is not 'PR31' and Line Item Claim Reason Group Code (MIR1005) and Line Item Payment Reason Code (MIR1006) is not 'PR31' respectively -- Please add the Sub-Group Number to the MIR and return the claim for processing. - _________________________________________________________",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "MP014",
+    "family": "MP",
+    "family_label": "MPL processing",
+    "family_note": "Errors or conditions detected by MPL in processing MIR data",
+    "definition": "",
+    "disposition": "undefined",
+    "source": "not in the sheet",
+    "guidance": [
+      "Seen in a notice, not defined in the sheet. Notice guidance: Surprise Bill claims requiring the Highmark Ops team to process manually."
+    ]
+  },
+  {
+    "code": "NR001",
+    "family": "NR",
+    "family_label": "Interplan update",
+    "family_note": "Posted when a claim is being updated within the BCBSA interplan system",
+    "definition": "Reason Code Invalid - Consult BCBS for resolution.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "NRL63",
+    "family": "NR",
+    "family_label": "Interplan update",
+    "family_note": "Posted when a claim is being updated within the BCBSA interplan system",
+    "definition": "A BCBS initiated adjustment is required for this Adjustment, coordinate thru BCBS",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "NRL68",
+    "family": "NR",
+    "family_label": "Interplan update",
+    "family_note": "Posted when a claim is being updated within the BCBSA interplan system",
+    "definition": "Episode Based Payment Settlement - Consult BCBS for resolution. ________________________________________________________",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "RI001",
+    "family": "RI",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "The sum of the Covered and non-covered D/V/U does not equal the Total D/V/Us submitted. Review the claim to assure that the sum of the D/V/Us equal the Total submitted and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "RI013",
+    "family": "RI",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "When DME applied amount is greater than zero, other DME fields cannot be populated. (Rel 18.5) - MPL mapping error to HPA RP017 The claim is a DME Purchase type with 837 Message Code of Rental to Purchase and the 837 contains a Type of service Code of 9G0 if Professional or a Revenue Code of 0292 0r 0293 for Institutional O/P and an 837 Message Code of",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "RR001",
+    "family": "RR",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "The line level D/V/Us or Charges inconsistent. Examine the claim submitted to assure that all of the line items received on the HIPAA 837 were returned in the MIR or that the submitted charges of each line are as received on the HIPAA 837. IF the above are consistent with the HIPAA 837 submitted information, contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: close direct with the Highmark team, typically via Arrow."
+    ]
+  },
+  {
+    "code": "RR004",
+    "family": "RR",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "is issued, the Home Plan needs to determine if there are any Member Managed Care Penalties that need to be applied and pass that information to",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "RR008",
+    "family": "RR",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "DME Applied amount allowed only when prior rentals are applied to reduce the purchase cost - implies prior rentals not processed.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "RR101",
+    "family": "RR",
+    "family_label": "BCBS data edit",
+    "family_note": "Error conditions detected by BCBS Data Edits",
+    "definition": "The number of lines returned on the MIR-MO do not equal the number of lines on the 837. Examine the claim submitted to assure that all of the line items received on the HIPAA 837 were returned in the MIR If the above are consistent with the HIPAA 837 submitted information, contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "U201",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Consult BCBS for resolution (",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "U270",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "is present and when CIACI-PROV-SANC-IND is equal to a \"1\", \"2\" or a \"3\" (Home Plan has indicated that a Sanction shouldn't or should be applied), that the",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "U296",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "on any line.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "U298",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "and the claim is being denied/rejected. (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "U602",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Claim, Par Provider | MIR Mapping Disp 4 at claim and N74 at claim level | Approve with DFMC 1073 | | | --- | --- | --- | --- | | | Disp 4 at claim and NOT N74 at claim level | DFMC 1073 | MP009U602 | | | Disp 4 on every line and N74 on all lines | DFMC 1073 | | | | Disp 4 on every line but N74 NOT on all lines | DFMC 1073 | MP009U602 | | | Disp 4 on every line but NO Reason Code | DFMC 1073 | MP009U602 | | | Disp 1 any line |",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "U702",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "\". Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "U955",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": ". Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UBL",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Refers to errors in determining COB primary and secondary payment calculations. D - Refers to conditions experienced when forwarding claim information back to BCBS. EC - Conflict found in calculation input by BCBS edits. EI - Conflict found in calculation of specific line input by BCBS edits EU - Refers to errors or conflicts found in the BCBS Plan's Special Pricing Conditions. FM - Refers to an error in matching to the MPL-BCBS Interface Files NR - refers to Edit Codes posted when a claim is being updated within t",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UBL01",
+    "family": "UBL",
+    "family_label": "COB cross-foot",
+    "family_note": "COB calculations do not cross-foot between claim and line levels",
+    "definition": "The COB calculations do not properly cross-foot at the claim to line levels. Check to assure that the cross footing on each line based on the COB Calculation Method indicated cross-foots properly.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UBL02",
+    "family": "UBL",
+    "family_label": "COB cross-foot",
+    "family_note": "COB calculations do not cross-foot between claim and line levels",
+    "definition": "The COB calculations do not properly cross-foot at the claim level. Check to assure that the cross footing on each line based on the COB Calculation Method indicated cross-foots properly.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UBL03",
+    "family": "UBL",
+    "family_label": "COB cross-foot",
+    "family_note": "COB calculations do not cross-foot between claim and line levels",
+    "definition": "The COB calculations do not properly cross-foot at the line level. Check to assure that the cross footing on each line based on the COB Calculation Method indicated cross-foots properly.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UD003",
+    "family": "UD",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "This is an informational message that will be returned on all MIRs that are returned to BCBS, but are the Funds obligation to pay indicating that the claim was received and reported to BCBS. No payment was made by BCBS on the assumption that the Fund will be paying the claim. - ________________________________________________________ -",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE001",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Function code not valid. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE002",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Patient last name does not match. Informational, no action should be required.",
+    "disposition": "informational",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE003",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Patient's last name missing on adjudication input. Informational, no action should be required.",
+    "disposition": "informational",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE004",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Contact MPL. (SF submission type must be \"3\" for adjustment closeout.) - Not a Fund issue.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE005",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Submission type on the original SCSF is invalid. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE006",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Use of adjusted SCCF serial number is not consistent with function code. - Contact MPL",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE008",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Submission type on the adjusted SCSF is invalid. Contact MPL",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE009",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Adjustment reason code must be blank. Contact MPL",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE010",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Adjustment reason code missing or invalid. Resubmit the claim with a valid adjustment reason code.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE011",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Disposition Format already on file. This means that the claim submitted is a duplicate to one already processed. Validate that the claim should not have been returned as an adjustment and if yes, re-submit as an adjustment, otherwise no further action should be required.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: duplicate submission, claim already processed. Confirm it should not have been returned."
+    ]
+  },
+  {
+    "code": "UE012",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Missing or invalid original/reissue Disposition Format for adjustment. This means that the original claim being adjusted has not been returned and processed. Resubmit the claim as an original claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE013",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Disposition Format on file for void/reissue/closeout. This means that this adjustment has already been processed. Verify, and if correct no further action should be required, otherwise contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE014",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid Payment reduction reason code (claim level). Validate that the HIPAA CAS adjustment reason code matches to a BCBS code in the MPL HIPAA Adjustment Reason Code Manual. Correct and re-submit.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE015",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid payment reduction reason code (line level) Validate that the HIPAA CAS adjustment reason code matches to a BCBS code in the MPL HIPAA Adjustment Reason Code Manual. Correct and re-submit.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE016",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid managed care reduction reason code. Validate that the HIPAA CAS adjustment reason code matches to a BCBS code in the MPL HIPAA Adjustment Reason Code Manual. Correct and re-submit.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE017",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid reject/message code for the adjudication status (claim level). Validate that the HIPAA CAS adjustment reason code matches to a BCBS code in the MPL HIPAA Adjustment Reason Code Manual. Correct and re-submit. (",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: use Arrow to close direct with the Highmark Ops team."
+    ]
+  },
+  {
+    "code": "UE018",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid reject/message code for the adjudication status (line level). Validate that the HIPAA CAS adjustment reason code matches to a BCBS code in the MPL HIPAA Adjustment Reason Code Manual. Correct and re-submit. (",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE019",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Disposition Format on MPL Transaction File. This means that this claim has already been processed. Validate that the claim should not be an Adjustment, and if yes, resubmit as such.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE020",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Disposition Format cannot be deleted not on HPA Transaction File. - Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE021",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Missing reject/message code (line level). A CAS Reason Code must be mapped in the MIR to indicate the reason for the DENIAL. In default, a Benefits not Covered reason code is mapped.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE022",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF exists on OEC Suspense Data Base. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE023",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid Adjudication Status. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE024",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SINF record not on Formats or status not valid. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE025",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Multiple SINF records on Formats Database. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE026",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SINF Conflict. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE027",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Table entry count does not match between pricing input and adjudication inputs. Validate that the number of line items as mapped into the MIR Table Entry Count is equal to the number of adjudicated/submitted lines on the claim.",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE028",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Pricing Method can not be 01, SF Message Code",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE029",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Claim not eligible for Streamlined Adjustment - Conflict in SF. Contact BCBS to Request a BCBS Initiated Adjustment.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE030",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Claim not eligible for Streamlined Adjustment - Conflict in DF. Contact BCBS to Request a BCBS Initiated Adjustment.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE031",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Claim not eligible for Streamlined Adjustment - Conflict in RF. Wait until the RECON record is returned and re-process the Streamline Adjustment",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE032",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Adjustment reason code must be 240 or greater for Streamlined Adjustment. Map a 'CR125' in MIR203/204 and re-submit the claim.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE033",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Streamlined Adjustment SINF found on Formats Database. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE034",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Payment Override data error. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE035",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Claim not eligible for Streamlined Adjustment - Conflict in approved to pay amount. The approved to pay is less than the original claim payment. Contact BCBS to Request a BCBS Initiated Adjustment.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE036",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Private Room Differential Code conflicts with revenue code. Re-submit the claim with a value mapped in MIR203/204 or MIR1005/1006 of 'CO41 ' to pay the differential or 'PR78 ' to assign the liability to the Patient.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: add CO41 to acknowledge the private/non-private room rate allowance, then resubmit."
+    ]
+  },
+  {
+    "code": "UE037",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Actual & Input Sub-ID must not match 1083 present. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE039",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid Primacy Indicator. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE040",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid SPPQ value. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE041",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SINF record not found for SPPQ change. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE042",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid change of Pricing Method to charges (i.e. \"01\"). Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE043",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Claim cannot be rejected through the COB process. Resubmit the claim as a non-COB claim and DENY at the Claim level.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE044",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Cannot process Dental Claims. NOT APPLICABLE, Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE045",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Cost sharing difference found for COB. Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE046",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid adjustment, previous MIR contained a R06 (DF contains a \"1083\" or \"1328\") reject/message code. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE047",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "COB cannot be calculated for Capitated POS claims. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE048",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Not all-inclusive lines have N59 CARC (DF Message code \"1073\"). Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE049",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "No SF message code \"",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UE050",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF message code \"1073\" appears and the price is not equal to zero or the line is non-covered. Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE051",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF message code \"1073\" appears on a secondary (COB) claim (non-override). Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE052",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Invalid reject, the DF contains one or more 1058, 1059, 1060, 1061, 1080, 1087, 1088 reject/handle direct DF message code(s) and the SF \"835 indicator\" has a value of \"Y\". Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE053",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Primacy indicator is \"M\" and LOB (i.e. Line of Business) is not a \"9\". Contact MPL.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE054",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "LOB (i.e. Line of Business) is \"9\" and \"Medicare assignment indicator\" is not a \"Y\" or \"N\". Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE055",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "LOB (i.e. Line of Business) is not a \"1\", \"2\" or \"9\". Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE056",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Primacy Indicator value cannot be \"S\" or \"X\" for SF message code \"",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE057",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SPPQ Code must be \"1\" when BlueCard Program Product Type is \"N\". Contact BCBS.",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE058",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Account Type Code is different between SF and Plan Profile. Contact BCBS. |",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE069",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Non-par claims identified with a SF message code of \"1022\" (hold harmless) or \"1023\" (not hold harmless), Host pricing is attached to the claim, and not reverted to charge. COMMON CAUSES: When a claim has a SF message code of \"1022\" or \"1023\", Host pricing is attached, and not reverted to charge, a by passable \"review\" code of",
+    "disposition": "review",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE075",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "PAYMENT DISP DIFFERENT BETWEEN LAST DF ON FILE AND CURRENT REISSUE (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE079",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "MIR CARC of R07 (DFMC of 1327) on MIR can only be used when DME Type of Service equal 9G0 or 9H0 if Professional Claim or Revenue Code of '0290' thru '0299' if Institutional Claim (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE080",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "B2 ADJ MESSAGE MUST EXIST WHEN ADJUSTING A DF WITH DF MC 1228 OR 1229",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE081",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "INVALID ADJUSTMENT REASON CODE WHEN ADJUSTING A DF WITH DF MC 1228/1229",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE082",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "AUTOMATED ADJUSTMENT REQUIRED WHEN ADJUSTING A DF WITH DF MC 1228/1229",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE083",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DCR DF FOUND ON FDB",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UE084",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "COVERAGE EXPIRATION",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: use reject code PR31 and resubmit. Note this differs from the sheet definition, which concerns a coverage expiration date and DF message code 0010."
+    ],
+    "review_needed": true
+  },
+  {
+    "code": "UE085",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "COVERAGE EXPIRATION",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UE086",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "PAY RED RSN CD -FR- REQUIRES",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE088",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SF MSG CODE 1039 IS PRESENT, DF MSG CODE 1073 OR 1288 NOT ALLOWED",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE089",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Previously Approved claim cannot be Rejected through a Streamline Adjustment. Contact BCBS to request a BCBS initiated Adjustment (DF Exception",
+    "disposition": "escalate",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE090",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "MIR Adjustment Reason Code (which translate into DF 1083) not allowed for this claim. (DF Exception",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE092",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "MIR Adjustment Reason Code R06 (which translate into DF 1328) not allowed for this claim with other CARC on claim or line level. (DF Exception",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE097",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Provider Sanction DF Message Code must have Provider Sanction 'PL' (Payment Reduction Reason Code) assigned on the DF. (Not Implemented as of ITS",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE098",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Sub Non-Cov Liability moved to PP/OA Payment Reduction Reason Code Amount, Sub Liability reduced by PP/OA Amount.",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE099",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "ADJUSTMENT RECEIPT",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UE100",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "HOME ADJUSTMENT REQUEST FOUND WITH NO HOST RESPONSE (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE101",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": ". This is because, when user comes back to work on the DF, circumstance/condition has changed. Scenario 2 (Converse): There is no open Blue2 Adjustment message. Someone starts creating a streamlined adjustment DF in Claims Admin and just saves the adjudication input without actually creating the DF. Now, someone goes and creates a Blue2 Adjustment Message. After that, if the user retrieves the same adjudication input in Claims Admin DF and clicks '",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE102",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "ONLY ONE TYPE OF LIABILITY MSG CD ALLOWED AT THE CLAIM, Cannot be Patient and Provider Liability (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE103",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "THIS MESSAGE CODE - CLAIM CANNOT HAVE NON COVERED DOLLARS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE104",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "THIS MESSAGE CODE - LINE CANNOT HAVE NON COVERED DOLLARS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE105",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SF MSG CODE 1040 MUST BE PRESENT IF CARE COOR MSG CODE",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE106",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "SF MSG CD 1011 MUST BE PRESENT WHEN PRV TIMELY FILING MSG CD IS",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: close direct with the Ops team."
+    ]
+  },
+  {
+    "code": "UE107",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF Message Code Not Valid Unless International Code = I (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE108",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "Incorrect DF Message Code Used with GOP (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE109",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "error since there is already a record on the suspense table. At present, there is no automated work-around and how this issue can be avoided. In the meantime, have the claim's DF deleted from the suspense table via Claims Admin in Blue2. After it has been deleted, have the Fund resubmit the corrected MIR record. This should allow for the DF to be created.",
+    "disposition": "fixable",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: close direct with the Ops team."
+    ],
+    "review_needed": true
+  },
+  {
+    "code": "UE110",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DFMC 1309 or 1322 For Use Only When SFMC 1040 Assigned on All Lines (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE111",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF MESSAGE CODE 1134 CAN ONLY BE ASSIGNED WHEN PM = 01 (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE112",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "LINE LEVEL DFMC REQUIRES NON-COVERED CHARGE GREATER THAN ZERO (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [
+      "Notice guidance: close direct with the Highmark Ops team."
+    ]
+  },
+  {
+    "code": "UE113",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DFMC 1323 For Use Only When SFMC is",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE114",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "EBP Final Settlement. No Member Cost Share Should Be Applied. (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE115",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "CARC 29 (DFMC 0230) IS NOT ALLOWED FOR VA/MILITARY PROVIDERS DURING 6 YEAR PERIOD (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE116",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "CARC 29 (DFMC 0230) NOT ALLOWED FOR VA/MILITARY PROVIDERS - LINE DURING 6 YEARS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE117",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DFMC 0230 IS NOT ALLOWED FOR IHS PROVIDERS (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE118",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DFMC 0230 IS NOT ALLOWED FOR IHS PROVIDERS - LINE (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE119",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "CLAIM LEVEL DFMC REQUIRES TOTAL NON-COVERED CHARGE GREATER (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE125",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DF MSG CODE 1131/1132",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "UE132",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "MIR CARC of R06 (DF MSG CODE 1328)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UE134",
+    "family": "UE",
+    "family_label": "Return to BCBS",
+    "family_note": "U-prefixed; the introduction lists \"U or UD\" but not UE explicitly",
+    "definition": "DFMC 1083 MUST BE APPLIED WHEN PREFIX HAS BEEN CHANGED ON THE DF (Description If Actual Sub id Prefix (S043.1) Not = Input Sub id Prefix (S044.2) THEN DF Message Code (D017) 1083 must be present at Claim level.)",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UPDT",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "Rel 15.0) NOTE: This edit can be issued in Claims Admin only. COMMON CAUSE: This edit would be issued under following scenarios: Scenario 1: There is an open Blue2 Adjustment message. Someone starts creating a V/R adjustment DF in Claims Admin DF and just saves the adjudication input without actually creating the DF. Now, someone goes and denies the open Blue2 Adjustment Message. After that, if the user comes back, retrieves the same adjudication input in Claims Admin and clicks '",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "UPF",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "as is currently done or just indicate no Provider Sanction (CIACI-PROV-SANC-IND equal to a space).",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": [],
+    "review_needed": true
+  },
+  {
+    "code": "USE",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "OF PAYMENT REDUCTION REASON CODE 'FR' REQS DF MSG CODE 1073 OR 1320",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  },
+  {
+    "code": "USED",
+    "family": "U",
+    "family_label": "Return to BCBS",
+    "family_note": "Conditions when forwarding claim information back to BCBS",
+    "definition": "INCORRECTLY - PAY DISP CODE IS NOT CHANGED (",
+    "disposition": "unclassified",
+    "source": "MPL_Exception-Codes-List-5_2-v21_0.docx",
+    "guidance": []
+  }
+]

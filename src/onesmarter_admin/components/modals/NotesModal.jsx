@@ -1,23 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
-import { fetchNotes, addNote } from '../../services/api';
-
-function formatDateTime(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-}
+import { fetchNotes, addNote, deleteNote } from '../../services/api';
+import '../StepNotesHistory.css';
+import TimeDisplay from '../../../components/TimeDisplay';
+import { showAppConfirm } from '../../../components/AppDialog';
 
 export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTitle }) {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [noteError, setNoteError] = useState('');
 
@@ -37,6 +29,24 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
     }
   };
 
+  const handleDeleteNote = async (note) => {
+    if (!note.id || deletingId) return;
+    if (!await showAppConfirm('Delete this note? This action cannot be undone.', {
+      title: 'Delete Note?', confirmLabel: 'Delete Note', danger: true, tone: 'error',
+    })) return;
+    try {
+      setDeletingId(note.id);
+      setNoteError('');
+      await deleteNote(clientId, stepKey, note.id);
+      setNotes((current) => current.filter((item) => item.id !== note.id));
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey } }));
+    } catch (e) {
+      setNoteError(e.message || 'Failed to delete note.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleAddNote = async (e) => {
     e.preventDefault();
     if (!newNote.trim()) return;
@@ -46,6 +56,7 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
       await addNote(clientId, stepKey, newNote.trim());
       setNewNote('');
       await loadNotes();
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey } }));
       onClose(); // Close the modal immediately after saving
     } catch (e) {
       setNoteError(e.message || 'Failed to save note.');
@@ -59,20 +70,30 @@ export default function NotesModal({ isOpen, onClose, clientId, stepKey, stepTit
       <div className="modal-t" id="notes-modal-title">Step Notes — {stepTitle || ''}</div>
       <div className="modal-b" id="notes-modal-subtitle">Internal notes recorded by administrators.</div>
 
-      <div className="notes-list" id="notes-list-container">
+      <section className="step-notes-history" id="notes-list-container" aria-label="Past notes">
+        <div className="step-notes-history-title">
+          <span>Past Notes</span>
+          <span>{notes.length}</span>
+        </div>
+        <div className="step-notes-history-list">
         {notes.length === 0 ? (
-          <div style={{ color: 'var(--ink-3)', fontSize: '12px' }}>No notes recorded for this step yet.</div>
+          <div className="step-note-history-item" style={{ color: 'var(--ink-3)', fontSize: '12px' }}>No notes recorded for this step yet.</div>
         ) : (
           [...notes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((n) => (
-            <div key={n.id} className="note-item">
-              <div className="meta">
-                <b>{n.author}</b> · {formatDateTime(n.created_at)}
+            <article key={n.id} className="step-note-history-item">
+              <div className="step-note-history-meta">
+                <b>{n.author}</b>
+                <span className="step-note-history-actions">
+                  <TimeDisplay value={n.created_at} easternOnly />
+                  <button type="button" onClick={() => handleDeleteNote(n)} disabled={deletingId === n.id} title="Delete note" aria-label="Delete note">🗑</button>
+                </span>
               </div>
-              <div>{n.note_text}</div>
-            </div>
+              <div className="step-note-history-text">{n.note_text}</div>
+            </article>
           ))
         )}
-      </div>
+        </div>
+      </section>
 
       <form onSubmit={handleAddNote}>
         <div className="field">

@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import CenteredModal from './CenteredModal';
+import { showAppAlert, showAppConfirm } from '../../../components/AppDialog';
+import { isSuperAdminAccount } from '../../utils/adminRoles';
+import PhoneNumberField from '../../../components/PhoneNumberField';
+import { splitE164, toE164, validateNationalNumber } from '../../../utils/phone';
 
 export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clients, user, currentUser }) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [countryIso, setCountryIso] = useState('US');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('User');
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -11,13 +16,15 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
-      setMobile(user.mobile && user.mobile !== '—' ? user.mobile : '');
+      const parsedMobile = splitE164(user.mobile && user.mobile !== '—' ? user.mobile : '');
+      setCountryIso(parsedMobile.countryIso);
+      setMobile(parsedMobile.nationalNumber);
       setRole(user.role || 'User');
       setSelectedClientId(user.client_id || '');
       setNewPassword('');
@@ -50,14 +57,22 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
       return;
     }
 
+    const mobileError = validateNationalNumber(countryIso, mobile);
+    if (mobileError) {
+      setErrorMsg(mobileError);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         name: name.trim(),
-        mobile: mobile.trim(),
+        mobile: toE164(countryIso, mobile),
+        country_code: countryIso,
         email: email.trim(),
         role,
-        is_staff: role === 'Admin',
+        is_staff: role === 'Admin' || role === 'Super Admin',
+        is_superuser: role === 'Super Admin',
         client_id: role === 'User' ? selectedClientId : null
       };
       if (newPassword) {
@@ -113,20 +128,13 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
             required
           />
         </div>
-        <div className="field">
-          <label>Mobile</label>
-          <input
-            placeholder="e.g. +1 555-0192"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-          />
-        </div>
+        <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
         {isSuperAdmin ? (
           <div className="field">
             <label>Role</label>
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
               <option value="User">User (Standard Access)</option>
-              <option value="Admin">Admin (Full Access)</option>
+              <option value="Admin">Admin (Custom Screen Access)</option>
               <option value="Super Admin">Super Admin (System Owner)</option>
             </select>
           </div>
@@ -177,7 +185,9 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
             type="button"
             className="btn"
             onClick={async () => {
-              if (window.confirm(`Are you sure you want to reset the password for ${user.email} and send a temporary password via email?`)) {
+              if (await showAppConfirm(`Reset the password for ${user.email} and email a temporary password?`, {
+                title: 'Reset Password?', confirmLabel: 'Reset & Email', tone: 'info',
+              })) {
                 setLoading(true);
                 try {
                   const res = await fetch(`/accounts/api/admin/users/${user.id}/reset-password/`, {
@@ -186,7 +196,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
                   });
                   const data = await res.json();
                   if (res.ok && data.success) {
-                    alert("✓ Reset successful: " + data.message);
+                    await showAppAlert(data.message, { title: 'Password Reset', tone: 'success' });
                     handleCloseModal();
                   } else {
                     setErrorMsg(data.error || "Failed to reset password.");

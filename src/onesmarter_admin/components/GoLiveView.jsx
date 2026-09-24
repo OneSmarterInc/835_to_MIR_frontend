@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 import ClientSftpModal from './ClientSftpModal';
 import {
   fetchGoLiveState, uploadGoLiveDoc, downloadGoLiveTemplate,
@@ -8,6 +9,13 @@ import {
 } from '../services/api';
 import FeedbackModal from './modals/FeedbackModal';
 import ConfirmModal from './modals/ConfirmModal';
+import StepNotesHistory from './StepNotesHistory';
+import TimeDisplay from '../../components/TimeDisplay';
+import {
+  EASTERN_TIME_ZONE,
+  scheduleTimeLabel,
+  scheduleTimeZoneOptions,
+} from '../../utils/timezone';
 
 function toISODate(val) {
   if (!val) return '';
@@ -39,7 +47,11 @@ function formatToMMDDYYYY(val) {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-export default function GoLiveView({ clients = [], activeClientId, onSelectClient, onClientUpdated, onOpenNotes }) {
+function areAllGoLiveStepsDone(steps) {
+  return Array.isArray(steps) && steps.length === 6 && steps.every((step) => step.done);
+}
+
+export default function GoLiveView({ clients = [], activeClientId, onSelectClient, onClientUpdated, onGoLiveCompleted, onOpenNotes }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [goliveState, setGoliveState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +68,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
   // Step 4 Schedule
   const [productionDate, setProductionDate] = useState('');
   const [productionTime, setProductionTime] = useState('');
+  const [productionTimezone, setProductionTimezone] = useState(EASTERN_TIME_ZONE);
   const [productionNotes, setProductionNotes] = useState('');
   const step4DatePickerRef = useRef(null);
 
@@ -99,6 +112,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
       if (step4?.extra?.schedule) {
         setProductionDate(formatToMMDDYYYY(step4.extra.schedule.production_date) || '');
         setProductionTime(step4.extra.schedule.production_time || '');
+        setProductionTimezone(step4.extra.schedule.timezone || EASTERN_TIME_ZONE);
         setProductionNotes(step4.extra.schedule.notes || '');
       }
 
@@ -197,7 +211,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const newState = await saveGoLiveSchedule(selectedClientId, productionDate.trim(), productionTime.trim(), productionNotes.trim());
+      const newState = await saveGoLiveSchedule(selectedClientId, productionDate.trim(), productionTime.trim(), productionNotes.trim(), productionTimezone);
       setGoliveState(newState);
       setSuccessMessage(`Step 4: Production Schedule set for ${productionDate} ${productionTime ? `at ${productionTime}` : '(time TBD)'}.`);
       if (onClientUpdated) {
@@ -222,6 +236,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
     try {
       const newState = await saveGoLiveComment(selectedClientId, specialComment.trim());
       setGoliveState(newState);
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId: selectedClientId, stepKey: 'golive_step_5' } }));
       setSuccessMessage('Step 5: Special Comment saved and step marked complete.');
       if (onClientUpdated) {
         onClientUpdated();
@@ -234,6 +249,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
   }
 
   async function handleFinalizeGoLive() {
+    const wasComplete = areAllGoLiveStepsDone(goliveState?.steps);
     setActionLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -242,7 +258,11 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
       setGoliveState(res.state);
       setSuccessMessage(`🎉 Production Successful! ${currentClient?.name} is now promoted to Live Production!`);
       if (onClientUpdated) {
-        onClientUpdated();
+        await onClientUpdated();
+      }
+      const isNowComplete = areAllGoLiveStepsDone(res.state?.steps);
+      if (!wasComplete && isNowComplete && onGoLiveCompleted) {
+        onGoLiveCompleted(selectedClientId);
       }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to finalize Go Live');
@@ -283,27 +303,9 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
 
   return (
     <section className="view on" id="v-promote">
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow">Stage Promotion</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
-            <ClientSelectDropdown
-              clients={clients}
-              value={selectedClientId}
-              onChange={(val) => {
-                setSelectedClientId(val);
-                if (onSelectClient) {
-                  onSelectClient(val);
-                }
-              }}
-            />
-            <h1 style={{ margin: 0 }}>Go Live Readiness</h1>
-          </div>
-          <p className="sub">Sequential 6-step compliance ladder to promote <b>{currentClient?.name}</b> to full production operations.</p>
-        </div>
-      </div>
+      <WorkspaceHeader eyebrow="Stage promotion workspace" title="Go Live Readiness" description="Verify production readiness and complete the client cutover workflow."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={(val) => { setSelectedClientId(val); if (onSelectClient) onSelectClient(val); }} fullWidth /></div></WorkspaceHeader>
 
-      <div className="metrics">
+      <div className="metrics golive-metrics">
         <div className="metric">
           <div className="v">{doneCount} / 6</div>
           <div className="l">Steps Complete</div>
@@ -315,7 +317,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
           <div className="d">{activeStepTitle}</div>
         </div>
         <div className="metric">
-          <div className="v">{goliveState?.progress_pct || 0}%</div>
+          <div className="v">{Math.round((doneCount / 6) * 100)}%</div>
           <div className="l">Completion</div>
           <div className="d">Stage: {isStep6Done ? 'Production' : 'Pre-Production'}</div>
         </div>
@@ -371,12 +373,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                     </div>
                   )}
 
-                  {/* Latest Note Evidence */}
-                  {step.latestNote && step.step_number !== 4 && step.step_number !== 5 && (
-                    <div className="ev" style={{ color: 'var(--ochre)', marginTop: '4px', fontSize: '11.5px' }}>
-                      💬 Latest Note: "{step.latestNote.note_text}" — <i>{step.latestNote.author}</i>
-                    </div>
-                  )}
+                  <StepNotesHistory clientId={activeClientId} stepKey={step.key} latestNote={step.latestNote} />
 
                   {/* Step 3 Content (SFTP Setup) */}
                   {step.step_number === 3 && (
@@ -398,7 +395,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           disabled={isWaiting || actionLoading}
                           onClick={() => handleSaveStep3SFTP(true)}
                         >
-                          {actionLoading ? 'Completing...' : '✓ Complete Step 3'}
+                          {actionLoading ? 'Submitting…' : 'Submit'}
                         </button>
                       ) : (
                         <button
@@ -421,8 +418,8 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Schedule Configuration</div>
                           <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                             <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.production_date) || 'N/A'}</div>
-                            <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.production_time || 'N/A'}</div>
-                            <div><b>Notes:</b> {step.extra?.schedule?.notes || step.latestNote?.note_text || 'None'}</div>
+                            <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.production_time, step.extra?.schedule?.timezone)}</div>
+                            {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} easternOnly /></div>}
                           </div>
                         </div>
                       )}
@@ -493,7 +490,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time (EST) *:</label>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time *:</label>
                           <input
                             type="time"
                             required
@@ -502,6 +499,12 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                             onChange={e => setProductionTime(e.target.value)}
                             style={{ padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px', width: '110px' }}
                           />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
+                          <select value={productionTimezone} onChange={(e) => setProductionTimezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
+                            {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </select>
                         </div>
                         <div style={{ flex: 1, minWidth: '180px' }}>
                           <input
@@ -519,7 +522,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                             disabled={isWaiting || actionLoading || !productionDate.trim()}
                             style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px' }}
                           >
-                            {actionLoading ? 'Saving...' : 'Save Schedule & Complete'}
+                            {actionLoading ? 'Submitting…' : 'Submit'}
                           </button>
                         </div>
                       </form>
@@ -529,16 +532,6 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                   {/* Step 5 Content (Any Special Comment) */}
                   {step.step_number === 5 && (
                     <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                      {isDone && step.latestNote && (
-                        <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                          <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                            Current Special Processing Instructions
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                            <div><b>Note:</b> {step.latestNote.note_text}</div>
-                          </div>
-                        </div>
-                      )}
                       <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Special Processing Instructions / Comments Logged</label>
                       <textarea
                         rows={1}
@@ -555,7 +548,7 @@ export default function GoLiveView({ clients = [], activeClientId, onSelectClien
                           onClick={handleSaveStep5Comment}
                           disabled={isWaiting || actionLoading}
                         >
-                          {actionLoading ? 'Saving...' : 'Submit & Complete Step 5'}
+                          {actionLoading ? 'Submitting…' : 'Submit'}
                         </button>
                       </div>
                     </div>

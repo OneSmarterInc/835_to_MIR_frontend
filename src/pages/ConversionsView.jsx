@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { splitClaimNumber } from "../utils/claimNumber";
+import { pushEdiFileToSftp } from "../onesmarter_admin/services/api";
+import WorkspaceHeader from "../components/WorkspaceHeader";
+import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
 export default function ConversionsView({
   trackedFiles,
@@ -6,21 +10,24 @@ export default function ConversionsView({
   onOpenFileModal,
   clients = [],
   isAdmin = false,
+  activeClientId = "",
+  onSelectClient,
 }) {
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(activeClientId || "");
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
   const [ediText, setEdiText] = useState("");
   const [currentFileName, setCurrentFileName] = useState("uploaded_file.x12");
   const [file835Subtext, setFile835Subtext] = useState("No 835 files selected.");
-  const [file837Subtext, setFile837Subtext] = useState("No 837 reference selected.");
   const [activeValidatedFileId, setActiveValidatedFileId] = useState(null);
 
   const [validating, setValidating] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
+  const [pushingSftpId, setPushingSftpId] = useState(null);
   const [startingBatch, setStartingBatch] = useState(false);
   const [batchAlert, setBatchAlert] = useState(null);
+  const [partialDetails, setPartialDetails] = useState(null);
 
   const [validationReport, setValidationReport] = useState(null);
   const [validationError, setValidationError] = useState(null);
@@ -41,6 +48,18 @@ export default function ConversionsView({
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  useEffect(() => {
+    setSelectedClientId(activeClientId || "");
+    setCurrentPage(1);
+  }, [activeClientId]);
+
+  const handleClientChange = (clientId) => {
+    setSelectedClientId(clientId);
+    setCurrentPage(1);
+    setSearchText("");
+    if (onSelectClient && clientId) onSelectClient(clientId);
+  };
 
   // 835 File Input change (Supports multiple file selection)
   const handle835FileChange = async (e) => {
@@ -79,24 +98,44 @@ export default function ConversionsView({
     }
   };
 
-  // 837 File Input change
-  const handle837FileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile837Subtext(
-        "Selected: " + e.target.files[0].name + " (optional reference)"
-      );
-    }
-  };
-
   const resetConversionForm = () => {
     setValidationError(null);
     setValidationReport(null);
     setIsValidated(false);
     setMirOutputText("");
     setActiveValidatedFileId(null);
+    setPartialDetails(null);
     setStep1State("active");
     setStep2State("");
     setStep3State("");
+  };
+
+  const captureHeldClaims = (data, fallbackId, fallbackStatus = "ARCHIVED") => {
+    const findings = Array.isArray(data?.findings) ? data.findings : [];
+    const heldCount = Number(data?.held_claims_count || 0);
+    const hasBlockingFinding = findings.some((finding) => {
+      const severity = String(finding?.severity || "").toUpperCase();
+      return severity === "HOLD" || severity === "REFUSE";
+    });
+
+    if (!data?.partial && heldCount <= 0 && !hasBlockingFinding) {
+      setPartialDetails(null);
+      return;
+    }
+
+    setPartialDetails({
+      id: data?.file_id || fallbackId,
+      status: data?.status || fallbackStatus,
+      output_path: data?.output_path || "",
+      delivered_claims_count: Number(data?.delivered_claims_count || 0),
+      held_claims_count: heldCount || new Set(
+        findings
+          .filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase()))
+          .map((finding) => finding.claim_control_number || finding.claim_number)
+          .filter(Boolean)
+      ).size,
+      conversion_findings: findings,
+    });
   };
 
   // Validate 835 Action (Single or Multi-file)
@@ -184,9 +223,11 @@ export default function ConversionsView({
 
       const data = await res.json();
       if (!res.ok || data.error) {
+        captureHeldClaims(data, activeValidatedFileId, "ERROR");
         throw new Error(data.error || "Conversion failed");
       }
 
+      captureHeldClaims(data, data.file_id || activeValidatedFileId, "ARCHIVED");
       setMirOutputText(data.text);
       if (data.combined_filename) {
         setCurrentFileName(data.combined_filename);
@@ -216,8 +257,12 @@ export default function ConversionsView({
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to convert file to MIR");
+        captureHeldClaims(data, fileId, "ERROR");
+        if (!data.partial && !(data.findings || []).length) {
+          alert(data.error || "Failed to convert file to MIR");
+        }
       } else {
+        captureHeldClaims(data, data.file_id || fileId, "ARCHIVED");
         if (data.text) setMirOutputText(data.text);
       }
     } catch (err) {
@@ -225,6 +270,41 @@ export default function ConversionsView({
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
+    }
+  };
+
+  // Retry MIR SFTP delivery directly from the conversion history table.
+  const handleSftpStatusClick = async (file) => {
+    if (!file?.id || file.present_in_sftp || pushingSftpId) return;
+
+    const hasMirOutput = Boolean(file.output_path) && file.status === "ARCHIVED";
+    if (!hasMirOutput) {
+      setBatchAlert({
+        type: "error",
+        title: "SFTP Push Unavailable",
+        message: "Process this run into a MIR file before attempting SFTP delivery.",
+      });
+      return;
+    }
+
+    setPushingSftpId(file.id);
+    setBatchAlert(null);
+    try {
+      const data = await pushEdiFileToSftp(file.id);
+      setBatchAlert({
+        type: "success",
+        title: "SFTP Push Complete",
+        message: data.message || "MIR file pushed to SFTP successfully.",
+      });
+      if (onRefreshData) await onRefreshData();
+    } catch (error) {
+      setBatchAlert({
+        type: "error",
+        title: "SFTP Push Failed",
+        message: error?.message || "Failed to push MIR to SFTP.",
+      });
+    } finally {
+      setPushingSftpId(null);
     }
   };
 
@@ -293,26 +373,60 @@ export default function ConversionsView({
     try {
       const res = await fetch("/api/start-batch-conversion/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ client_id: selectedClientId || undefined }),
       });
-      const data = await res.json();
-      if (data.success) {
+
+      const data = await res.json().catch(() => ({}));
+      const jobId = data.job_id;
+      if ((!res.ok && res.status !== 409) || !jobId) {
+        throw new Error(data.error || data.message || "Batch conversion could not be queued.");
+      }
+
+      setBatchAlert({
+        type: "success",
+        message: data.state === "RUNNING"
+          ? "Batch is running in the background…"
+          : "Batch queued. Reading inbound files and creating the MIR…",
+      });
+
+      let completedData = null;
+      for (let attempt = 0; attempt < 400; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const statusRes = await fetch(
+          `/api/start-batch-conversion/?job_id=${encodeURIComponent(jobId)}`,
+          { method: "GET", credentials: "include", headers: { Accept: "application/json" } }
+        );
+        const statusData = await statusRes.json().catch(() => ({}));
+        if (!statusRes.ok || !statusData.success) {
+          throw new Error(statusData.error || "Unable to read batch status.");
+        }
+        const state = statusData.job?.state;
+        if (state === "COMPLETED" || state === "FAILED") {
+          completedData = statusData.job.result || {};
+          break;
+        }
+      }
+
+      if (!completedData) {
+        throw new Error("The batch is still running in the background. Refresh the history shortly.");
+      }
+
+      if (completedData.success) {
         setBatchAlert({
           type: "success",
-          message: data.message || `✓ Batch processing completed! Processed ${data.processed_count} files.`,
+          message: completedData.message || `✓ Batch processing completed! Processed ${completedData.processed_count} files.`,
         });
         if (onRefreshData) onRefreshData();
       } else {
         setBatchAlert({
           type: "error",
-          message: data.error || "Batch conversion failed.",
+          message: completedData.error || completedData.message || "Batch conversion failed.",
         });
       }
     } catch (err) {
-      setBatchAlert({
-        type: "error",
-        message: err.message,
-      });
+      setBatchAlert({ type: "error", message: err?.message || "Batch conversion failed." });
     } finally {
       setStartingBatch(false);
     }
@@ -337,6 +451,9 @@ export default function ConversionsView({
   };
 
   let filtered = (trackedFiles || []).filter((item) => {
+    if (isAdmin && String(item.client_id || "") !== String(selectedClientId || "")) {
+      return false;
+    }
     if (searchText) {
       const query = searchText.toLowerCase();
       const fullStr = (
@@ -386,38 +503,13 @@ export default function ConversionsView({
   const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
   return (
-    <section className="view on" id="v-batches">
-      <div className="eyebrow">Operations Studio</div>
-      <h1>Conversions</h1>
-      <p className="sub">
-        Start a conversion run, validate EDI 835 files, and view 30-day conversion history.
-      </p>
+    <section className="view on table-screen" id="v-batches">
+      <WorkspaceHeader eyebrow="Conversion workspace" title="Conversions" description="Upload, validate, convert, and deliver healthcare transaction files.">
+        {isAdmin && clients?.length > 0 && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={handleClientChange} includeGlobal fullWidth /></div>}
+      </WorkspaceHeader>
 
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">
-        {isAdmin && clients && clients.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderBottom: '1px solid var(--line, #e2e8f0)', background: '#F8FAFC' }}>
-            <label style={{ fontSize: "12px", fontWeight: "bold", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Associate with Client:</label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              style={{
-                padding: "6px 10px",
-                border: "1px solid var(--line, #e2e8f0)",
-                borderRadius: "4px",
-                fontSize: "12.5px",
-                background: "#fff",
-                color: "var(--ink, #000)",
-                minWidth: "220px"
-              }}
-            >
-              <option value="">-- None (Global System Default) --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
         <div className="start-conversion-header">
           <h2>Start a conversion</h2>
           <div className="step-pills">
@@ -425,19 +517,15 @@ export default function ConversionsView({
               1 &bull; UPLOAD 835
             </span>
             <span className="step-arrow">&rarr;</span>
-            <span className={`step-pill ${step2State}`} id="pillStep2">
-              2 &bull; VALIDATE
-            </span>
+            <span className={`step-pill ${step2State}`} id="pillStep2">2 &bull; VALIDATE</span>
             <span className="step-arrow">&rarr;</span>
-            <span className={`step-pill ${step3State}`} id="pillStep3">
-              3 &bull; PROCESS MIR
-            </span>
+            <span className={`step-pill ${step3State}`} id="pillStep3">3 &bull; PROCESS MIR</span>
           </div>
         </div>
 
         <div className="conversion-boxes">
           {/* REQUIRED 835 INPUT BOX */}
-          <div className="c-box">
+          <div className="c-box" style={{ flex: "1 1 auto" }}>
             <div className="c-box-label">REQUIRED &bull; 835 INPUT</div>
             <input
               type="file"
@@ -446,13 +534,24 @@ export default function ConversionsView({
               onChange={handle835FileChange}
             />
             <div className="subtext">{file835Subtext}</div>
-          </div>
-
-          {/* OPTIONAL 837 REFERENCE BOX */}
-          <div className="c-box">
-            <div className="c-box-label">OPTIONAL &bull; 837 REFERENCE ONLY</div>
-            <input type="file" accept=".837,.x12,.txt,*/*" onChange={handle837FileChange} />
-            <div className="subtext">{file837Subtext}</div>
+            {Number(partialDetails?.held_claims_count || 0) > 0 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  padding: "8px 10px",
+                  border: "1px solid var(--ochre)",
+                  borderRadius: "4px",
+                  background: "var(--ochre-bg, #fff8e6)",
+                  fontSize: "12px",
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong>{partialDetails.held_claims_count} claim{Number(partialDetails.held_claims_count) === 1 ? "" : "s"} held.</strong>{" "}
+                {Number(partialDetails.delivered_claims_count || 0) > 0
+                  ? `${partialDetails.delivered_claims_count} other claim${Number(partialDetails.delivered_claims_count) === 1 ? " was" : "s were"} processed into MIR.`
+                  : "No clean claims were available to process into MIR."}
+              </div>
+            )}
           </div>
 
           {/* ACTION BUTTONS WITH ICONS */}
@@ -524,7 +623,7 @@ export default function ConversionsView({
           </div>
         </div>
 
-        {/* BATCH CONVERSION ALERT BANNER */}
+        {/* BATCH CONVERSION / SFTP ALERT BANNER */}
         {batchAlert && (
           <div
             className={`status-banner ${batchAlert.type === "success" ? "valid" : "invalid"}`}
@@ -532,7 +631,7 @@ export default function ConversionsView({
           >
             <div>
               <div style={{ fontWeight: 700, fontSize: "14px" }}>
-                {batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error"}
+                {batchAlert.title || (batchAlert.type === "success" ? "✓ Automated Inbound Batch Pipeline Completed" : "✕ Batch Pipeline Error")}
               </div>
               <div style={{ fontSize: "12px", marginTop: "2px" }}>
                 {batchAlert.message}
@@ -590,13 +689,13 @@ export default function ConversionsView({
                 <div className="v" style={{ color: "var(--brick)" }}>
                   {(validationReport.errors || []).length}
                 </div>
-                <div className="l">Errors</div>
+                <div className="l">Validation Errors</div>
               </div>
               <div className="metric">
                 <div className="v" style={{ color: "var(--ochre)" }}>
                   {(validationReport.warnings || []).length}
                 </div>
-                <div className="l">Warnings</div>
+                <div className="l">Validation Warnings</div>
               </div>
             </div>
 
@@ -740,7 +839,7 @@ export default function ConversionsView({
                     {sortKey === "filename" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
                 </th>
-                <th>837 REF</th>
+                <th>SFTP STATUS</th>
                 <th
                   className={`sortable ${sortKey === "claims" ? sortOrder : ""}`}
                   onClick={() => handleSortHeader("claims")}
@@ -781,12 +880,19 @@ export default function ConversionsView({
                   const mirName = f.output_path
                     ? f.output_path.split("/").pop()
                     : "MIR_" + (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") + ".mir";
+                  const hasMirOutput = Boolean(f.output_path) && f.status === "ARCHIVED";
+                  const hasFindings = (f.conversion_findings || []).length > 0;
+                  const displayStatus = f.status === "PARTIAL" ? "ERROR" : f.status;
 
                   let statusTitle = "";
                   if (f.status === "PROCESSING") {
                     statusTitle = "PROCESSING: 835 EDI file validated and stored in archive folder. Click to convert file into MIR.";
                   } else if (f.status === "ARCHIVED") {
-                    statusTitle = "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
+                    statusTitle = Number(f.held_claims_count || 0) > 0
+                      ? `ARCHIVED: MIR created from ${f.delivered_claims_count || 0} claim(s); ${f.held_claims_count} claim(s) were held for review.`
+                      : "ARCHIVED: File successfully converted into MIR format and stored in output/archive folders.";
+                  } else if (f.status === "PARTIAL") {
+                    statusTitle = "ERROR: This legacy partial run did not produce an approved complete MIR. Click to view claim findings.";
                   } else if (f.status === "ERROR") {
                     statusTitle = f.error_message
                       ? `ERROR: ${f.error_message}`
@@ -807,12 +913,36 @@ export default function ConversionsView({
                       <td className="num" style={{ color: "var(--ink-2)" }}>
                         {f.original_filename}
                       </td>
-                      <td className="num" style={{ color: "var(--ink-3)" }}>
-                        —
+                      <td className="num" style={{ whiteSpace: "nowrap" }}>
+                        {f.present_in_sftp ? (
+                          <span className="tag ok" title="MIR successfully delivered to the configured outbound SFTP location.">
+                            PUSHED
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="tag work"
+                            onClick={() => handleSftpStatusClick(f)}
+                            disabled={pushingSftpId === f.id || !hasMirOutput}
+                            title={
+                              hasMirOutput
+                                ? "Not delivered to SFTP. Click to retry the MIR push."
+                                : "MIR output must be created before SFTP delivery can be attempted."
+                            }
+                            style={{
+                              border: 0,
+                              font: "inherit",
+                              cursor: hasMirOutput && pushingSftpId !== f.id ? "pointer" : "not-allowed",
+                              opacity: hasMirOutput ? 1 : 0.55,
+                            }}
+                          >
+                            {pushingSftpId === f.id ? "PUSHING..." : "NOT PUSHED"}
+                          </button>
+                        )}
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
                       <td className="num" style={{ color: "var(--ink-2)" }}>
-                        {f.status === "ARCHIVED" ? mirName : "—"}
+                        {hasMirOutput ? mirName : "—"}
                       </td>
                       <td>
                         <span
@@ -824,16 +954,18 @@ export default function ConversionsView({
                               : "work"
                           }`}
                           style={{
-                            cursor: f.status === "PROCESSING" ? "pointer" : "default",
+                            cursor: f.status === "PROCESSING" || hasFindings ? "pointer" : "default",
                           }}
                           title={statusTitle}
                           onClick={() => {
                             if (f.status === "PROCESSING") {
                               handleConvertStatusClick(f.id);
+                            } else if (hasFindings) {
+                              setPartialDetails(f);
                             }
                           }}
                         >
-                          {convertingId === f.id ? "CONVERTING..." : f.status}
+                          {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
                       <td
@@ -855,7 +987,7 @@ export default function ConversionsView({
                             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                           </svg>
                         </button>
-                        {f.status === "ARCHIVED" ? (
+                        {hasMirOutput ? (
                           <button
                             type="button"
                             className="btn-download"
@@ -932,6 +1064,40 @@ export default function ConversionsView({
           </div>
         </div>
       </div>
+
+      {partialDetails ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setPartialDetails(null)}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="partial-title" onMouseDown={(event) => event.stopPropagation()} style={{ maxWidth: "760px", width: "calc(100% - 32px)" }}>
+            <div className="modal-header">
+              <div>
+                <h2 id="partial-title" style={{ margin: 0 }}>Held claims</h2>
+                <div style={{ color: "var(--ink-3)", fontSize: "12px", marginTop: "4px" }}>
+                  {Number(partialDetails.delivered_claims_count || 0) > 0 ? "Partial conversion completed" : "Conversion held"} · {partialDetails.held_claims_count || 0} claim(s) require review
+                </div>
+              </div>
+              <button type="button" className="modal-close" aria-label="Close" onClick={() => setPartialDetails(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+              {(partialDetails.conversion_findings || []).filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase())).length ? (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr><th>Highmark Claim Number</th><th>Internal Claim Number</th><th>Rule</th><th>Reason</th></tr></thead>
+                  <tbody>{(partialDetails.conversion_findings || []).filter((finding) => ["HOLD", "REFUSE"].includes(String(finding?.severity || "").toUpperCase())).map((finding, index) => (
+                    <tr key={`${finding.claim_control_number || finding.claim_number || "claim"}-${finding.rule_code || index}-${index}`}>
+                      <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).highmarkClaimNumber || "—"}</td>
+                      <td className="num">{splitClaimNumber(finding.claim_control_number || finding.claim_number).internalClaimNumber || "—"}</td>
+                      <td><span className="tag work">{finding.rule_code || "HOLD"}</span></td>
+                      <td>{finding.reason || finding.detail || "Claim requires review."}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              ) : <p>No claim-level reason was recorded for this run.</p>}
+            </div>
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <button type="button" className="btn secondary" onClick={() => setPartialDetails(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* OPERATIONAL VIEW BANNER */}
       <div className="stub">

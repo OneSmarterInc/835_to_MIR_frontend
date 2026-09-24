@@ -1,0 +1,7 @@
+.client-claim-search-page .claim-search-client {
+  display: none !important;
+}
+
+.client-claim-search-page .claim-search-heading-row {
+  grid-template-columns: 1fr !important;
+}

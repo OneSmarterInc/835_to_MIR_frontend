@@ -1,12 +1,29 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { isDemoModeEnabled, toggleDemoMode } from '../../utils/demoSubstitution';
 
-export default function Header({ onSignOut, currentUser, onToggleSidebar }) {
+export default function Header({ onSignOut, currentUser, onToggleSidebar, isSidebarOpen = false }) {
   const displayName = currentUser?.name || currentUser?.email || 'Sahil Asarkar';
-  const initials = displayName.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'SA';
+  const initials = displayName.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'SA';
   const role = currentUser?.role || 'CLIENT USER';
   const clientName = currentUser?.client || 'OneSmarter';
   const isSystemAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Super Admin' || currentUser?.is_staff || currentUser?.is_superuser;
   const displayTitle = isSystemAdmin ? displayName : clientName;
+  const [demoMode, setDemoMode] = useState(isDemoModeEnabled());
+
+  const handleDemoToggle = () => {
+    const next = !demoMode;
+    setDemoMode(next);
+    toggleDemoMode(next);
+  };
+
+  useEffect(() => {
+    const rail = document.querySelector('.shell > .rail');
+    if (!rail) return;
+    rail.style.setProperty('display', 'block', 'important');
+    rail.style.setProperty('transform', isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)', 'important');
+    rail.style.setProperty('opacity', isSidebarOpen ? '1' : '0', 'important');
+    rail.style.setProperty('pointer-events', isSidebarOpen ? 'auto' : 'none', 'important');
+  }, [isSidebarOpen]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerOpenRef = useRef(false);
@@ -79,39 +96,46 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar }) {
           bottom: 0 !important;
           width: 206px !important;
           height: calc(100vh - 56px) !important;
-          z-index: 1000 !important;
+          z-index: 100 !important;
           flex: none !important;
           overflow-y: auto !important;
-          box-shadow: 4px 0 20px rgba(0,0,0,.24) !important;
-          transition: transform 220ms ease, opacity 180ms ease !important;
+          background: #1D2938 !important;
+          border-right: none !important;
+          padding: 18px 0 !important;
+          box-shadow: 4px 0 20px rgba(0, 0, 0, 0.24) !important;
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
+          will-change: transform, opacity;
+          font-family: var(--body) !important;
+          color: #B9C6D4 !important;
         }
-        .shell > .main {
-          width: 100% !important;
-          min-width: 0 !important;
-          max-width: 100% !important;
-          flex: 1 1 100% !important;
+        .shell > .rail .grp { padding-left: 16px !important; padding-right: 16px !important; color: #6C7F94 !important; }
+        .shell > .rail .navitem {
+          display: flex !important; align-items: center !important; justify-content: space-between !important;
+          gap: 8px !important; width: 100% !important; text-align: left !important; padding: 9px 16px !important;
+          border-left: 2px solid transparent !important; color: #B9C6D4 !important; background: transparent !important;
         }
-        .admin-sidebar-edge-trigger {
-          position: fixed;
-          top: 56px;
-          left: 0;
-          bottom: 0;
-          width: 24px;
-          z-index: 1001;
-          pointer-events: none;
-        }
-        .shell > .rail > * { transition: opacity 160ms ease; }
+        .shell > .rail .navitem:hover { background: #243244 !important; color: #ffffff !important; }
+        .shell > .rail .navitem.on { border-left-color: var(--ochre) !important; background: #243244 !important; color: #ffffff !important; font-weight: 600 !important; }
+        .shell > .rail .navitem .count { font-family: var(--display) !important; font-size: 10px !important; background: var(--ochre) !important; color: #fff !important; border-radius: 9999px !important; padding: 1px 6px !important; }
+        .shell > .main { width: 100% !important; min-width: 0 !important; max-width: 100% !important; flex: 1 1 100% !important; }
       `}</style>
-
-      <div className="admin-sidebar-edge-trigger" aria-hidden="true" />
       <div className="topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button type="button" className="admin-hamburger-btn" onClick={toggleDrawer} title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" style={{ background: 'none', border: 'none', color: '#B9C6D4', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button type="button" className="admin-hamburger-btn" onClick={onToggleSidebar} title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" style={{ background: 'none', border: 'none', color: '#B9C6D4', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <div className="wordmark">ONESMARTER <span>/ MIR RELAY ADMIN</span></div>
         </div>
-        <div className="spacer"></div>
+        <div className="spacer" />
+        <label className="admin-demo-toggle">
+          <span>Demo Data</span>
+          <input
+            type="checkbox"
+            checked={demoMode}
+            onChange={handleDemoToggle}
+            title="Enable demo data encoding"
+          />
+        </label>
         <div className="me"><div className="av">{initials}</div><div><div>{displayTitle}</div><div className="role">{role}</div></div></div>
         <button type="button" className="btn-topbar-logout" title="Sign Out" aria-label="Sign Out" onClick={onSignOut}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>

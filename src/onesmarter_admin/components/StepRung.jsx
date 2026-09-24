@@ -1,26 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, fetchClientSmtpConfig, saveClientSmtpConfig } from '../services/api';
+import { uploadStepFile, validateStaged835, postStepData, downloadTemplateFile, fetchStepUploadFile, createUser, deleteClientContact, deleteClientUser, fetchClientSmtpConfig, saveClientSmtpConfig, pushEdiFileToSftp } from '../services/api';
 import FeedbackModal from './modals/FeedbackModal';
 import FileViewerModal from './modals/FileViewerModal';
 import ClientSftpModal from './ClientSftpModal';
+import StepNotesHistory from './StepNotesHistory';
+import TimeDisplay from '../../components/TimeDisplay';
+import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
+import { fileAccept, validateFileExtensions } from '../../utils/fileTypes';
+import { cleanNationalNumber, PHONE_COUNTRIES, toE164, validateNationalNumber } from '../../utils/phone';
+import {
+  EASTERN_TIME_ZONE,
+  scheduleTimeLabel,
+  scheduleTimeZoneOptions,
+} from '../../utils/timezone';
+import './StepUploadModal.css';
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = { ...extra };
   if (token) headers['Authorization'] = `Token ${token}`;
   return headers;
-}
-
-function formatDateTime(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
 function toISODate(val) {
@@ -54,25 +53,45 @@ function formatToMMDDYYYY(val) {
 }
 
 export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
+  // User creation is the dedicated ninth onboarding action. Keep its rung,
+  // completion button, notes, and redo labels consistent even if a cached API
+  // response still carries the former combined-step display number.
+  const displayStepNumber = step.actionType === 'user_creation' ? 9 : (step.displayNumber ?? step.id);
   const [feedback, setFeedback] = useState({ isOpen: false, kind: 'ok', title: '', content: '', checks: [] });
   const [viewerFile, setViewerFile] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [validating835, setValidating835] = useState(false);
+  const [pushingMir, setPushingMir] = useState(false);
   const [showSftpModal, setShowSftpModal] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadExpiration, setUploadExpiration] = useState('');
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const uploadFileRef = useRef(null);
 
   const [s4Name, setS4Name] = useState('');
   const [s4Role, setS4Role] = useState('Technical Contact');
   const [s4Email, setS4Email] = useState('');
-  const [s4CountryCode, setS4CountryCode] = useState('+1');
+  const [s4CountryCode, setS4CountryCode] = useState('US');
   const [s4Phone, setS4Phone] = useState('');
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [s4Touched, setS4Touched] = useState({ name: false, email: false, phone: false });
   const [s4SubmitError, setS4SubmitError] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  const [savingClaim, setSavingClaim] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [localContacts, setLocalContacts] = useState(step.extra?.contacts || []);
+  const [localUsers, setLocalUsers] = useState(step.extra?.users || []);
 
   // Step 4 Real-time inline field validations
-  const s4Existing = step.extra?.contacts || [];
+  const s4Existing = localContacts;
+
+  useEffect(() => setLocalContacts(step.extra?.contacts || []), [step.extra?.contacts]);
+  useEffect(() => setLocalUsers(step.extra?.users || []), [step.extra?.users]);
 
   const s4NameError = (() => {
     if (!s4Touched.name && !s4Name) return '';
@@ -100,18 +119,16 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const s4PhoneError = (() => {
     const trimmed = s4Phone.trim();
     if (!trimmed) return '';
-    const fullPhone = `${s4CountryCode}${trimmed}`;
-    const digits = fullPhone.replace(/\D/g, '');
-    if (digits.length < 7 || digits.length > 15) {
-      return 'Phone must have 7 to 15 digits.';
-    }
+    const validationError = validateNationalNumber(s4CountryCode, trimmed, false);
+    if (validationError) return validationError;
+    const fullPhone = toE164(s4CountryCode, trimmed);
     if (s4Existing.some(c => (c.phone || '').trim() === fullPhone)) {
       return 'Phone number already exists.';
     }
     return '';
   })();
 
-  const [s5Text, setS5Text] = useState(step.latestNote?.note_text || step.extra?.verification?.verification_text || '');
+  const [s5Text, setS5Text] = useState(step.extra?.verification?.verification_text || '');
   const [s6Method, setS6Method] = useState(step.extra?.transferConfig?.method || 'SFTP');
   const [s6SftpMode, setS6SftpMode] = useState(step.extra?.transferConfig?.notes?.includes('Pull') ? 'Pull' : 'Push');
   const [s6ApiUrl, setS6ApiUrl] = useState(step.extra?.transferConfig?.notes?.startsWith('https') ? step.extra.transferConfig.notes : '');
@@ -157,6 +174,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   const [s9Email, setS9Email] = useState('');
   const [s9Password, setS9Password] = useState('');
   const [s9Mobile, setS9Mobile] = useState('');
+  const [s9CountryCode, setS9CountryCode] = useState('US');
 
   const datePickerRef = useRef(null);
   const [s13Date, setS13Date] = useState(() => formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || '');
@@ -185,6 +203,8 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   // Load existing SMTP config for Step 6 on mount
   useEffect(() => {
     if (step.actionType !== 'smtp_config') return;
+    // Never carry a typed secret between clients or repopulate one from storage.
+    setS11Password('');
     fetchClientSmtpConfig(clientId)
       .then(cfg => {
         if (cfg) {
@@ -204,45 +224,55 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, step.actionType]);
   const [s13Time, setS13Time] = useState(step.extra?.schedule?.scheduled_time || '10:00');
+  const [s13Timezone, setS13Timezone] = useState(step.extra?.schedule?.timezone || EASTERN_TIME_ZONE);
   const [s13Notes, setS13Notes] = useState(step.extra?.schedule?.notes || '');
 
   const [stText, setStText] = useState(step.extra?.submission?.submission_text || '');
 
-  const handleStandardFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleStandardFileUpload = async () => {
+    const file = uploadFile;
+    if (!file || !uploadExpiration) return;
+    setUploadingDocument(true);
     try {
-      const res = await uploadStepFile(clientId, step.key, file);
+      const res = await uploadStepFile(clientId, step.key, file, uploadExpiration);
       setFeedback({
         isOpen: true,
         kind: 'ok',
         title: 'Evidence Validated & Stored',
-        content: `Uploaded ${file.name} for Step ${step.id}.`,
+        content: `Uploaded ${file.name} as version ${res.version || (step.latestUpload?.version || 0) + 1}.`,
         checks: res.checks || []
       });
+      setUploadDialogOpen(false);
+      setUploadFile(null);
+      setUploadExpiration('');
       await onRefresh();
     } catch (err) {
+      setUploadFile(null);
       setFeedback({
         isOpen: true,
         kind: 'bad',
         title: 'Validation Failed',
-        content: err.message,
+        content: err.version ? `${err.message} The failed file was retained as version ${err.version}.` : err.message,
         checks: err.checks || []
       });
+      await onRefresh();
+    } finally {
+      setUploadingDocument(false);
+      if (uploadFileRef.current) uploadFileRef.current.value = '';
     }
   };
 
   const handleStep7Upload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
-    const allowed = ['835', 'x12', 'edi', 'txt', 'dat', '35', 'ansi', 'rem'];
-    if (!allowed.includes(ext)) {
+    const extensionError = validateFileExtensions([file], '835');
+    if (extensionError) {
+      e.target.value = '';
       setFeedback({
         isOpen: true,
         kind: 'bad',
         title: 'Upload Error',
-        content: `Unsupported file type (.${ext}). Upload a valid 835/X12 file (.835, .x12, .edi, .txt, .dat, .35, .ansi, .rem).`,
+        content: extensionError,
         checks: []
       });
       return;
@@ -253,8 +283,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setFeedback({
         isOpen: true,
         kind: 'ok',
-        title: '835 Structural Validation Passed',
-        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
+        title: '835 Validated and MIR Delivered',
+        content: res.email_sent
+          ? `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, pushed to outbound SFTP, and the client was notified by email.`
+          : `Step ${displayStepNumber} Complete: the MIR was delivered to SFTP, but the client email notification could not be sent.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -279,8 +311,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setFeedback({
         isOpen: true,
         kind: 'ok',
-        title: '835 Structural Validation Passed',
-        content: 'Step 8 Complete: Deep X12 835 structural and balance checks passed.',
+        title: '835 Validated and MIR Delivered',
+        content: res.email_sent
+          ? `Step ${displayStepNumber} Complete: the 835 was validated, converted to MIR, pushed to outbound SFTP, and the client was notified by email.`
+          : `Step ${displayStepNumber} Complete: the MIR was delivered to SFTP, but the client email notification could not be sent.`,
         checks: res.checks || []
       });
       await onRefresh();
@@ -298,7 +332,27 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
     }
   };
 
+  const handlePushGeneratedMir = async (force = false) => {
+    const delivery = step.extra?.mir_delivery;
+    if (!delivery?.file_id) {
+      await showAppAlert('The generated MIR file record is unavailable. Run Step 11 again.', { title: 'MIR Not Available', tone: 'error' });
+      return;
+    }
+    setPushingMir(true);
+    try {
+      const result = await pushEdiFileToSftp(delivery.file_id, { force });
+      await showAppAlert(result.message || 'MIR pushed to the configured SFTP output path.', { title: force ? 'MIR Pushed Again' : 'MIR Pushed', tone: 'success' });
+      await onRefresh();
+    } catch (err) {
+      await showAppAlert(err.message || 'The MIR could not be pushed to SFTP.', { title: 'SFTP Push Failed', tone: 'error' });
+      await onRefresh();
+    } finally {
+      setPushingMir(false);
+    }
+  };
+
   const handleStep4Save = async () => {
+    if (savingContact) return;
     setS4Touched({ name: true, email: true, phone: true });
     setS4SubmitError('');
 
@@ -307,10 +361,11 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       return;
     }
 
-    const fullPhone = s4Phone.trim() ? `${s4CountryCode}${s4Phone.trim()}` : '';
+    const fullPhone = s4Phone.trim() ? toE164(s4CountryCode, s4Phone) : '';
 
     try {
-      await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_4_contacts/save/`, {
+      setSavingContact(true);
+      const result = await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_4_contacts/save/`, {
         role_name: s4Role,
         employee_name: trimmedName,
         email: s4Email.trim(),
@@ -321,23 +376,46 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setS4Phone('');
       setS4Touched({ name: false, email: false, phone: false });
       setS4SubmitError('');
-      await onRefresh();
+      if (result.contact) setLocalContacts((current) => [...current, result.contact]);
+      onRefresh();
     } catch (err) {
       setS4SubmitError(err.message || 'Failed to save contact.');
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const handleDeleteContact = async (contact) => {
+    if (!contact?.id || deletingId) return;
+    if (!await showAppConfirm(`Delete contact ${contact.name || contact.employee_name}? This action cannot be undone.`, {
+      title: 'Delete Contact?', confirmLabel: 'Delete Contact', danger: true, tone: 'error',
+    })) return;
+    try {
+      setDeletingId(`contact-${contact.id}`);
+      await deleteClientContact(clientId, contact.id);
+      setLocalContacts((current) => current.filter((item) => item.id !== contact.id));
+      onRefresh();
+    } catch (err) {
+      setS4SubmitError(err.message || 'Failed to delete contact.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const handleStep5Save = async () => {
+    if (savingClaim) return;
     if (!s5Text.trim()) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please enter verification text.', checks: [] });
       return;
     }
     try {
+      setSavingClaim(true);
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_5_claim_sys/save/`, { verification_text: s5Text });
-      await onRefresh();
+      window.dispatchEvent(new CustomEvent('step-note-added', { detail: { clientId, stepKey: step.key } }));
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Submission Error', content: err.message, checks: [] });
-    }
+    } finally { setSavingClaim(false); }
   };
 
   const handleStep10Save = async () => {
@@ -371,7 +449,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
     try {
       const notesPayload = s6Method === 'SFTP'
-        ? `SFTP Direction: ${s6SftpMode}${finalConfig ? ` | Host: ${finalConfig.host} | 835: ${finalConfig.inbound_835_folder} | 837: ${finalConfig.inbound_837_folder} | MIR: ${finalConfig.outbound_mir_folder}` : ''}`
+        ? `SFTP Direction: ${s6SftpMode}${finalConfig ? ` | Host: ${finalConfig.host} | 835: ${finalConfig.inbound_835_folder} | 837: ${finalConfig.inbound_837_folder} | RECON: ${finalConfig.inbound_recon_folder || 'Not set'} | MIR: ${finalConfig.outbound_mir_folder}` : ''}`
         : (s6Method === 'HTTPS API' ? s6ApiUrl.trim() : 'Manual Upload Direct');
 
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
@@ -404,16 +482,24 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const handleStep9CreateUser = async () => {
-    if (!s9Name.trim() || !s9Email.trim() || !s9Password) {
-      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Name, Email, and Password are required.', checks: [] });
+    if (creatingUser) return;
+    if (!s9Name.trim() || !s9Email.trim() || !s9Password || !s9Mobile.trim()) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Name, Email, Mobile, and Password are required.', checks: [] });
+      return;
+    }
+    const mobileError = validateNationalNumber(s9CountryCode, s9Mobile);
+    if (mobileError) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Invalid Mobile Number', content: mobileError, checks: [] });
       return;
     }
     try {
-      await createUser({
+      setCreatingUser(true);
+      const result = await createUser({
         name: s9Name,
         email: s9Email,
         password: s9Password,
-        mobile: s9Mobile,
+        mobile: toE164(s9CountryCode, s9Mobile),
+        country_code: s9CountryCode,
         role: 'User',
         clients: [clientId]
       });
@@ -423,28 +509,46 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
       setS9Email('');
       setS9Password('');
       setS9Mobile('');
-      await onRefresh();
+      if (result.user) setLocalUsers((current) => [...current, result.user]);
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Creation Error', content: err.message, checks: [] });
-    }
+    } finally { setCreatingUser(false); }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!user?.id || deletingId) return;
+    if (!await showAppConfirm(`Delete user ${user.email}? This action cannot be undone.`, {
+      title: 'Delete User?', confirmLabel: 'Delete User', danger: true, tone: 'error',
+    })) return;
+    try {
+      setDeletingId(`user-${user.id}`);
+      await deleteClientUser(clientId, user.id);
+      setLocalUsers((current) => current.filter((item) => item.id !== user.id));
+      onRefresh();
+    } catch (err) {
+      setFeedback({ isOpen: true, kind: 'bad', title: 'Delete Error', content: err.message, checks: [] });
+    } finally { setDeletingId(null); }
   };
 
   const handleStep13Save = async () => {
+    if (savingSchedule) return;
     if (!s13Date.trim() || !s13Time.trim()) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Input Required', content: 'Please select scheduled date and time.', checks: [] });
       return;
     }
     try {
+      setSavingSchedule(true);
       await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/save/`, {
         scheduled_date: s13Date.trim(),
         scheduled_time: s13Time.trim(),
-        timezone: 'Eastern (ET)',
+        timezone: s13Timezone,
         notes: s13Notes.trim()
       });
-      await onRefresh();
+      onRefresh();
     } catch (err) {
       setFeedback({ isOpen: true, kind: 'bad', title: 'Schedule Error', content: err.message, checks: [] });
-    }
+    } finally { setSavingSchedule(false); }
   };
 
   const handleTextSubmission = async () => {
@@ -490,7 +594,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   };
 
   const stateClass = step.done ? 'done' : (step.inProgress ? 'now' : 'locked');
-  const markContent = step.done ? '✓' : (step.inProgress ? step.id : '🔒');
+  const markContent = step.done ? '✓' : (step.inProgress ? displayStepNumber : '🔒');
   const statusTag = step.done ? (
     <span className="tag ok">Complete</span>
   ) : step.inProgress ? (
@@ -500,46 +604,42 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
   );
 
   return (
-    <div className={`rung ${stateClass}`} id={`step-${step.id}`} data-step-id={step.id}>
+    <div className={`rung ${stateClass}`} id={`step-${step.id}`} data-step-id={step.id} data-display-step-number={displayStepNumber}>
       <div className="mark">{markContent}</div>
 
       <div className="txt">
-        <h3>Step {step.id}: {step.title}</h3>
+        <h3>Step {displayStepNumber}: {step.title}</h3>
         <div className="meta">{step.desc}</div>
 
         {latestUp && (
           <div className="ev">
-            📄 Filed: <b>{latestUp.original_filename}</b> ({formatDateTime(latestUp.uploaded_at)})
+            📄 Filed: <b>{latestUp.original_filename}</b> <TimeDisplay value={latestUp.uploaded_at} easternOnly />
           </div>
         )}
 
-        {step.latestNote && step.id !== 5 && step.id !== 10 && step.id !== 11 && step.id !== 12 && step.id !== 13 && step.id !== 14 && step.id !== 15 && (
-          <div className="ev" style={{ color: 'var(--ochre)' }}>
-            Note: "{step.latestNote.note_text}" — <i>{step.latestNote.author}</i>
-          </div>
-        )}
+        <StepNotesHistory clientId={clientId} stepKey={step.key} latestNote={step.latestNote} />
 
         {(step.inProgress || step.done) && (
           <>
             {step.actionType === 'contact_manager' && (
               <div className="step-custom-box" style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)', marginTop: '10px' }}>
-                {step.extra?.contacts && step.extra.contacts.length > 0 && (
+                {localContacts.length > 0 && (
                   <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
                     <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Recorded Contacts ({step.extra.contacts.length})</span>
-                      {step.extra.contacts.length > 2 && (
+                      <span>Recorded Contacts ({localContacts.length})</span>
+                      {localContacts.length > 2 && (
                         <button
                           type="button"
                           style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => setShowAllContacts(!showAllContacts)}
                         >
-                          {showAllContacts ? '▲ Show Less' : `▼ Show More (${step.extra.contacts.length - 2} more)`}
+                          {showAllContacts ? '▲ Show Less' : `▼ Show More (${localContacts.length - 2} more)`}
                         </button>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {(showAllContacts ? step.extra.contacts : step.extra.contacts.slice(0, 2)).map((c, idx) => (
-                        <div key={c.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllContacts ? step.extra.contacts.length : Math.min(2, step.extra.contacts.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
+                      {(showAllContacts ? localContacts : localContacts.slice(0, 2)).map((c, idx) => (
+                        <div key={c.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllContacts ? localContacts.length : Math.min(2, localContacts.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
                           <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
                             <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                           </svg>
@@ -562,6 +662,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                               </span>
                             )}
                           </div>
+                          <button type="button" className="btn tiny" title="Delete contact" aria-label={`Delete contact ${c.name || ''}`} disabled={deletingId === `contact-${c.id}`} onClick={() => handleDeleteContact(c)} style={{ marginLeft: 'auto', color: 'var(--brick)' }}>🗑</button>
                         </div>
                       ))}
                     </div>
@@ -651,10 +752,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         value={s4CountryCode}
                         onChange={(e) => setS4CountryCode(e.target.value)}
                       >
-                        <option value="+1">+1 (US)</option>
-                        <option value="+44">+44 (UK)</option>
-                        <option value="+91">+91 (IN)</option>
-                        <option value="+61">+61 (AU)</option>
+                        {PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.iso} {country.code}</option>)}
                       </select>
                       <input
                         style={{
@@ -671,7 +769,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         value={s4Phone}
                         onBlur={() => setS4Touched(prev => ({ ...prev, phone: true }))}
                         onChange={(e) => {
-                          setS4Phone(e.target.value);
+                          setS4Phone(cleanNationalNumber(e.target.value));
                           setS4Touched(prev => ({ ...prev, phone: true }));
                         }}
                       />
@@ -688,9 +786,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       type="button"
                       className="btn tiny primary"
                       onClick={handleStep4Save}
+                      disabled={savingContact}
                       style={{ padding: '6px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                     >
-                      {step.extra?.contacts && step.extra.contacts.length > 0 ? '+ Add Contact' : 'Save & Complete'}
+                      {savingContact ? 'Saving…' : (localContacts.length > 0 ? '+ Add Contact' : 'Submit')}
                     </button>
                   </div>
                 </div>
@@ -705,18 +804,10 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
             {step.actionType === 'claim_verify' && (
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                {step.done && step.latestNote && (
-                  <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                    <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Claim System Verification</div>
-                    <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      <div><b>Note:</b> {step.latestNote.note_text}</div>
-                    </div>
-                  </div>
-                )}
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Claim System Verification Information</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s5Text} onChange={(e) => setS5Text(e.target.value)} placeholder="e.g. Vendor hosted ClaimsCore Enterprise, SFTP outbound nightly 835 drops verified." />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
-                  <button className="btn tiny primary" onClick={handleStep5Save}>Submit &amp; Complete Step 5</button>
+                  <button className="btn tiny primary" onClick={handleStep5Save} disabled={savingClaim}>{savingClaim ? 'Saving…' : 'Submit'}</button>
                 </div>
               </div>
             )}
@@ -781,7 +872,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                                   body: JSON.stringify({ use_default: true, client_id: clientId, connection_type: 'UNIFIED' })
                                 });
                                 setS6SftpVerified(true);
-                                
+                                await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});
+                                await onRefresh();
+
                                 let detailsStr = 'Using default SFTP server connection details.';
                                 try {
                                   const resSftp = await fetch('/edi835/api/sftp/get/');
@@ -798,7 +891,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
                                 setFeedback({ isOpen: true, kind: 'ok', title: 'Default SFTP Settings Enabled', content: detailsStr, checks: [] });
                               } catch (err) {
-                                alert("Failed to set default SFTP: " + err.message);
+                                await showAppAlert("Failed to set default SFTP: " + err.message, { title: 'SFTP Update Failed', tone: 'error' });
                               }
                             } else {
                               setS6SftpVerified(false);
@@ -846,7 +939,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                           disabled={Boolean(s6ApiError) || !s6ApiUrl.trim()}
                           style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                         >
-                          ✓ Save API &amp; Complete
+                          Submit
                         </button>
                       </div>
                     </>
@@ -860,7 +953,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         onClick={handleStep6Save}
                         style={{ padding: '6px 14px', fontWeight: 600, whiteSpace: 'nowrap', height: '29px' }}
                       >
-                        ✓ Complete Step 7
+                        Submit
                       </button>
                     </div>
                   )}
@@ -870,7 +963,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
             {step.actionType === 'x12_835_validate' && (
               <div className="step-custom-box">
-                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 6 }}>Sample 835 EDI Validation:</div>
+                <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 6 }}>Validate 835 and Push MIR to SFTP:</div>
                 {latestUp ? (
                   <div style={{ fontSize: 12, marginBottom: 8 }}>📄 File: <b>{latestUp.original_filename}</b> ({latestUp.validation_status || 'PENDING'})</div>
                 ) : (
@@ -881,12 +974,12 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   <label className={`btn tiny ${step.done ? 'success' : 'primary'}`} style={{ cursor: validating835 ? 'not-allowed' : 'pointer' }}>
                     {validating835 ? (
                       <>
-                        <span className="spinner-icon" /> Validating...
+                        <span className="spinner-icon" /> Converting &amp; Pushing...
                       </>
                     ) : (
-                      '⬆ Upload & Validate 835'
+                      '⬆ Validate 835 & Push MIR'
                     )}
-                    <input type="file" hidden accept=".835,.x12,.edi,.txt,.dat,.35,.ansi,.rem" onChange={handleStep7Upload} disabled={validating835} />
+                    <input type="file" hidden accept={fileAccept('835')} onChange={handleStep7Upload} disabled={validating835} />
                   </label>
                 </div>
               </div>
@@ -915,7 +1008,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                   MIR Output Filename Format
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--ink)', marginBottom: '12px', lineHeight: 1.5 }}>
-                  Define the naming convention format for generated MIR output files. Placeholders like <b>YYYY</b> (4-digit Year), <b>MM</b> (2-digit Month), and <b>DD</b> (2-digit Day) will be dynamically resolved.
+                  Define the naming convention for MIR files delivered to SFTP. Supported placeholders: <b>YYYY</b> (4-digit year), <b>MM</b> (2-digit month), <b>DD</b> (2-digit day), <b>hh</b> (24-hour), <b>mm</b> (minute), and <b>ss</b> (second). Local server copies are automatically prefixed with the client ID to prevent cross-client filename conflicts.
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
                   <input
@@ -923,31 +1016,35 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     type="text"
                     value={s9MirFormat}
                     onChange={(e) => setS9MirFormat(e.target.value)}
-                    placeholder="MIROUT_YYYY_MMDD_.MIR"
+                    placeholder="MIROUT_YYYYMMDD_hhmmss.MIR"
                   />
                   <button className="btn tiny primary" onClick={handleStep9NamingSave}>
-                    ✓ Save Naming Format &amp; Complete Step 10
+                    Submit
                   </button>
                 </div>
+              </div>
+            )}
 
+            {step.actionType === 'user_creation' && (
+              <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
                 <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '15px' }}>
-                  {step.extra?.users && step.extra.users.length > 0 && (
+                  {localUsers.length > 0 && (
                     <div style={{ marginBottom: '16px', background: '#fff', border: '1px solid var(--line-soft)', borderRadius: '4px', padding: '12px 16px' }}>
                       <div style={{ fontWeight: 700, color: '#475569', marginBottom: '12px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Recorded Users ({step.extra.users.length})</span>
-                        {step.extra.users.length > 2 && (
+                        <span>Recorded Users ({localUsers.length})</span>
+                        {localUsers.length > 2 && (
                           <button
                             type="button"
                             style={{ background: '#fff', border: '1px solid #CBD5E1', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', color: '#334155', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}
                             onClick={() => setShowAllUsers(!showAllUsers)}
                           >
-                            {showAllUsers ? '▲ Show Less' : `▼ Show More (${step.extra.users.length - 2} more)`}
+                            {showAllUsers ? '▲ Show Less' : `▼ Show More (${localUsers.length - 2} more)`}
                           </button>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {(showAllUsers ? step.extra.users : step.extra.users.slice(0, 2)).map((u, idx) => (
-                          <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? step.extra.users.length : Math.min(2, step.extra.users.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
+                        {(showAllUsers ? localUsers : localUsers.slice(0, 2)).map((u, idx) => (
+                          <div key={u.id || idx} style={{ padding: '10px 0', borderBottom: idx < (showAllUsers ? localUsers.length : Math.min(2, localUsers.length)) - 1 ? '1px solid #F1F5F9' : 'none', display: 'flex', alignItems: 'center', fontSize: '13px', color: '#1E293B' }}>
                             <svg width="14" height="14" fill="#334155" viewBox="0 0 16 16" style={{ marginRight: '8px', flexShrink: 0 }}>
                               <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                             </svg>
@@ -970,6 +1067,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                                 </span>
                               )}
                             </div>
+                            <button type="button" className="btn tiny" title="Delete user" aria-label={`Delete user ${u.email || ''}`} disabled={deletingId === `user-${u.id}`} onClick={() => handleDeleteUser(u)} style={{ marginLeft: 'auto', color: 'var(--brick)' }}>🗑</button>
                           </div>
                         ))}
                       </div>
@@ -1006,22 +1104,32 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                         onChange={(e) => setS9Password(e.target.value)}
                       />
                     </div>
-                    <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                    <div style={{ flex: '1 1 250px', minWidth: '250px', display: 'flex', gap: '4px' }}>
+                      <select
+                        aria-label="Country code"
+                        style={{ width: '95px', padding: '6px 4px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '11.5px', background: '#fff' }}
+                        value={s9CountryCode}
+                        onChange={(e) => setS9CountryCode(e.target.value)}
+                      >
+                        {PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.iso} {country.code}</option>)}
+                      </select>
                       <input
-                        style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
+                        style={{ flex: 1, minWidth: 0, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff' }}
                         type="tel"
-                        placeholder="Mobile"
+                        inputMode="numeric"
+                        placeholder="Mobile *"
                         value={s9Mobile}
-                        onChange={(e) => setS9Mobile(e.target.value)}
+                        onChange={(e) => setS9Mobile(cleanNationalNumber(e.target.value))}
                       />
                     </div>
                     <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'flex-start' }}>
                       <button
                         className="btn tiny primary"
                         onClick={handleStep9CreateUser}
+                        disabled={creatingUser}
                         style={{ padding: '6px 14px', fontWeight: 600, height: '29px' }}
                       >
-                        ✓ Create User &amp; Complete Step 10
+                        {creatingUser ? 'Creating…' : 'Submit'}
                       </button>
                     </div>
                   </div>
@@ -1031,50 +1139,28 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
             {step.actionType === 'side_by_side_done' && (
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                {step.done && step.latestNote && (
-                  <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                    <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Side-by-Side 835 Conversion Review Notes</div>
-                    <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      <div><b>Note:</b> {step.latestNote.note_text}</div>
-                    </div>
-                  </div>
-                )}
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Side-by-Side 835 Conversion Review Notes</label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} value={s10Notes} onChange={(e) => setS10Notes(e.target.value)} placeholder="e.g. Verified side-by-side 835 conversion claim totals CLP, BPR, and TRN against MIR format." />
-                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    className="btn tiny"
-                    type="button"
-                    onClick={async () => {
-                      if (window.confirm("Do you want to transmit the verified test MIR payload to client SFTP/FTP server now?")) {
-                        try {
-                          const res = await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/submit-text/`, { submission_text: "Test File Transmitted via SFTP/FTP successfully. " + s10Notes });
-                          alert("✓ Test payload transmitted successfully via SFTP/FTP!");
-                          await onRefresh();
-                        } catch (err) {
-                          alert("Transmission failed: " + err.message);
-                        }
-                      }
-                    }}
-                    style={{ background: '#f59e0b', color: '#fff', border: 'none', fontWeight: 600 }}
-                  >
-                    ⚡ Transmit Test File to FTP
-                  </button>
-                  <button className="btn tiny primary" onClick={handleStep10Save}>Submit &amp; Complete Step 11</button>
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                  {step.extra?.mir_delivery?.mir_created && step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" type="button" disabled={pushingMir} onClick={() => handlePushGeneratedMir(true)}>
+                      {pushingMir ? 'Pushing…' : 'Push Again To SFTP'}
+                    </button>
+                  )}
+                  {step.extra?.mir_delivery?.mir_created && !step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" type="button" disabled={pushingMir} onClick={() => handlePushGeneratedMir(false)}>
+                      {pushingMir ? 'Pushing…' : 'Push MIR to SFTP'}
+                    </button>
+                  )}
+                  {step.extra?.mir_delivery?.sftp_pushed && (
+                    <button className="btn tiny primary" onClick={handleStep10Save}>Continue</button>
+                  )}
                 </div>
               </div>
             )}
 
             {step.actionType === 'smtp_config' && (
               <div className="step-custom-box" style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                {step.done && step.latestNote && (
-                  <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                    <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current SMTP / Email Config Notes</div>
-                    <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      <div><b>Note:</b> {step.latestNote.note_text}</div>
-                    </div>
-                  </div>
-                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     SMTP / Email Configuration
@@ -1296,21 +1382,21 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       transition: 'opacity 0.2s'
                     }}
                   >
-                    {s11Sending ? '⏳ Saving...' : '💾 Save SMTP Config & Complete'}
+                    {s11Sending ? 'Saving…' : 'Submit'}
                   </button>
                 </div>
               </div>
             )}
 
-            {step.actionType === 'schedule_action' && (
+           {step.actionType === 'production_schedule' && (
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)', marginTop: '8px' }}>
                 {step.done && (step.extra?.schedule || step.latestNote) && (
                   <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
                     <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Current Schedule Configuration</div>
                     <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
                       <div style={{ marginBottom: '4px' }}><b>Date:</b> {formatToMMDDYYYY(step.extra?.schedule?.scheduled_date) || 'N/A'}</div>
-                      <div style={{ marginBottom: '4px' }}><b>Time (EST):</b> {step.extra?.schedule?.scheduled_time || 'N/A'}</div>
-                      <div><b>Notes:</b> {step.latestNote?.note_text || 'None'}</div>
+                      <div style={{ marginBottom: '4px' }}><b>Scheduled time:</b> {scheduleTimeLabel(step.extra?.schedule?.scheduled_time, step.extra?.schedule?.timezone)}</div>
+                      {step.extra?.schedule?.scheduled_at && <div style={{ marginBottom: '4px' }}><TimeDisplay value={step.extra.schedule.scheduled_at} easternOnly /></div>}
                     </div>
                   </div>
                 )}
@@ -1388,13 +1474,19 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time (EST) *:</label>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Time *:</label>
                     <input
                       type="time"
                       style={{ width: '110px', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: '12px', background: '#fff', color: 'var(--ink)', height: '28px' }}
                       value={s13Time}
                       onChange={(e) => setS13Time(e.target.value)}
                     />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Timezone:</label>
+                    <select value={s13Timezone} onChange={(e) => setS13Timezone(e.target.value)} style={{ height: '28px', maxWidth: '260px', border: '1px solid var(--line)', borderRadius: '3px', background: '#fff', fontSize: '12px' }}>
+                      {scheduleTimeZoneOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
                   </div>
                   <div style={{ flex: 1, minWidth: '180px' }}>
                     <input
@@ -1409,26 +1501,30 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       type="button"
                       className="btn tiny primary"
                       onClick={handleStep13Save}
+                      disabled={savingSchedule}
                       style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px' }}
                     >
-                      Save Schedule &amp; Complete
+                      {savingSchedule ? 'Saving…' : 'Submit'}
                     </button>
                     <button
                       type="button"
                       className="btn tiny"
                       title="Skip this step — Go Live scheduling is optional"
+                      disabled={savingSchedule}
                       onClick={async () => {
+                        if (savingSchedule) return;
                         try {
+                          setSavingSchedule(true);
                           await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/step_13_schedule/save/`, {
                             scheduled_date: '',
                             scheduled_time: '',
-                            timezone: 'Eastern (ET)',
+                            timezone: s13Timezone,
                             notes: 'Skipped — Go Live scheduling is optional.'
                           });
                           await onRefresh();
                         } catch (err) {
                           setFeedback({ isOpen: true, kind: 'bad', title: 'Skip Error', content: err.message, checks: [] });
-                        }
+                        } finally { setSavingSchedule(false); }
                       }}
                       style={{ padding: '5px 12px', fontWeight: 600, whiteSpace: 'nowrap', height: '28px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
                     >
@@ -1480,23 +1576,13 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
 
             {(step.actionType === 'text_submission' || step.actionType === 'text_submission_final') && (
               <div className="step-custom-box" style={{ padding: '8px 12px', background: '#F8FAFC', borderRadius: '4px', border: '1px solid var(--line-soft)' }}>
-                {step.done && step.latestNote && (
-                  <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fff', borderRadius: '4px', border: '1px solid var(--line)' }}>
-                    <div style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                      {step.actionType === 'text_submission_final' ? 'Current Production Delivery Sign-Off Notes' : 'Current Go-Live Safeguards Verification'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      <div><b>Note:</b> {step.latestNote.note_text}</div>
-                    </div>
-                  </div>
-                )}
                 <label style={{ fontWeight: 600, fontSize: 11.5, display: 'block', marginBottom: 6, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {step.actionType === 'text_submission_final' ? 'Production Delivery Sign-Off Notes' : 'Go-Live Safeguards Verification'}
                 </label>
                 <textarea rows={1} style={{ width: '100%', padding: '4px 6px', border: '1px solid var(--line)', borderRadius: '3px', fontSize: 12, resize: 'vertical', minHeight: '28px' }} placeholder={step.actionType === 'text_submission_final' ? 'First production file delivered and monitored without error.' : 'All cutover checks and security safeguards passed.'} value={stText} onChange={(e) => setStText(e.target.value)} />
                 <div style={{ marginTop: 6, textAlign: 'right' }}>
                   <button className="btn tiny primary" onClick={handleTextSubmission}>
-                    {step.actionType === 'text_submission_final' ? 'Conclude Onboarding' : `Submit & Complete Step ${step.id}`}
+                    Submit
                   </button>
                 </div>
               </div>
@@ -1542,22 +1628,44 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
           )}
 
           {(step.actionType === 'upload_template' || step.actionType === 'email_upload') && (
-            <label
+            <button
+              type="button"
               className={`btn icon-btn upload-btn ${step.done ? 'done' : ''}`}
-              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setUploadFile(null);
+                setUploadExpiration('');
+                setUploadDialogOpen(true);
+              }}
               title={step.actionType === 'email_upload' ? "Upload Email Confirmation (Images & Documents)" : "Upload File"}
               aria-label="Upload File"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
                 <path d="M5 20h14v-2H5v2zm0-10h4v6h6v-6h4l-7-7-7 7z" />
               </svg>
-              <input
-                type="file"
-                hidden
-                onChange={handleStandardFileUpload}
-                accept={step.actionType === 'email_upload' ? "image/*,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.tiff,.tif,.ico,.avif,.pdf,.eml,.msg,.txt,.doc,.docx" : (step.file ? ".pdf,.doc,.docx" : (step.ext ? `.${step.ext}` : undefined))}
-              />
-            </label>
+            </button>
+          )}
+
+          {uploadDialogOpen && (
+            <div className="step-upload-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !uploadingDocument && setUploadDialogOpen(false)}>
+              <section className="step-upload-modal" role="dialog" aria-modal="true" aria-labelledby={`step-upload-title-${step.id}`}>
+                <header>
+                  <div><div className="eyebrow">DOCUMENT UPLOAD</div><h2 id={`step-upload-title-${step.id}`}>Upload {step.title}</h2></div>
+                  <button type="button" className="modal-cross-btn" disabled={uploadingDocument} onClick={() => setUploadDialogOpen(false)}>×</button>
+                </header>
+                <div className="step-upload-body">
+                  <div className="step-upload-version"><span>Uploading version</span><strong>v{step.latestUpload?.next_version || ((step.latestUpload?.version || 0) + 1)}</strong></div>
+                  <label htmlFor={`step-upload-file-${step.id}`}>Document file</label>
+                  <input ref={uploadFileRef} id={`step-upload-file-${step.id}`} type="file" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} accept={step.actionType === 'email_upload' ? "image/*,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.tiff,.tif,.ico,.avif,.pdf,.eml,.msg,.txt,.doc,.docx" : (step.file ? ".pdf,.doc,.docx" : (step.ext ? `.${step.ext}` : undefined))} />
+                  <label htmlFor={`step-upload-expiration-${step.id}`}>Expiration date</label>
+                  <input id={`step-upload-expiration-${step.id}`} type="date" min={new Date().toISOString().slice(0, 10)} value={uploadExpiration} onChange={(event) => setUploadExpiration(event.target.value)} />
+                  <small>A failed validation is still retained as this version; the next attempt advances to the following version.</small>
+                </div>
+                <footer>
+                  <button type="button" className="btn" disabled={uploadingDocument} onClick={() => setUploadDialogOpen(false)}>Cancel</button>
+                  <button type="button" className="btn primary" disabled={!uploadFile || !uploadExpiration || uploadingDocument} onClick={handleStandardFileUpload}>{uploadingDocument ? 'Uploading…' : `Upload v${step.latestUpload?.next_version || ((step.latestUpload?.version || 0) + 1)}`}</button>
+                </footer>
+              </section>
+            </div>
           )}
 
           <button
@@ -1576,9 +1684,9 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
             <button
               type="button"
               className="btn icon-btn redo-btn"
-              onClick={() => onOpenRedo(step.key, step.id)}
-              title={`Redo Step ${step.id}`}
-              aria-label={`Redo Step ${step.id}`}
+              onClick={() => onOpenRedo(step.key, displayStepNumber)}
+              title={`Redo Step ${displayStepNumber}`}
+              aria-label={`Redo Step ${displayStepNumber}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -1594,7 +1702,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
         onClose={() => setIsViewerOpen(false)}
         fileData={viewerFile}
         stepTitle={step.title}
-        stepNum={step.id}
+        stepNum={displayStepNumber}
       />
 
       <FeedbackModal

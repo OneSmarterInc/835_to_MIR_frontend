@@ -1,0 +1,279 @@
+/* Source-file viewer polish loaded globally after the MPL page styles. */
+.mpl-file-viewer .sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.mpl-file-viewer .mpl-file-content-heading {
+  display: grid !important;
+  grid-template-columns: auto minmax(300px, 1fr) auto;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.mpl-file-viewer .mpl-file-search {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.mpl-file-viewer .mpl-file-search label {
+  display: block !important;
+  order: 1;
+}
+
+.mpl-file-viewer .mpl-file-search input {
+  box-sizing: border-box;
+  width: 220px !important;
+  height: 30px !important;
+  padding: 0 9px !important;
+  border: 1px solid #9fb2c4 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: #23374c !important;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+}
+
+.mpl-file-viewer .mpl-file-search input:focus {
+  border-color: #6f879c !important;
+  outline: 2px solid rgba(111, 135, 156, .18) !important;
+  outline-offset: 1px;
+}
+
+.mpl-file-viewer .mpl-file-search > span {
+  order: 3;
+  min-width: 48px !important;
+  color: #34485f !important;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.mpl-file-viewer .mpl-file-search button {
+  display: grid !important;
+  place-items: center !important;
+  width: 27px !important;
+  height: 25px !important;
+  padding: 0 !important;
+  border: 1px solid #9fb2c4 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  color: #087363 !important;
+  font: 800 14px/1 ui-monospace, SFMono-Regular, Consolas, monospace !important;
+  cursor: pointer;
+}
+
+.mpl-file-viewer .mpl-file-search button:first-of-type { order: 2; }
+.mpl-file-viewer .mpl-file-search button:last-of-type { order: 4; }
+
+.mpl-file-viewer .mpl-file-search button:hover:not(:disabled) {
+  border-color: #087363 !important;
+  background: #e8f6f2 !important;
+}
+
+.mpl-file-viewer .mpl-file-search button:disabled {
+  opacity: .35 !important;
+  cursor: not-allowed;
+}
+
+/* Highlights must not change fixed-width/source-file column positions. */
+.mpl-file-viewer .mpl-source-code mark {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  font: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+}
+
+.mpl-file-viewer .mpl-source-code mark.file-search {
+  background: #d7dadd !important;
+  color: #1b2734 !important;
+  box-shadow: 0 0 0 1px #b8bdc2 !important;
+}
+
+.mpl-file-viewer .mpl-source-code mark.file-search.active {
+  background: #aeb4ba !important;
+  color: #101820 !important;
+  box-shadow: 0 0 0 2px #747c84 !important;
+}
+
+/* Native React claim-slice download action beside Download file. */
+.mpl-file-viewer .mpl-file-viewer-toolbar {
+  grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.7fr) auto 38px !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download {
+  appearance: none !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  align-self: end !important;
+  justify-self: start !important;
+  box-sizing: border-box !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #111827 !important;
+  border-radius: 3px !important;
+  background: #111827 !important;
+  color: #fff !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download svg {
+  display: block !important;
+  width: 17px !important;
+  height: 17px !important;
+  pointer-events: none;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:hover:not(:disabled) {
+  border-color: #27364a !important;
+  background: #27364a !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:focus-visible {
+  outline: 3px solid rgba(17, 24, 39, .2) !important;
+  outline-offset: 2px;
+}
+
+.mpl-file-viewer .mpl-claim-slice-download:disabled {
+  opacity: .5 !important;
+  cursor: wait !important;
+}
+
+.mpl-file-viewer .mpl-claim-slice-message {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  color: #805000;
+  font-size: 10px;
+  text-align: right;
+}
+
+/* Make the detail-page return action look and behave like an actual button. */
+.mpl-detail-page .mpl-back-button {
+  appearance: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 34px !important;
+  margin: 0 0 14px !important;
+  padding: 7px 12px !important;
+  border: 1px solid rgba(158, 217, 207, .55) !important;
+  border-radius: 4px !important;
+  background: rgba(255, 255, 255, .04) !important;
+  color: #a9e2d8 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .05s ease;
+}
+
+.mpl-detail-page .mpl-back-button:hover {
+  border-color: #8fd8ca !important;
+  background: rgba(143, 216, 202, .12) !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+.mpl-detail-page .mpl-back-button:active {
+  transform: translateY(1px);
+}
+
+.mpl-detail-page .mpl-back-button:focus-visible {
+  outline: 3px solid rgba(143, 216, 202, .26) !important;
+  outline-offset: 2px;
+}
+
+/* AI suggestions are now ordinary React claim-card content. */
+.mpl-ai-suggestion-section {
+  background: #fff;
+}
+
+.mpl-ai-suggestion-paragraph {
+  margin: 10px 0 12px;
+  color: #334a61;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.mpl-ai-suggestion-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #334a61;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.mpl-ai-suggestion-list li + li {
+  margin-top: 5px;
+}
+
+.mpl-ai-suggestion-unavailable {
+  margin: 10px 0 0;
+  color: #805000;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mpl-ai-suggestion-loading {
+  margin: 10px 0 0;
+  color: #66788d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .mpl-file-viewer .mpl-file-viewer-toolbar {
+    grid-template-columns: 1fr auto auto !important;
+  }
+
+  .mpl-file-viewer .mpl-file-viewer-toolbar > label,
+  .mpl-file-viewer .mpl-file-viewer-toolbar > dl {
+    grid-column: 1 / -1;
+  }
+
+  .mpl-file-viewer .mpl-file-content-heading {
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .mpl-file-viewer .mpl-file-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .mpl-file-viewer .mpl-file-search label {
+    flex: 1;
+  }
+
+  .mpl-file-viewer .mpl-file-search input {
+    width: 100% !important;
+  }
+}

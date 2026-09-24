@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import CenteredModal from './CenteredModal';
+import { isSuperAdminAccount } from '../../utils/adminRoles';
+import PhoneNumberField from '../../../components/PhoneNumberField';
+import { toE164, validateNationalNumber } from '../../../utils/phone';
 
 export default function CreateUserModal({ isOpen, onClose, onSave, clients, currentUser }) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [countryIso, setCountryIso] = useState('US');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('User');
@@ -11,13 +15,14 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.is_superuser;
+  const isSuperAdmin = isSuperAdminAccount(currentUser);
 
   const handleCloseModal = () => {
     setErrorMsg('');
     setName('');
     setEmail('');
     setMobile('');
+    setCountryIso('US');
     setPassword('');
     setRole('User');
     setSelectedClientId('');
@@ -44,11 +49,18 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
       return;
     }
 
+    const mobileError = validateNationalNumber(countryIso, mobile);
+    if (mobileError) {
+      setErrorMsg(mobileError);
+      return;
+    }
+
     setLoading(true);
     try {
       await onSave({
         name: name.trim(),
-        mobile: mobile.trim(),
+        mobile: toE164(countryIso, mobile),
+        country_code: countryIso,
         email: email.trim(),
         password,
         role,
@@ -103,14 +115,7 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
             required
           />
         </div>
-        <div className="field">
-          <label>Mobile</label>
-          <input
-            placeholder="e.g. +1 555-0192"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-          />
-        </div>
+        <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
         <div className="field">
           <label>Password *</label>
           <input
@@ -127,7 +132,7 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
             <label>Role</label>
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
               <option value="User">User (Standard Access)</option>
-              <option value="Admin">Admin (Full Access)</option>
+              <option value="Admin">Admin (Custom Screen Access)</option>
               <option value="Super Admin">Super Admin (System Owner)</option>
             </select>
           </div>

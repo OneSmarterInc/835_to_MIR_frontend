@@ -4,16 +4,8 @@ import ClientSelectDropdown from './ClientSelectDropdown';
 import { postStepData } from '../services/api';
 import ConfirmModal from './modals/ConfirmModal';
 import FeedbackModal from './modals/FeedbackModal';
-
-function formatDate(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
+import TimeDisplay from '../../components/TimeDisplay';
+import './OnboardingLadder.css';
 
 export default function OnboardingLadder({ client, steps, roles, clients, onSelectClient, onRefresh, onOpenNotes, onOpenRedo, onOpenAddRole }) {
   const [returnPrompt, setReturnPrompt] = useState({ isOpen: false, pendingKey: '', stepName: '' });
@@ -38,7 +30,9 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
     if (focusStep && steps && steps.length > 0) {
       hasScrolledRef.current = true;
       const scrollTimer = setTimeout(() => {
-        const el = document.getElementById(`step-${focusStep}`) || document.getElementById(`step-rung-${focusStep}`);
+        const displayStepElement = Array.from(document.querySelectorAll('[data-display-step-number]'))
+          .find((node) => node.dataset.displayStepNumber === String(focusStep));
+        const el = displayStepElement || document.getElementById(`step-${focusStep}`) || document.getElementById(`step-rung-${focusStep}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           el.classList.add('highlight-flash');
@@ -102,7 +96,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
   const totalSteps = steps.length || 15;
   const doneCount = steps.filter(s => s.done).length;
   const inProgressStep = steps.find(s => s.inProgress);
-  const activeStepNum = inProgressStep ? `Step ${inProgressStep.id}` : (doneCount === totalSteps ? 'Complete' : '—');
+  const activeStepNum = inProgressStep ? `Step ${inProgressStep.displayNumber ?? inProgressStep.id}` : (doneCount === totalSteps ? 'Complete' : '—');
   const activeStepTitle = inProgressStep ? inProgressStep.title : (doneCount === totalSteps ? `All ${totalSteps} Steps Complete` : '—');
   const stageName = (() => {
     const s = (client.stage || '').toLowerCase().replace(/[\s-]/g, '_');
@@ -113,6 +107,32 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
     return 'Onboarding Pending';
   })();
 
+  const isPermanentlyOffboarded = String(client.stage || '').toLowerCase() === 'offboarded';
+
+  if (isPermanentlyOffboarded) {
+    return (
+      <section className="view on onboarding-history-view" id="v-onboard">
+        <header className="onboarding-heading-row onboarding-history-header">
+          <div className="onboarding-heading-copy"><div className="onboarding-heading-eyebrow">Onboarding workspace</div><h1>Onboarding History</h1><p>This client has been permanently offboarded. Onboarding cannot be resumed or restarted.</p></div>
+          <div className="onboarding-heading-client"><label>Client</label><ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} fullWidth /></div>
+        </header>
+        <div role="status" className="onboarding-lock-notice">
+          <strong>Onboarding permanently locked</strong>
+          <div>All previous onboarding steps are preserved below for read-only review. Upload, save, complete, delete, and redo actions are unavailable.</div>
+        </div>
+        <div className="ladder onboarding-history-list">
+          {steps.map((step) => (
+            <div className={`rung onboarding-history-rung${step.done ? ' done' : ''}`} key={`${client.id}-${step.id}`}>
+              <div className="mark">{step.done ? '✓' : '—'}</div>
+              <div className="txt"><h3>{step.title}</h3><div className="meta">{step.done ? 'Completed before offboarding' : 'Not completed'} · Read only</div>{step.latestUpload?.original_filename && <div className="onboarding-file-name">Filed: <b>{step.latestUpload.original_filename}</b></div>}</div>
+              <span className="tag bad">Locked</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   let currentPhase = null;
 
   // Use natural database step sequence
@@ -120,27 +140,23 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
 
   return (
     <section className="view on" id="v-onboard">
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow" id="ob-eyebrow">Selected Client</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
-            <ClientSelectDropdown
-              id="client-select-hdr"
-              clients={clients}
-              value={client.id}
-              onChange={(value) => onSelectClient(value)}
-            />
-            <h1 id="ob-title" style={{ margin: 0 }}>Onboarding Workflow</h1>
-          </div>
-          <p className="sub">Sequential {totalSteps}-step compliance ladder. Completing the active step automatically unlocks the next step.</p>
+      <header className="onboarding-heading-row">
+        <div className="onboarding-heading-copy">
+          <div className="onboarding-heading-eyebrow" id="ob-eyebrow">Onboarding workspace</div>
+          <h1 id="ob-title">Onboarding Workflow</h1>
+          <p>Configure, validate, and complete every requirement for the selected client.</p>
         </div>
-      </div>
+        <div className="onboarding-heading-client">
+          <label>Client</label>
+          <ClientSelectDropdown id="client-select-hdr" clients={clients} value={client.id} onChange={onSelectClient} fullWidth />
+        </div>
+      </header>
 
-      <div className="metrics">
+      <div className="metrics onboarding-metrics">
         <div className="metric">
           <div className="v" id="m-complete">{doneCount} / {totalSteps}</div>
           <div className="l">Steps Complete</div>
-          <div className="d" id="m-started">Started — {formatDate(client.created_at)}</div>
+          <div className="d" id="m-started">Started — <TimeDisplay value={client.created_at} easternOnly /></div>
         </div>
         <div className="metric">
           <div className="v" id="m-waiting">{activeStepNum}</div>
@@ -153,7 +169,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
           <div className="d" id="m-stage">Stage: {stageName}</div>
         </div>
         <div className="metric">
-          <div className="v" id="m-move">{formatDate(client.updated_at)}</div>
+          <div className="v" id="m-move"><TimeDisplay value={client.updated_at} easternOnly /></div>
           <div className="l">Last Activity</div>
           <div className="d" id="m-move-d">Activity logged</div>
         </div>
@@ -189,7 +205,7 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         })}
       </div>
 
-      <div className="note">
+      <div className="note onboarding-workflow-note">
         <b>Sequential Workflow:</b> Steps unlock one by one. Use the <b>💬 Notes</b> icon on any step to record internal notes. Steps can be completed via document uploads, structured forms, or integration callbacks.
       </div>
 
@@ -197,9 +213,9 @@ export default function OnboardingLadder({ client, steps, roles, clients, onSele
         isOpen={returnPrompt.isOpen}
         onClose={() => setReturnPrompt({ isOpen: false, pendingKey: '', stepName: '' })}
         onConfirm={handleConfirmPendingReturn}
-        title="Complete Step Action"
-        message={`Welcome back! Did you finish work in the external tool for ${returnPrompt.stepName}? Click below to mark this step complete.`}
-        confirmText="Mark Step Complete"
+        title="Submit Step"
+        message={`Welcome back! If you finished work in the external tool for ${returnPrompt.stepName}, submit the step to continue.`}
+        confirmText="Submit"
         cancelText="Not Yet"
       />
 

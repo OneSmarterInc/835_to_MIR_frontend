@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
-import { fetchClientDocuments, uploadClientDocument, downloadDocumentFile, fetchDocumentFile } from '../services/api';
+import { fetchClientDocuments, downloadDocumentFile, fetchDocumentFile } from '../services/api';
 import FileViewerModal from './modals/FileViewerModal';
+import OffboardedClientBanner from './OffboardedClientBanner';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
+import './DocumentsView.css';
 
 export default function DocumentsView({ clients = [], activeClientId, onSelectClient }) {
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || (clients[0]?.id || ''));
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [viewingId, setViewingId] = useState(null);
   const [viewerFile, setViewerFile] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerDocTitle, setViewerDocTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const fileInputRef = useRef(null);
 
   const currentClient = clients.find(c => c.id === selectedClientId) || clients[0];
 
@@ -81,54 +81,36 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
     }
   }
 
-  async function handleFileUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file || !selectedClientId) return;
-
-    setUploading(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      await uploadClientDocument(selectedClientId, file, file.name.replace(/\.[^/.]+$/, ''), 'General Document');
-      setSuccessMessage(`Document '${file.name}' uploaded and registered successfully.`);
-      await loadDocuments(selectedClientId);
-    } catch (err) {
-      setErrorMessage(err.message || 'Document upload failed');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }
-
   function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0 B';
+    if (bytes === null || bytes === undefined) return '—';
+    if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
+  const formatDate = value => value ? new Date(value).toLocaleDateString('en-US', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/New_York',
+  }) : '—';
+
+  const displayState = doc => {
+    if (doc.expiration_date && doc.expiration_date < new Date().toISOString().slice(0, 10)) {
+      return 'EXPIRED';
+    }
+    return doc.state || '—';
+  };
+
   return (
-    <section className="view on" id="v-docs">
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow">Client Documents</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '2px 0 4px' }}>
-            <ClientSelectDropdown
-              clients={clients}
-              value={selectedClientId}
-              onChange={(val) => {
-                setSelectedClientId(val);
-                if (onSelectClient) {
-                  onSelectClient(val);
-                }
-              }}
-            />
-            <h1 style={{ margin: 0 }}>Documents &amp; Agreements</h1>
-          </div>
-          <p className="sub">Executed legal agreements, compliance certificates, and evidence files associated with <b>{currentClient?.name}</b>.</p>
-        </div>
-      </div>
+    <section className="view on table-screen" id="v-docs">
+      <WorkspaceHeader eyebrow="Compliance workspace" title="Documents & Agreements" description="Review client agreements, delivery status, versions, and expiration dates.">
+        <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={(val) => { setSelectedClientId(val); if (onSelectClient) onSelectClient(val); }} fullWidth /></div>
+      </WorkspaceHeader>
+
+      <OffboardedClientBanner
+        client={currentClient}
+        detail="This client is offboarded. The documents below are retained for historical, read-only review."
+      />
 
       {errorMessage && (
         <div className="note" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)' }}>
@@ -136,57 +118,38 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
         </div>
       )}
 
-      {successMessage && (
-        <div className="good">
-          ✓ {successMessage}
-        </div>
-      )}
-
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-3)' }}>
           Loading documents for {currentClient?.name}...
         </div>
-      ) : documents.length === 0 ? (
-        <div className="stub" style={{ textAlign: 'center', padding: '36px' }}>
-          <b>No documents available for this client.</b>
-          <p style={{ margin: '6px 0 0', color: 'var(--ink-2)' }}>
-            Upload legal agreements, compliance forms, or test data for {currentClient?.name} using the onboarding workflow.
-          </p>
-        </div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="admin-table-scroll documents-register-wrap">
+        <table className="documents-register-table">
           <thead>
             <tr>
-              <th style={{ width: '25%' }}>Document</th>
-              <th style={{ width: '30%' }}>Template / Filename</th>
-              <th style={{ width: '15%' }}>Category</th>
-              <th style={{ width: '6%' }}>Format</th>
-              <th style={{ width: '7%' }}>Size</th>
-              <th style={{ width: '9%' }}>Uploaded By</th>
-              <th style={{ width: '8%', textAlign: 'right' }}>Actions</th>
+              <th>Document</th><th>Filename</th><th>Direction</th><th>Category</th><th>Format</th>
+              <th>Size</th><th>Uploaded By</th><th>Signed or Sent</th><th>Expires</th>
+              <th>Version</th><th>State</th><th>Action</th>
             </tr>
           </thead>
           <tbody>
             {documents.map((doc) => {
-              const ext = (doc.original_filename?.split('.').pop() || 'PDF').toUpperCase();
+              const ext = doc.original_filename ? doc.original_filename.split('.').pop().toUpperCase() : '—';
+              const state = displayState(doc);
               return (
-                <tr key={doc.id}>
-                  <td>
-                    <b>{doc.document_name}</b>
-                  </td>
-                  <td>
-                    <code style={{ fontSize: '11.5px', wordBreak: 'break-all', display: 'inline-block' }}>
-                      {doc.original_filename}
-                    </code>
-                  </td>
-                  <td>{doc.document_type || 'Legal / Confidentiality'}</td>
-                  <td>
-                    <span className="mono" style={{ fontSize: '11px' }}>{ext}</span>
-                  </td>
+                <tr key={doc.document_type}>
+                  <td><b>{doc.document_name || '—'}</b></td>
+                  <td>{doc.original_filename || '—'}</td>
+                  <td>{doc.direction || '—'}</td><td>{doc.category || '—'}</td>
+                  <td><span className="mono">{ext}</span></td>
                   <td className="num">{formatBytes(doc.file_size)}</td>
-                  <td>{doc.uploaded_by || 'Admin User'}</td>
-                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                  <td>{doc.uploaded_by || '—'}</td>
+                  <td>{formatDate(doc.signed_or_sent_at)}</td>
+                  <td>{doc.expiration_date ? formatDate(`${doc.expiration_date}T12:00:00`) : '—'}</td>
+                  <td>{doc.version ? `v${doc.version}` : '—'}</td>
+                  <td><span className={`document-state state-${state.toLowerCase().replaceAll(' ', '-')}`}>{state}</span></td>
+                  <td><div className="document-actions">
+                      {doc.id && <>
                       <button
                         type="button"
                         className="btn icon-btn view-btn"
@@ -219,6 +182,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
                           </svg>
                         )}
                       </button>
+                      </>}
                     </div>
                   </td>
                 </tr>
@@ -226,6 +190,7 @@ export default function DocumentsView({ clients = [], activeClientId, onSelectCl
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       <FileViewerModal

@@ -1,0 +1,35 @@
+name: Fix Step 7 Default SFTP Completion
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply Step 7 completion fix
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/onesmarter_admin/components/StepRung.jsx')
+          text = path.read_text(encoding='utf-8')
+          old = """                                setS6SftpVerified(true);\n                                \n                                let detailsStr"""
+          new = """                                setS6SftpVerified(true);\n                                await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});\n                                await onRefresh();\n\n                                let detailsStr"""
+          if old not in text:
+              raise SystemExit('Target code was not found; no changes made.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/onesmarter_admin/components/StepRung.jsx
+          git commit -m "Fix Step 7 default SFTP completion"
+          git push

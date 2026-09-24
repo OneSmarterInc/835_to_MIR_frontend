@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { safeFetchJson } from "../utils/api";
+import PhoneNumberField from "../components/PhoneNumberField";
+import { toE164, validateNationalNumber } from "../utils/phone";
 
 export default function SignupPage({ onSignupSuccess, onNavigate }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
+  const [countryIso, setCountryIso] = useState("US");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
@@ -17,6 +20,13 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
     setGeneralError(null);
     setLoading(true);
 
+    const mobileError = validateNationalNumber(countryIso, mobile);
+    if (mobileError) {
+      setErrors({ mobile: mobileError });
+      setLoading(false);
+      return;
+    }
+
     try {
       const { res, data } = await safeFetchJson("/accounts/api/signup/", {
         method: "POST",
@@ -24,7 +34,8 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
         body: JSON.stringify({
           name,
           email,
-          mobile,
+          mobile: toE164(countryIso, mobile),
+          country_code: countryIso,
           password,
           confirm_password: confirmPassword,
         }),
@@ -81,13 +92,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
             {errors.email && <div className="error-msg">{errors.email}</div>}
           </div>
           <div>
-            <label>Mobile Number</label>
-            <input
-              type="text"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              placeholder="1234567890"
-            />
+            <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
             {errors.mobile && <div className="error-msg">{errors.mobile}</div>}
           </div>
           <div>

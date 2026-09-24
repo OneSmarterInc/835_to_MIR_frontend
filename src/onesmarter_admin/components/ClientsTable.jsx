@@ -1,23 +1,15 @@
 import React, { useState } from 'react';
-
-/**
- * Format ISO date string into DD/MM/YYYY
- */
-function formatDate(dateVal) {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return dateVal;
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
+import TimeDisplay from '../../components/TimeDisplay';
+import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 /**
  * Stage Badge Renderer matching compliance status design tokens
  */
 function getStageBadge(stage) {
   const s = (stage || '').toLowerCase().replace(/[\s-]/g, '_');
+  if (s === 'offboarded') {
+    return <span className="tag bad">Offboarded</span>;
+  }
   if (s === 'production') {
     return <span className="tag ok">Production</span>;
   }
@@ -40,7 +32,7 @@ function getStageBadge(stage) {
   return <span className="tag work">Onboarding Pending</span>;
 }
 
-export default function ClientsTable({ clients = [], onSelectClient, onOpenAddClient, onDeleteClient }) {
+export default function ClientsTable({ clients = [], onSelectClient, onOpenAddClient, onDeleteClient, canPermanentlyDelete = false }) {
   const [filterStage, setFilterStage] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -65,6 +57,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
     else if (filterStage === 'golive_pending') matchesStage = s === 'golive_pending' || s === 'go_live_pending';
     else if (filterStage === 'production_pending') matchesStage = s === 'production_pending';
     else if (filterStage === 'production') matchesStage = s === 'production';
+    else if (filterStage === 'offboarded') matchesStage = s === 'offboarded';
 
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
@@ -79,20 +72,9 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
   });
 
   return (
-    <section className="view on" id="v-clients">
+    <section className="view on table-screen" id="v-clients">
       {/* Header & Primary Action */}
-      <div className="hdr-row">
-        <div>
-          <div className="eyebrow">Tenants</div>
-          <h1>All Clients</h1>
-          <p className="sub">
-            Dynamic relational database-driven client registry for administrative management and lifecycle tracking.
-          </p>
-        </div>
-        <button className="btn primary" id="btn-add-client" onClick={onOpenAddClient}>
-          + Add Client
-        </button>
-      </div>
+      <WorkspaceHeader eyebrow="Client workspace" title="All Clients" description="Manage client onboarding, operational status, and lifecycle access."><button className="btn primary" id="btn-add-client" onClick={onOpenAddClient}>+ Add Client</button></WorkspaceHeader>
 
       {/* Database KPI Metric Cards */}
       <div className="metrics">
@@ -127,6 +109,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
           <option value="golive_pending">Go Live Pending</option>
           <option value="production_pending">Production Pending</option>
           <option value="production">Production</option>
+          <option value="offboarded">Offboarded</option>
         </select>
         <input
           placeholder="Filter clients by name, owner, or identifier…"
@@ -137,13 +120,14 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
       </div>
 
       {/* Relational Client Grid */}
+      <div className="admin-table-scroll">
       <table className="clickable">
         <thead>
           <tr>
             <th style={{ width: '24%' }}>Client</th>
             <th style={{ width: '15%' }}>Stage</th>
             <th style={{ width: '14%' }}>Claims System</th>
-            <th style={{ width: '13%' }}>Live Since / Started</th>
+            <th style={{ width: '13%' }}>Live Since / Started (EST)</th>
             <th style={{ width: '18%' }}>Onboarding Progress</th>
             <th style={{ width: '10%' }}>Owner</th>
             {/* <th style={{ width: '6%', textAlign: 'center' }}>Actions</th> */}
@@ -161,7 +145,6 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
               const isProd = (c.stage || '').toLowerCase() === 'production';
               const displayOwner = c.owner || 'Unassigned';
               const displayClaims = c.claimsSystem || c.claims_system || 'Unknown';
-              const displayDate = formatDate(c.liveSince || c.live_since || c.created_at);
               const progressPct = c.progress_pct || 0;
 
               return (
@@ -176,7 +159,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
                   <td>
                     <span style={{ color: 'var(--ink-2)' }}>{displayClaims}</span>
                   </td>
-                  <td className="num" style={{ color: 'var(--ink-2)' }}>{displayDate}</td>
+                  <td className="num" style={{ color: 'var(--ink-2)', minWidth: '210px' }}><TimeDisplay value={c.liveSince || c.live_since || c.created_at} easternOnly /></td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ flex: 1, background: 'var(--line-soft)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
@@ -195,7 +178,33 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{displayOwner}</span>
+                    {canPermanentlyDelete && displayOwner === 'System Admin' ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDeleteClient?.(c);
+                        }}
+                        aria-label={`Permanently delete ${c.name}`}
+                        title={`Permanently delete ${c.name}`}
+                        style={{
+                          appearance: 'none',
+                          border: 0,
+                          padding: 0,
+                          margin: 0,
+                          background: 'transparent',
+                          color: 'var(--ink)',
+                          font: 'inherit',
+                          fontWeight: 600,
+                          textAlign: 'left',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {displayOwner}
+                      </button>
+                    ) : (
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{displayOwner}</span>
+                    )}
                   </td>
                   {/* <td style={{ textAlign: 'center' }}>
                     <button
@@ -224,9 +233,6 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
           )}
         </tbody>
       </table>
-
-      <div className="note">
-        <b>Client-Aware Architecture:</b> Every client maintains an isolated sequential compliance workflow, notes, contacts, transfer setup, and audit records in the database.
       </div>
     </section>
   );

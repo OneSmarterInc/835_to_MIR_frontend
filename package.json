@@ -7,9 +7,21 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test:result-sorting": "node scripts/test-result-sorting.js",
+    "test:table-layout": "node scripts/test-table-layout.js",
+    "test:sftp-automation": "node scripts/test-sftp-automation.js",
+    "test:timezone": "node scripts/test-timezone-formatting.js",
+    "test:no-native-dialogs": "node scripts/test-no-native-dialogs.js",
+    "test:golive-redirect": "node scripts/test-golive-redirect.js",
+    "test:audit-log": "node scripts/test-audit-log.js",
+    "test:client-session": "node scripts/test-client-session-requests.js",
+    "test:phone-validation": "node scripts/test-phone-validation.js",
+    "test:file-viewer-auth": "node scripts/test-file-viewer-auth.js",
+    "test:checks-resolved": "node scripts/test-checks-resolved-status.js",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-select": "^5.10.2"

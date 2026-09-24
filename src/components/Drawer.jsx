@@ -1,5 +1,5 @@
 import React from "react";
-
+//test
 export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
   return (
     <>
@@ -11,19 +11,7 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
       ></div>
 
       {/* Left-to-Right Drawer Navigation Panel */}
-      <nav className={`client-drawer ${isOpen ? "open" : ""}`} id="navDrawer">
-        <div className="drawer-header">
-          <h3>NAVIGATION</h3>
-          <button
-            type="button"
-            className="drawer-close-btn"
-            id="drawerCloseBtn"
-            title="Close Menu"
-            onClick={onClose}
-          >
-            &times;
-          </button>
-        </div>
+      <nav className={`client-drawer ${isOpen ? "open" : ""}`} id="navDrawer" aria-label="Client navigation">
         <div className="grp eyebrow">Operations</div>
         <button
           className={`navitem ${activeTab === "flow" ? "on" : ""}`}
@@ -40,6 +28,13 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           Conversions
         </button>
         <button
+          className={`navitem ${activeTab === "checks" ? "on" : ""}`}
+          data-v="checks"
+          onClick={() => onSelectTab("checks")}
+        >
+          Checks
+        </button>
+        <button
           className={`navitem ${activeTab === "notices" ? "on" : ""}`}
           data-v="notices"
           onClick={() => onSelectTab("notices")}
@@ -50,11 +45,32 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           Records
         </div>
         <button
+          className={`navitem ${activeTab === "search" ? "on" : ""}`}
+          data-v="search"
+          onClick={() => onSelectTab("search")}
+        >
+          Search
+        </button>
+        <button
           className={`navitem ${activeTab === "archive" ? "on" : ""}`}
           data-v="archive"
           onClick={() => onSelectTab("archive")}
         >
           Archive
+        </button>
+        <button
+          className={`navitem ${activeTab === "code-dictionary" ? "on" : ""}`}
+          data-v="code-dictionary"
+          onClick={() => onSelectTab("code-dictionary")}
+        >
+          Code Dictionary
+        </button>
+        <button
+          className={`navitem ${activeTab === "result" ? "on" : ""}`}
+          data-v="result"
+          onClick={() => onSelectTab("result")}
+        >
+          Reconciliation
         </button>
         <div className="grp eyebrow" style={{ paddingTop: "18px" }}>
           Setup
@@ -72,6 +88,13 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
           onClick={() => onSelectTab("contacts")}
         >
           Contact Us
+        </button>
+        <button
+          className={`navitem ${activeTab === "security" ? "on" : ""}`}
+          data-v="security"
+          onClick={() => onSelectTab("security")}
+        >
+          Security Keys
         </button>
       </nav>
     </>

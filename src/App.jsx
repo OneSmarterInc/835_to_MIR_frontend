@@ -4,8 +4,10 @@ import Topbar from "./components/Topbar";
 import Drawer from "./components/Drawer";
 import FileViewerModal from "./components/FileViewerModal";
 import SftpBrowserModal from "./components/SftpBrowserModal";
+import AccessDeniedScreen from "./components/AccessDeniedScreen";
 
 import { safeFetchJson } from "./utils/api";
+import { clearSessionExpiry, scheduleSessionExpiry } from "./utils/sessionExpiry";
 
 import LoginPage from "./pages/LoginPage";
 import TotpSetupPage from "./pages/TotpSetupPage";
@@ -14,11 +16,16 @@ import FirstLoginPasswordPage from "./pages/FirstLoginPasswordPage";
 
 import FlowView from "./pages/FlowView";
 import ConversionsView from "./pages/ConversionsView";
+import ChecksView from "./pages/ChecksView";
+import CodeDictionaryView from "./pages/CodeDictionaryView";
 import NoticesView from "./pages/NoticesView";
 import ArchiveView from "./pages/ArchiveView";
 import ConnectionsView from "./pages/ConnectionsView";
 import ContactsView from "./pages/ContactsView";
 import AdminView from "./pages/AdminView";
+import ResultView from "./pages/ResultView";
+import ClientClaimSearchView from "./pages/ClientClaimSearchView";
+import SecurityView from "./pages/SecurityView";
 
 
 export default function App() {
@@ -27,6 +34,8 @@ export default function App() {
   const [userState,setUserState] = useState(null);
   const [loadingUser,setLoadingUser] = useState(true);
   const [authNext,setAuthNext] = useState(null);
+
+
 
 
   const [isAdminRoute,setIsAdminRoute] = useState(()=>{
@@ -167,12 +176,6 @@ export default function App() {
       );
 
 
-      console.log(
-        "USER STATUS:",
-        data
-      );
-
-
       setUserState(data);
 
 
@@ -226,122 +229,97 @@ export default function App() {
   // ===========================
 
 
-  const refreshDashboardData = useCallback(async()=>{
-
-
+  const refreshOperationalData = useCallback(async()=>{
     try{
-
-
-      const [
-        metricsResponse,
-        filesResponse,
-        sftpResponse
-
-      ] = await Promise.all([
-
-
+      const [metricsResponse, sftpResponse] = await Promise.all([
         safeFetchJson(
           "/edi835/api/metrics/",
-          {
-            credentials:"include"
-          }
+          { credentials:"include" }
         ).catch(()=>null),
-
-
-
-        safeFetchJson(
-          "/edi835/api/tracked-files/",
-          {
-            credentials:"include"
-          }
-        ).catch(()=>null),
-
-
-
         safeFetchJson(
           "/edi835/api/sftp/get/",
-          {
-            credentials:"include"
-          }
+          { credentials:"include" }
         ).catch(()=>null)
-
-
-
       ]);
 
-
-
       if(metricsResponse?.res.ok){
-
-        setMetrics(
-          metricsResponse.data
-        );
-
+        setMetrics(metricsResponse.data);
       }
-
-
-
-      if(filesResponse?.res.ok){
-
-        setTrackedFiles(
-          filesResponse.data.files || []
-        );
-
-      }
-
-
-
 
       if(sftpResponse?.res.ok){
-
-        setSftpConfigs(
-          sftpResponse.data.configurations || []
-        );
-
-
-        setActiveSftpConfig(
-          sftpResponse.data.active_config || null
-        );
-
+        setSftpConfigs(sftpResponse.data.configurations || []);
+        setActiveSftpConfig(sftpResponse.data.active_config || null);
       }
-
-
-
     }catch(error){
-
-
-      console.warn(
-        "Dashboard refresh failed",
-        error
-      );
-
-
+      console.warn("Operational dashboard refresh failed", error);
     }
-
-
   },[]);
 
 
+  const loadTrackedFiles = useCallback(async()=>{
+    try{
+      const {res, data} = await safeFetchJson(
+        "/edi835/api/tracked-files/?include_conversion_findings=0",
+        { credentials:"include" }
+      );
 
+      if(res.ok){
+        setTrackedFiles(data.files || []);
+      }
+    }catch(error){
+      console.warn("Tracked files refresh failed", error);
+    }
+  },[]);
+
+
+  const refreshDashboardData = useCallback(async()=>{
+    await Promise.all([
+      refreshOperationalData(),
+      loadTrackedFiles()
+    ]);
+  },[refreshOperationalData, loadTrackedFiles]);
 
 
   useEffect(()=>{
+    // Do not compete with the session bootstrap request. On a small Gunicorn
+    // deployment these three dashboard calls could queue ahead of /api/user/
+    // and leave the entire application on the loading screen.
+    if(!userState?.authenticated || isAdminRoute){
+      return undefined;
+    }
 
+    const initialRefresh=setTimeout(refreshDashboardData,0);
 
-    refreshDashboardData();
+    // Lightweight metrics/SFTP state can age a little while the user is idle.
+    // Heavy tracked-file history is not polled; it refreshes on focus or after
+    // an action that explicitly calls refreshDashboardData.
+    const timer=setInterval(()=>{
+      if(document.visibilityState === "visible"){
+        refreshOperationalData();
+      }
+    },30000);
 
+    const refreshWhenActive=()=>{
+      if(document.visibilityState === "visible"){
+        refreshDashboardData();
+      }
+    };
 
-    const timer=setInterval(
-      refreshDashboardData,
-      3000
-    );
+    window.addEventListener("focus",refreshWhenActive);
+    document.addEventListener("visibilitychange",refreshWhenActive);
 
-
-    return ()=>clearInterval(timer);
-
-
-  },[refreshDashboardData]);
-
+    return ()=>{
+      clearTimeout(initialRefresh);
+      clearInterval(timer);
+      window.removeEventListener("focus",refreshWhenActive);
+      document.removeEventListener("visibilitychange",refreshWhenActive);
+    };
+  },[
+    userState?.authenticated,
+    isAdminRoute,
+    refreshDashboardData,
+    refreshOperationalData
+  ]);
 
 
 
@@ -390,9 +368,15 @@ export default function App() {
     });
 
     setAuthNext(null);
+    clearSessionExpiry();
 
 
   };
+
+  useEffect(() => {
+    if (!userState?.authenticated) return undefined;
+    return scheduleSessionExpiry(handleLogout);
+  }, [userState?.authenticated]);
 
 
   // Preserve the backend's authentication decision. This prevents a stale
@@ -403,6 +387,17 @@ export default function App() {
 
     await checkUserStatus();
 
+  };
+
+  const handleAccessDenied = (loginData)=>{
+    setAuthNext(null);
+    setUserState({
+      authenticated:false,
+      offboarded:true,
+      offboarded_message:loginData?.message || loginData?.error,
+      client:loginData?.client || null,
+      user:null
+    });
   };
 
 
@@ -433,6 +428,18 @@ export default function App() {
 
   }
 
+  // This gate is deliberately above every portal/admin route and MFA flow.
+  // Server-side middleware independently enforces the same restriction.
+  if(userState?.offboarded){
+    return (
+      <AccessDeniedScreen
+        client={userState.client || userState.user?.client}
+        message={userState.offboarded_message}
+        onExit={handleLogout}
+      />
+    );
+  }
+
 
 
 
@@ -451,6 +458,8 @@ export default function App() {
         isAdminRoute={isAdminRoute}
 
         onLoginSuccess={handleLoginSuccess}
+
+        onAccessDenied={handleAccessDenied}
 
       />
 
@@ -523,7 +532,6 @@ export default function App() {
 
       );
 
-
     }
 
 
@@ -553,7 +561,6 @@ export default function App() {
 
       );
 
-
     }
 
 
@@ -574,7 +581,6 @@ export default function App() {
         />
 
       );
-
 
     }
 
@@ -620,6 +626,7 @@ export default function App() {
         onLogout={handleLogout}
 
       />
+
 
     );
 
@@ -717,6 +724,23 @@ export default function App() {
 
 
           {
+            activeTab==="checks" &&
+            <ChecksView
+              trackedFiles={trackedFiles}
+            />
+          }
+
+          {
+            activeTab==="search" &&
+            <ClientClaimSearchView />
+          }
+
+          {
+            activeTab==="code-dictionary" &&
+            <CodeDictionaryView/>
+          }
+
+          {
             activeTab==="notices" &&
             <NoticesView/>
           }
@@ -745,6 +769,11 @@ export default function App() {
 
             />
 
+          }
+
+          {
+            activeTab==="result" &&
+            <ResultView />
           }
 
 
@@ -776,6 +805,11 @@ export default function App() {
           {
             activeTab==="contacts" &&
             <ContactsView/>
+          }
+
+          {
+            activeTab==="security" &&
+            <SecurityView/>
           }
 
 

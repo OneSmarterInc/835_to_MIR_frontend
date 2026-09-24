@@ -8,6 +8,8 @@ import FilesView from './components/FilesView';
 import GoLiveView from './components/GoLiveView';
 import AccessView from './components/AccessView';
 import DefaultConfigsView from './components/DefaultConfigsView';
+import AuditLogView from './components/AuditLogView';
+import WorkspaceHeader from '../components/WorkspaceHeader';
 import AddClientModal from './components/modals/AddClientModal';
 import NotesModal from './components/modals/NotesModal';
 import AddRoleModal from './components/modals/AddRoleModal';
@@ -17,54 +19,35 @@ import FeedbackModal from './components/modals/FeedbackModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
+import AdminChecksView from './components/AdminChecksView';
+import CodeDictionaryView from '../pages/CodeDictionaryView';
 import FileViewerModal from '../components/FileViewerModal';
+import ResultView from '../pages/ResultView';
+import SftpAutomationView from './components/SftpAutomationView';
+import ClaimSearchView from './components/ClaimSearchView';
+import NoticesView from '../pages/NoticesView';
+import ClientSelectDropdown from './components/ClientSelectDropdown';
+import OffboardedClientBanner from './components/OffboardedClientBanner';
+import SecurityView from '../pages/SecurityView';
+import { clearSessionExpiry, scheduleSessionExpiry } from '../utils/sessionExpiry';
 
-import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, fetchAuditLogs, fetchAccessInfo, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
+import { fetchClients, fetchClientState, createClient, deleteClient, redoStep, fetchEmployeeRoles, logoutAdmin, fetchOffboardingState, completeOffboardingStep, redoOffboardingStep } from './services/api';
 
-function formatDateTime(isoStr) {
-  if (!isoStr) return '—';
-  try {
-    const d = new Date(isoStr);
-    if (isNaN(d.getTime())) return isoStr;
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-  } catch (e) {
-    return isoStr;
-  }
-}
-
-function renderAuditDetails(details) {
-  if (!details) return '—';
-  const match = details.match(/^(.*?) changed from '(.*?)' to '(.*?)'(.*)$/i);
-  if (match) {
-    const [, prefix, oldVal, newVal, suffix] = match;
-    return (
-      <span>
-        {prefix && <span>{prefix} </span>}
-        <span style={{ textDecoration: 'line-through', color: 'var(--brick)', opacity: 0.85, marginRight: '4px' }}>
-          '{oldVal}'
-        </span>
-        <span style={{ color: 'var(--ink-2)', marginRight: '4px', fontWeight: 600 }}>→</span>
-        <span style={{ fontWeight: 600, color: 'var(--teal)' }}>
-          '{newVal}'
-        </span>
-        {suffix && <span> {suffix}</span>}
-      </span>
-    );
-  }
-  return details;
-}
+const DEFAULT_ADMIN_SCREENS = ['clients', 'onboard', 'conversions', 'search', 'notices', 'files', 'promote', 'trust', 'ops', 'security'];
 
 export default function App({ user, onLogout }) {
   const isMappingRoute = window.location.pathname.startsWith('/mapping');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
-    return user || { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
+    if (user) return user;
+    try {
+      const storedUser = localStorage.getItem('onesmarter_admin_user');
+      if (storedUser) return JSON.parse(storedUser);
+    } catch (error) {
+      console.warn('Could not restore the signed-in administrator identity.', error);
+    }
+    return { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
 
   const [clients, setClients] = useState([]);
@@ -83,13 +66,11 @@ export default function App({ user, onLogout }) {
     return 'clients';
   });
   const [roles, setRoles] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [recentLogins, setRecentLogins] = useState([]);
-  const [auditClientFilter, setAuditClientFilter] = useState('');
-  const [auditModuleFilter, setAuditModuleFilter] = useState('');
-  const [auditSortField, setAuditSortField] = useState('timestamp');
-  const [auditSortDirection, setAuditSortDirection] = useState('desc');
   const [adminTrackedFiles, setAdminTrackedFiles] = useState([]);
+  const assignedScreens = currentUser?.is_superuser
+    ? null
+    : new Set(currentUser?.admin_screens ?? DEFAULT_ADMIN_SCREENS);
+  const canView = (screen) => Boolean(currentUser?.is_superuser || assignedScreens?.has(screen));
 
   const [adminViewerFileId, setAdminViewerFileId] = useState(null);
 
@@ -119,54 +100,86 @@ export default function App({ user, onLogout }) {
     if (!isAuthenticated) return;
     loadClients();
     loadRoles();
+    if (activeClientId) {
+      loadClientWorkflow(activeClientId);
+    }
 
-    // Auto-update client status in real-time every 3 seconds
-    const interval = setInterval(() => {
-      loadClients();
-      if (activeClientId) {
-        loadClientWorkflow(activeClientId);
-      }
-    }, 3000);
-
-    const onFocus = () => {
+    const refreshClientState = () => {
+      if (document.visibilityState !== 'visible') return;
       loadClients();
       if (activeClientId) {
         loadClientWorkflow(activeClientId);
       }
     };
-    window.addEventListener('focus', onFocus);
+
+    // Client/workflow state changes much less often than conversion progress.
+    // Keep a slow safety refresh plus immediate refresh when the user returns.
+    const interval = setInterval(refreshClientState, 30000);
+    window.addEventListener('focus', refreshClientState);
+    document.addEventListener('visibilitychange', refreshClientState);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', refreshClientState);
+      document.removeEventListener('visibilitychange', refreshClientState);
     };
   }, [isAuthenticated, activeClientId]);
 
-  // Auto-reload audit logs whenever filters change
   useEffect(() => {
-    if (isAuthenticated) {
-      loadAuditLogs(auditClientFilter, auditModuleFilter);
+    if (!canView(activeNav)) {
+      setActiveNav(DEFAULT_ADMIN_SCREENS.find(canView) || 'clients');
     }
-  }, [isAuthenticated, auditClientFilter, auditModuleFilter]);
+  }, [activeNav, currentUser]);
 
   const loadAdminTrackedFiles = async () => {
     try {
-      const res = await fetch('/edi835/api/tracked-files/');
-      const data = await res.json();
-      if (data && data.success) {
-        setAdminTrackedFiles(data.files || []);
-      }
+        const token = localStorage.getItem('onesmarter_admin_token');
+        const headers = token ? { Authorization: `Token ${token}` } : {};
+        const res = await fetch('/edi835/api/tracked-files/?include_conversion_findings=0', {
+            credentials: 'include',
+            headers,
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Tracked-files API returned a non-JSON response (${res.status})`);
+        }
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        setAdminTrackedFiles(Array.isArray(data.files) ? data.files : []);
     } catch (err) {
-      console.error("Failed to load admin tracked files", err);
+        console.error("Failed to load admin tracked files:", err);
+        // Preserve the last successful result during a transient refresh error.
     }
-  };
+};
 
   useEffect(() => {
-    if (isAuthenticated && activeNav === 'conversions') {
-      loadAdminTrackedFiles();
-      const interval = setInterval(loadAdminTrackedFiles, 3000);
-      return () => clearInterval(interval);
+    if (!(isAuthenticated && (activeNav === 'conversions' || activeNav === 'checks'))) {
+      return undefined;
     }
+
+    loadAdminTrackedFiles();
+
+    const refreshTrackedFiles = () => {
+      if (document.visibilityState === 'visible') {
+        loadAdminTrackedFiles();
+      }
+    };
+
+    // Do not poll file history every three seconds. Conversion actions already
+    // call loadAdminTrackedFiles explicitly; focus/visibility handles external
+    // worker changes when the administrator returns to the tab.
+    window.addEventListener('focus', refreshTrackedFiles);
+    document.addEventListener('visibilitychange', refreshTrackedFiles);
+
+    return () => {
+      window.removeEventListener('focus', refreshTrackedFiles);
+      document.removeEventListener('visibilitychange', refreshTrackedFiles);
+    };
   }, [isAuthenticated, activeNav]);
 
   // Sync state to URL for persistence on refresh
@@ -222,64 +235,6 @@ export default function App({ user, onLogout }) {
     }
   };
 
-  const loadAuditLogs = async (cid = auditClientFilter, mod = auditModuleFilter) => {
-    try {
-      const logs = await fetchAuditLogs(cid, mod);
-      setAuditLogs(logs);
-      const accessData = await fetchAccessInfo();
-      setRecentLogins(accessData.recent_logins || []);
-    } catch (err) {
-      console.error('Failed to load audit logs:', err);
-    }
-  };
-
-  const handleAuditSort = (field) => {
-    if (auditSortField === field) {
-      setAuditSortDirection(auditSortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setAuditSortField(field);
-      setAuditSortDirection('asc');
-    }
-  };
-
-  const getSortedAuditLogs = () => {
-    if (!auditLogs) return [];
-    const logs = [...auditLogs];
-    if (!auditSortField) return logs;
-    return logs.sort((a, b) => {
-      let valA = '';
-      let valB = '';
-      if (auditSortField === 'timestamp') {
-        valA = a.timestamp || '';
-        valB = b.timestamp || '';
-      } else if (auditSortField === 'module') {
-        valA = a.module || '';
-        valB = b.module || '';
-      } else if (auditSortField === 'action') {
-        valA = a.action || '';
-        valB = b.action || '';
-      } else if (auditSortField === 'client') {
-        valA = a.client_name || a.client || '';
-        valB = b.client_name || b.client || '';
-      } else if (auditSortField === 'performed_by') {
-        valA = a.performed_by || '';
-        valB = b.performed_by || '';
-      }
-      valA = valA.toString().toLowerCase();
-      valB = valB.toString().toLowerCase();
-      if (valA < valB) return auditSortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return auditSortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  };
-
-  const renderAuditSortIcon = (field) => {
-    if (auditSortField !== field) return <span style={{ marginLeft: '4px', opacity: 0.3, fontSize: '10px' }}>⇅</span>;
-    return auditSortDirection === 'asc' 
-      ? <span style={{ marginLeft: '4px', color: 'var(--teal)', fontSize: '10px' }}>▲</span>
-      : <span style={{ marginLeft: '4px', color: 'var(--teal)', fontSize: '10px' }}>▼</span>;
-  };
-
   // ==========================================
   // FETCH CLIENT DATA
   // ==========================================
@@ -306,6 +261,18 @@ export default function App({ user, onLogout }) {
     loadClientWorkflow(clientId);
   };
 
+  const handleGoLiveCompleted = (clientId) => {
+    const onboardingUrl = new URL(window.location.href);
+    onboardingUrl.searchParams.set('nav', 'onboard');
+    onboardingUrl.searchParams.set('client', clientId);
+    onboardingUrl.searchParams.set('step', '14');
+    onboardingUrl.hash = 'step-14';
+    window.history.pushState({}, document.title, onboardingUrl.toString());
+    setActiveClientId(clientId);
+    setActiveNav('onboard');
+    loadClientWorkflow(clientId);
+  };
+
   const handleOpenRevoke = (client) => {
     const target = typeof client === 'string' 
       ? clients.find(c => c.id === client) || { id: client, name: client } 
@@ -314,11 +281,11 @@ export default function App({ user, onLogout }) {
     setIsRevokeOpen(true);
   };
 
-  const handleConfirmRevoke = async () => {
+  const handleConfirmRevoke = async ({ confirmationName, password }) => {
     if (!revokeTarget?.id) return;
     setRevokeLoading(true);
     try {
-      await deleteClient(revokeTarget.id);
+      await deleteClient(revokeTarget.id, confirmationName, password);
       await loadClients();
       if (activeClientId === revokeTarget.id) {
         setActiveClientId(null);
@@ -384,7 +351,13 @@ export default function App({ user, onLogout }) {
       setCurrentUser(null);
       setIsAuthenticated(false);
     }
+    clearSessionExpiry();
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    return scheduleSessionExpiry(handleSignOut);
+  }, [isAuthenticated]);
 
   const currentClient = clients.find(c => c.id === activeClientId) || clients[0];
 
@@ -405,61 +378,102 @@ export default function App({ user, onLogout }) {
     );
   }
 
+  const selectedClientIsOffboarded = String(
+    clientState?.client?.stage || clients.find((client) => client.id === activeClientId)?.stage || ''
+  ).toLowerCase() === 'offboarded';
+  const selectedOperationalClient = clientState?.client || clients.find((client) => client.id === activeClientId) || null;
+
   return (
     <>
       <Header
         onSignOut={handleSignOut}
         currentUser={currentUser}
         onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        isSidebarOpen={isSidebarOpen}
       />
 
       <div className="shell">
+        {isSidebarOpen && (
+          <button
+            type="button"
+            className="admin-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
         {/* Left Navigation Sidebar matching POC exactly */}
-        <nav className="rail" style={{ display: isSidebarOpen ? 'block' : 'none' }}>
+        <nav
+          className="rail"
+          aria-hidden={!isSidebarOpen}
+          onClick={(event) => {
+            if (event.target.closest('.navitem')) setIsSidebarOpen(false);
+          }}
+        >
           <div className="grp eyebrow">Clients</div>
-          <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
+          {canView('clients') && <button className={`navitem ${activeNav === 'clients' ? 'on' : ''}`} onClick={() => setActiveNav('clients')}>
             <span>All Clients</span>
             <span className="count">{clients.length}</span>
-          </button>
-          <button className={`navitem ${activeNav === 'onboard' ? 'on' : ''}`} onClick={() => setActiveNav('onboard')}>
+          </button>}
+          {canView('onboard') && <button className={`navitem ${activeNav === 'onboard' ? 'on' : ''}`} onClick={() => setActiveNav('onboard')}>
             <span>Onboarding</span>
-          </button>
-          <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
+          </button>}
+          {canView('docs') && <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
             <span>Documents</span>
-          </button>
-          <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
-            <span>Files</span>
-          </button>
-          <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
+          </button>}
+          {canView('conversions') && <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
-          </button>
+          </button>}
+          {canView('search') && <button className={`navitem ${activeNav === 'search' ? 'on' : ''}`} onClick={() => setActiveNav('search')}>
+            <span>Search</span>
+          </button>}
+          {(canView('notices') || canView('ops')) && <button className={`navitem ${activeNav === 'notices' ? 'on' : ''}`} onClick={() => setActiveNav('notices')}>
+            <span>MPL Notices</span>
+          </button>}
+          {canView('checks') && <button className={`navitem ${activeNav === 'checks' ? 'on' : ''}`} onClick={() => setActiveNav('checks')}>
+            <span>Checks</span>
+          </button>}
+          {canView('result') && <button className={`navitem ${activeNav === 'result' ? 'on' : ''}`} onClick={() => setActiveNav('result')}>
+            <span>Reconciliation</span>
+          </button>}
+          {canView('sftp-automation') && <button className={`navitem ${activeNav === 'sftp-automation' ? 'on' : ''}`} onClick={() => setActiveNav('sftp-automation')}>
+            <span>SFTP Automation</span>
+          </button>}
+          {canView('files') && <button className={`navitem ${activeNav === 'files' ? 'on' : ''}`} onClick={() => setActiveNav('files')}>
+            <span>Archive</span>
+          </button>}
+          {canView('code-dictionary') && <button className={`navitem ${activeNav === 'code-dictionary' ? 'on' : ''}`} onClick={() => setActiveNav('code-dictionary')}>
+            <span>Code Dictionary</span>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Pre-Production</div>
-          <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
+          {canView('promote') && <button className={`navitem ${activeNav === 'promote' ? 'on' : ''}`} onClick={() => setActiveNav('promote')}>
             <span>Go Live</span>
-          </button>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Governance</div>
-          <button className={`navitem ${activeNav === 'trust' ? 'on' : ''}`} onClick={() => setActiveNav('trust')}>
+          {canView('trust') && <button className={`navitem ${activeNav === 'trust' ? 'on' : ''}`} onClick={() => setActiveNav('trust')}>
             <span>Trust Center</span>
-          </button>
-          <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
+          </button>}
+          {canView('access') && <button className={`navitem ${activeNav === 'access' ? 'on' : ''}`} onClick={() => setActiveNav('access')}>
             <span>Access</span>
-          </button>
-          <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
+          </button>}
+          {canView('security') && <button className={`navitem ${activeNav === 'security' ? 'on' : ''}`} onClick={() => setActiveNav('security')}>
+            <span>Security Keys</span>
+          </button>}
+          {canView('defaults') && <button className={`navitem ${activeNav === 'defaults' ? 'on' : ''}`} onClick={() => setActiveNav('defaults')}>
             <span>Default Configs</span>
-          </button>
-          <button className={`navitem ${activeNav === 'audit' ? 'on' : ''}`} onClick={() => setActiveNav('audit')}>
+          </button>}
+          {canView('audit') && <button className={`navitem ${activeNav === 'audit' ? 'on' : ''}`} onClick={() => setActiveNav('audit')}>
             <span>Audit Log</span>
-          </button>
+          </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Operations</div>
-          <button className={`navitem ${activeNav === 'ops' ? 'on' : ''}`} onClick={() => setActiveNav('ops')}>
+          {canView('ops') && <button className={`navitem ${activeNav === 'ops' ? 'on' : ''}`} onClick={() => setActiveNav('ops')}>
             <span>Operations</span>
-          </button>
-          <button className={`navitem ${activeNav === 'offboard' ? 'on' : ''}`} onClick={() => setActiveNav('offboard')}>
+          </button>}
+          {canView('offboard') && <button className={`navitem ${activeNav === 'offboard' ? 'on' : ''}`} onClick={() => setActiveNav('offboard')}>
             <span>Offboarding</span>
-          </button>
+          </button>}
         </nav>
 
         <main className="main">
@@ -472,6 +486,7 @@ export default function App({ user, onLogout }) {
               }}
               onOpenAddClient={() => setIsAddClientOpen(true)}
               onDeleteClient={handleOpenRevoke}
+              canPermanentlyDelete={Boolean(currentUser?.is_superuser || currentUser?.role === 'Super Admin')}
             />
           )}
 
@@ -502,6 +517,8 @@ export default function App({ user, onLogout }) {
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClient}
+              onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
@@ -512,28 +529,74 @@ export default function App({ user, onLogout }) {
               onOpenFileModal={(fileId) => setAdminViewerFileId(fileId)}
               clients={clients}
               isAdmin={true}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+              selectedClient={selectedOperationalClient}
+            />
+          )}
+
+          {activeNav === 'search' && (
+            <ClaimSearchView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+            />
+          )}
+
+          {activeNav === 'notices' && (
+            <NoticesView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+              isAdmin={true}
+            />
+          )}
+
+          {activeNav === 'checks' && (
+            <AdminChecksView
+              trackedFiles={adminTrackedFiles}
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+            />
+          )}
+
+          {activeNav === 'code-dictionary' && (
+            <CodeDictionaryView />
+          )}
+
+          {activeNav === 'result' && (
+            <ResultView
+              clients={clients}
+              isAdmin={true}
+              initialClientId={activeClientId}
+              selectedClient={selectedOperationalClient}
+            />
+          )}
+
+          {activeNav === 'sftp-automation' && (
+            <SftpAutomationView
+              clients={clients}
+              activeClientId={activeClientId}
+              onSelectClient={handleSelectClient}
+              selectedClient={selectedOperationalClient}
             />
           )}
 
           {activeNav === 'promote' && (
-            <GoLiveView
+            selectedClientIsOffboarded ? <section className="view on"><WorkspaceHeader eyebrow="Stage promotion workspace" title="Go Live Readiness" description="This workflow is locked for the selected offboarded client."><div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={activeClientId} onChange={handleSelectClientInGoLive} fullWidth /></div></WorkspaceHeader><OffboardedClientBanner client={selectedOperationalClient} detail="Go Live cannot be resumed, completed, or reset. Select another client above to continue." /></section> : <GoLiveView
               clients={clients}
               activeClientId={activeClientId}
               onSelectClient={handleSelectClientInGoLive}
               onClientUpdated={() => { loadClients(); loadClientWorkflow(activeClientId); }}
+              onGoLiveCompleted={handleGoLiveCompleted}
               onOpenNotes={handleOpenNotes}
             />
           )}
 
           {activeNav === 'trust' && (
-            <section className="view on" id="v-trust">
-              <div className="hdr-row">
-                <div>
-                  <div className="eyebrow">Compliance Assurance</div>
-                  <h1>Trust Center</h1>
-                  <p className="sub">Security, encryption, HIPAA safeguards, and compliance attestations.</p>
-                </div>
-              </div>
+            <section className="view on table-screen" id="v-trust">
+              <WorkspaceHeader eyebrow="Governance workspace" title="Trust Center" description="Security, encryption, HIPAA safeguards, and compliance attestations." />
               <div className="metrics">
                 <div className="metric">
                   <div className="v" style={{ fontSize: '20px', fontWeight: 600 }}>SOC 2 Type II</div>
@@ -609,154 +672,21 @@ export default function App({ user, onLogout }) {
             <AccessView currentUser={currentUser} />
           )}
 
+          {activeNav === 'security' && (
+            <SecurityView />
+          )}
+
           {activeNav === 'defaults' && (
             <DefaultConfigsView />
           )}
 
           {activeNav === 'audit' && (
-            <section className="view on" id="v-audit">
-              <div className="hdr-row">
-                <div>
-                  <div className="eyebrow">Append Only Audit</div>
-                  <h1>Audit Log</h1>
-                  <p className="sub">Immutable audit trail of all client onboarding, document, test, go-live, and administrative actions.</p>
-                </div>
-              </div>
-
-              <div className="filters" style={{ borderBottom: '1px solid var(--line)', marginBottom: '16px' }}>
-                <select
-                  value={auditClientFilter}
-                  onChange={e => setAuditClientFilter(e.target.value)}
-                >
-                  <option value="">All Clients</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={auditModuleFilter}
-                  onChange={e => setAuditModuleFilter(e.target.value)}
-                >
-                  <option value="">All Modules</option>
-                  <option value="CLIENTS">Clients</option>
-                  <option value="DOCUMENTS">Documents</option>
-                  <option value="ONBOARDING">Onboarding</option>
-                  <option value="TEST_ENV">Test Environment</option>
-                  <option value="GO_LIVE">Go Live</option>
-                  <option value="AUTH">Authentication</option>
-                  <option value="SYSTEM">System</option>
-                  <option value="OPERATIONS">Operations</option>
-                  <option value="OFFBOARDING">Offboarding</option>
-                </select>
-
-                <span className="n">{auditLogs.length} Events Recorded</span>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th onClick={() => handleAuditSort('timestamp')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      When {renderAuditSortIcon('timestamp')}
-                    </th>
-                    <th onClick={() => handleAuditSort('module')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Module {renderAuditSortIcon('module')}
-                    </th>
-                    <th onClick={() => handleAuditSort('action')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Action {renderAuditSortIcon('action')}
-                    </th>
-                    <th onClick={() => handleAuditSort('client')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Client {renderAuditSortIcon('client')}
-                    </th>
-                    <th>Details</th>
-                    <th onClick={() => handleAuditSort('performed_by')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                      Who {renderAuditSortIcon('performed_by')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--ink-3)' }}>
-                        No audit log entries found matching criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    getSortedAuditLogs().map((log) => (
-                      <tr key={log.id}>
-                        <td className="num">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
-                        <td
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setAuditModuleFilter(auditModuleFilter === (log.module || 'SYSTEM') ? '' : (log.module || 'SYSTEM'))}
-                          title="Click to toggle filter by this module"
-                        >
-                          <span className="tag" style={{ textTransform: 'uppercase', fontSize: '10px', cursor: 'pointer' }}>
-                            {log.module || 'SYSTEM'}
-                          </span>
-                        </td>
-                        <td><span className="tag ok">{log.action}</span></td>
-                        <td
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setAuditClientFilter(auditClientFilter === (log.client_id || '') ? '' : (log.client_id || ''))}
-                          title="Click to toggle filter by this client"
-                        >
-                          <b>{log.client_name || log.client || 'System'}</b>
-                        </td>
-                        <td>{renderAuditDetails(log.details)}</td>
-                        <td className="num">{log.performed_by || 'Admin User'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-
-              <h2 className="sec" style={{ marginTop: '28px' }}>Recent Administrator Login History</h2>
-              <table style={{ width: '100%', tableLayout: 'fixed' }}>
-                <thead>
-                  <tr>
-                    <th>Login Timestamp</th>
-                    <th>Admin Username</th>
-                    <th>IP Address</th>
-                    <th>Client User Agent</th>
-                    <th>Status</th>
-                    <th>Logout Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLogins.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', color: 'var(--ink-3)', padding: '16px' }}>
-                        No recent logins recorded.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentLogins.map((log) => (
-                      <tr key={log.id}>
-                        <td className="num">{formatDateTime(log.login_time)}</td>
-                        <td><b>{log.username}</b></td>
-                        <td><code>{log.ip_address}</code></td>
-                        <td style={{ fontSize: '12px', color: 'var(--ink-2)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {log.user_agent}
-                        </td>
-                        <td>
-                          <span className={`tag ${log.status === 'SUCCESS' ? 'ok' : 'bad'}`}>
-                            {log.status}
-                          </span>
-                        </td>
-                        <td className="num">{formatDateTime(log.logout_time)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </section>
+            <AuditLogView clients={clients} />
           )}
 
           {activeNav === 'ops' && (
             <section className="view on" id="v-ops">
-              <div className="eyebrow">Reliability</div>
-              <h1>Operations &amp; Delivery</h1>
-              <p className="sub">File delivery metrics, silent folder monitoring, and SLA tracking.</p>
+              <WorkspaceHeader eyebrow="Reliability workspace" title="Operations & Delivery" description="File delivery metrics, silent folder monitoring, and SLA tracking." />
               <div className="metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div className="metric">
                   <div className="v">1,248</div>

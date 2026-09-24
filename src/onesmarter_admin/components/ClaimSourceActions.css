@@ -1,0 +1,21 @@
+.universal-source-actions{display:inline-flex;visibility:visible;align-items:center;justify-content:center;gap:8px}
+.universal-source-action{display:inline-flex;visibility:visible;opacity:1;width:40px;min-width:40px;height:40px;padding:0;align-items:center;justify-content:center;background:#fff;color:#172638;border-radius:7px;cursor:pointer}
+.universal-source-action:first-child{border:1px solid #d5e1ed}
+.universal-source-action:nth-child(2){border:1px solid #172638;background:#172638;color:#fff}
+.universal-source-action:hover{background:#fff;color:#172638}
+.universal-source-action:nth-child(2):hover{background:#111c2d;color:#fff;border-color:#111c2d}
+.universal-source-action:first-child svg{display:block;width:15px!important;height:15px!important;fill:#172638!important;stroke:none!important;visibility:visible}
+.universal-source-action:first-child svg path{fill:#172638!important;stroke:none!important}
+.universal-source-action:nth-child(2) svg{display:none!important}
+.universal-source-action:nth-child(2)::before{content:"";display:block;width:15px;height:15px;background:center/15px 15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E")}
+.claim-source-download-backdrop{position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:24px;background:rgba(13,23,36,.58)}
+.claim-source-download-dialog{width:min(520px,94vw);overflow:hidden;border-radius:4px;background:var(--paper);box-shadow:0 24px 70px rgba(0,0,0,.3)}
+.claim-source-download-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#111c2d;border-bottom:3px solid #18a38b;color:#fff}
+.claim-source-download-dialog>header span{font:700 9px/1.2 var(--display);letter-spacing:.12em;color:#8fa3bd}
+.claim-source-download-dialog>header h3{margin:4px 0 0;color:#fff;font-size:18px}
+.claim-source-download-dialog>header button{font-size:25px;line-height:1;color:#fff;background:transparent;border:0;cursor:pointer}
+.claim-source-download-body{padding:20px}
+.claim-source-download-body p{margin:0 0 5px;overflow-wrap:anywhere;color:var(--ink)}
+.claim-source-download-body small{color:var(--ink-3)}
+.claim-source-download-dialog>footer{display:flex;justify-content:flex-end;gap:9px;padding:15px 20px;border-top:1px solid var(--line);background:var(--surface)}
+@media(max-width:620px){.claim-source-download-dialog>footer{flex-direction:column}.claim-source-download-dialog>footer .btn{width:100%;justify-content:center}}

@@ -157,6 +157,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border
 
 /* ---------- shell ---------- */
 .shell{display:flex;min-height:calc(100vh - 56px)}
+.admin-sidebar-backdrop{position:fixed;inset:56px 0 0;z-index:90;background:rgba(13,23,36,.28);cursor:default}
 .rail{width:206px;flex:none;background:#1D2938;padding:18px 0;color:#B9C6D4;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
 .rail::-webkit-scrollbar{width:4px}
 .rail::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px}
@@ -165,7 +166,11 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border
 .navitem:hover{background:#243244;color:#fff}
 .navitem.on{border-left-color:var(--ochre);background:#243244;color:#fff;font-weight:600}
 .navitem .count{font-family:var(--display);font-size:10px;background:var(--ochre);color:#fff;border-radius:9px;padding:1px 6px}
-.main{flex:1;padding:26px 30px 60px;max-width:100%}
+.main{flex:1;padding:26px 30px 60px;max-width:100%;min-width:0;width:auto;overflow-x:hidden}
+.main .start-conversion-card{max-width:100%;box-sizing:border-box}
+.main .conversion-boxes{min-width:0}
+.main .conversion-boxes>*{min-width:0}
+.main .c-actions{flex-wrap:wrap;justify-content:flex-end}
 .view{display:none}
 .view.on{display:block}
 .hdr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:4px}
@@ -365,6 +370,34 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .rung .side{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
 .rup{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .step-custom-box{margin-top:12px;padding:12px;background:#F9FBFC;border:1px solid var(--line-soft);border-radius:2px}
+.offboarded-client-banner{display:grid;gap:5px;box-sizing:border-box;width:100%;margin:14px 0 18px;padding:15px 18px;border:1px solid var(--brick);border-left-width:5px;background:var(--brick-bg);color:var(--brick)}
+.offboarded-client-banner strong{font-size:14px}
+.offboarded-client-banner span{font-size:12px;line-height:1.5}
+.btn-eye.files-single-eye::before{display:none!important}
+.btn-eye.files-single-eye svg{display:block!important}
+.locked-view-client-bar{display:grid;grid-template-columns:auto minmax(240px,560px);align-items:center;gap:12px;margin-top:16px}
+@media(max-width:620px){.locked-view-client-bar{grid-template-columns:1fr}}
+
+/* ---------- locked onboarding history ---------- */
+.onboarding-history-view{width:100%;max-width:100%;min-width:0;overflow:hidden}
+.onboarding-history-header>div{width:100%;min-width:0}
+.onboarding-client-heading{display:grid;grid-template-columns:minmax(240px,420px) minmax(0,1fr);align-items:center;gap:16px;margin:5px 0 8px}
+.onboarding-client-heading h1{margin:0;white-space:nowrap;overflow-wrap:normal}
+.onboarding-client-select{min-width:0}
+.onboarding-lock-notice{box-sizing:border-box;width:100%;margin:0 0 16px;padding:16px 18px;border:1px solid var(--brick);border-left-width:5px;background:var(--brick-bg);color:var(--brick)}
+.onboarding-lock-notice>div{margin-top:5px;font-size:12px;line-height:1.5}
+.onboarding-history-list{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
+.onboarding-history-rung{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:start;gap:14px;padding:16px 18px}
+.onboarding-history-rung .mark{margin:0}
+.onboarding-history-rung>.tag{align-self:start;white-space:nowrap}
+.onboarding-file-name{max-width:100%;margin-top:6px;font-size:12px;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+
+@media (max-width:760px){
+  .onboarding-client-heading{grid-template-columns:1fr;gap:10px}
+  .onboarding-client-heading h1{white-space:normal}
+  .onboarding-history-rung{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:14px 12px}
+  .onboarding-history-rung>.tag{grid-column:2;justify-self:start}
+}
 
 /* ---------- centered modals ---------- */
 .modal {
@@ -378,7 +411,7 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 10100;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease-in-out;
@@ -439,3 +472,92 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
   outline: none;
   border-color: var(--ochre);
 }
+
+/* Compact admin workspace while preserving every instruction and action. */
+.main{padding:20px 24px 44px}
+.view.on>.sub,.view.on>.hdr-row .sub{margin-bottom:12px;line-height:1.45}
+.view.on .hdr-row{margin-bottom:10px}
+.view.on .card{padding:12px 14px;margin-bottom:10px}
+.view.on .metrics{margin-bottom:12px}
+.view.on .metric{padding:11px 13px}
+.view.on .metric .v{font-size:21px}
+.view.on .metric .d{margin-top:3px}
+.view.on .cols{gap:10px}
+.view.on .filters,.view.on .filters-bar{gap:8px;padding:8px 10px}
+.view.on .note,.view.on .good,.view.on .stub,.view.on .status-banner{margin:10px 0;padding:9px 11px}
+.view.on table th{padding:9px 10px}
+.view.on table td{padding:9px 10px}
+.view.on h2.sec{margin:16px 0 8px}
+.ladder .phase{padding:7px 14px}
+.ladder .rung{padding:12px 14px;gap:11px}
+
+/* Dense onboarding workspace: retain the workflow meaning with less scrolling. */
+#v-onboard .onboarding-workflow-heading,.documents-workspace-heading{display:flex;align-items:center;gap:12px;margin:2px 0 3px;min-width:0}
+#v-onboard .onboarding-workflow-heading>div,.documents-workspace-heading>div{flex:0 1 350px;min-width:220px}
+#v-onboard .onboarding-workflow-heading h1,.documents-workspace-heading h1{flex:none;margin:0;white-space:nowrap;overflow-wrap:normal}
+#v-onboard>.hdr-row{margin-bottom:8px}
+#v-onboard>.hdr-row .sub{margin-bottom:0}
+#v-onboard .onboarding-metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+#v-onboard .onboarding-metrics .metric{min-height:86px;padding:10px 13px}
+#v-onboard .onboarding-metrics .v{font-size:20px;line-height:1.25}
+#v-onboard .onboarding-metrics .l{margin-top:1px}
+#v-onboard .onboarding-metrics .d{margin-top:3px;line-height:1.35}
+#v-onboard .rung h3{margin-top:0}
+#v-onboard .rung .ev{margin-top:4px}
+#v-onboard .rung .side{gap:6px}
+#v-onboard .onboarding-workflow-note{font-size:11.5px}
+
+@media(max-width:900px){
+  .main{padding:18px 16px 38px}
+  #v-onboard .onboarding-workflow-heading,.documents-workspace-heading{align-items:stretch;flex-direction:column;gap:7px}
+  #v-onboard .onboarding-workflow-heading>div,.documents-workspace-heading>div{flex-basis:auto;min-width:0}
+  #v-onboard .onboarding-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){#v-onboard .onboarding-metrics{grid-template-columns:1fr}}
+
+/* Dense Go Live workspace aligned with onboarding. */
+#v-promote .golive-workspace-heading{display:flex;align-items:center;gap:12px;margin:2px 0 3px;min-width:0}
+#v-promote .golive-workspace-heading>div{flex:0 1 380px;min-width:220px}
+#v-promote .golive-workspace-heading h1{flex:none;margin:0;white-space:nowrap;overflow-wrap:normal}
+#v-promote>.hdr-row{margin-bottom:8px}
+#v-promote .golive-metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+#v-promote .golive-metrics .metric{min-height:82px;padding:10px 13px}
+#v-promote .golive-metrics .v{font-size:20px;line-height:1.25}
+#v-promote .golive-metrics .d{margin-top:3px}
+#v-promote .rung{padding:11px 14px}
+#v-promote .rung .side{gap:6px}
+#v-promote .step-custom-box{margin-top:7px!important}
+
+@media(max-width:900px){
+  #v-promote .golive-workspace-heading{align-items:stretch;flex-direction:column;gap:7px}
+  #v-promote .golive-workspace-heading>div{flex-basis:auto;min-width:0}
+  #v-promote .golive-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){#v-promote .golive-metrics{grid-template-columns:1fr}}
+
+.admin-checks-heading{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.admin-checks-heading h1{flex:none;margin:0;white-space:nowrap}
+.admin-checks-heading>div{flex:0 1 700px;min-width:260px}
+.admin-checks-heading+.view.on>.eyebrow{margin-bottom:8px!important}
+@media(max-width:700px){.admin-checks-heading{align-items:stretch;flex-direction:column}.admin-checks-heading>div{flex-basis:auto;min-width:0}}
+.admin-screen-access { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.admin-screen-access-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.admin-screen-access-heading span { color: var(--ink-3); font-size: 11px; }
+.admin-screen-access-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; }
+.admin-screen-access-grid label { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 13px; }
+.admin-screen-access-grid input { width: 15px; height: 15px; }
+.admin-client-grant-form { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(110px, 1fr) auto; gap: 8px; }
+.admin-client-grant-form > :nth-child(2) { grid-column: 2 / 4; }
+.admin-client-grant-form select, .admin-client-grant-form input { min-width: 0; padding: 8px 10px; border: 1px solid var(--line); background: var(--surface); }
+.admin-client-grant-form .btn.primary:disabled { background: var(--ink); border-color: var(--ink); color: #fff; opacity: 1; }
+.admin-active-grants { margin-top: 14px; }
+.admin-active-grants > strong { display: block; margin-bottom: 8px; font-size: 13px; }
+.admin-active-grant { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 12px; }
+.admin-active-grant span { display: flex; flex-direction: column; gap: 3px; }
+.admin-active-grant small { color: var(--ink-3); font-size: 11px; }
+.admin-active-grant small strong { color: var(--ink); }
+.admin-client-grant-hint { margin-top: 6px; color: var(--brick); font-size: 11px; }
+@media (max-width: 820px) { .admin-client-grant-form { grid-template-columns: 1fr 1fr; } .admin-client-grant-form > :nth-child(2), .admin-client-grant-form > button { grid-column: 1 / -1; } }
+
+.admin-demo-toggle{display:flex;align-items:center;gap:6px;margin-right:14px;font-family:var(--body);font-size:12px;color:#B9C6D4;white-space:nowrap}
+.admin-demo-toggle input{margin:0;cursor:pointer;accent-color:#0f8b78}

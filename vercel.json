@@ -1,4 +1,7 @@
 {
+  "git": {
+    "deploymentEnabled": false
+  },
   "rewrites": [
     { "source": "/accounts/:path*", "destination": "https://mir.onesmarter.com/accounts/:path*" },
     { "source": "/edi835/:path*", "destination": "https://mir.onesmarter.com/edi835/:path*" },
@@ -7,4 +10,3 @@
     { "source": "/:path*", "destination": "/index.html" }
   ]
 }
-

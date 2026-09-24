@@ -6,6 +6,8 @@ function getAuthHeaders(extraHeaders = {}) {
   if (token) {
     headers['Authorization'] = `Token ${token}`;
   }
+  const activeScreen = new URLSearchParams(window.location.search).get('nav');
+  if (activeScreen) headers['X-Admin-Screen'] = activeScreen;
   return headers;
 }
 
@@ -58,6 +60,87 @@ export async function fetchClientState(clientId) {
   if (!res.ok) throw new Error('Failed to fetch client state');
   const data = await res.json();
   return data.state;
+}
+
+export async function pushEdiFileToSftp(fileId, { force = false } = {}) {
+  const res = await fetch('/edi835/api/sftp/push/', {
+    method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ file_id: fileId, force }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || data.message || 'Failed to push MIR to SFTP.');
+  }
+  return data;
+}
+
+export async function process837Upload(clientId, files) {
+  const body = new FormData();
+  body.append('client_id', clientId);
+  Array.from(files || []).forEach(file => body.append('files', file));
+  const res = await fetch('/edi835/api/837/upload-process/', {
+    method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Failed to process the 837 file.');
+  return data;
+}
+
+export async function search837Claims(clientId, query, field = 'all', limit = 100, signal) {
+  const params = new URLSearchParams({ client_id: clientId, q: query, field, limit: String(limit) });
+  const res = await fetch(`/edi835/api/837/search/?${params}`, {
+    credentials: 'include', headers: getAuthHeaders(), signal,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to search 837 claims.');
+  return data;
+}
+
+export async function fetch837Files(clientId, query = '', page = 1, pageSize = 20) {
+  const params = new URLSearchParams({
+    client_id: clientId, q: query, page: String(page), page_size: String(pageSize),
+  });
+  const res = await fetch(`/edi835/api/837/files/?${params}`, {
+    credentials: 'include', headers: getAuthHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load 837 files.');
+  return data;
+}
+
+export async function fetch837ClaimDetail(claimId) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/`, { credentials: 'include', headers: getAuthHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load the 837 claim.');
+  return data.claim;
+}
+
+export async function push837ClaimToSftp(claimId, filename) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/push-sftp/`, {
+    method: 'POST', credentials: 'include',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ filename }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Unable to push this 837 claim to SFTP.');
+  return data;
+}
+
+export async function download837Claim(claimId, claimNumber) {
+  const res = await fetch(`/edi835/api/837/claims/${encodeURIComponent(claimId)}/export/`, { credentials: 'include', headers: getAuthHeaders() });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Unable to export this 837 claim.');
+  }
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = res.headers.get('X-OneSmarter-Filename') || `837_${claimNumber}.837`;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1500);
 }
 
 export async function createClient(clientPayload) {
@@ -113,20 +196,25 @@ export async function createClient(clientPayload) {
   return { success: true, client: clientObj };
 }
 
-export async function deleteClient(clientId) {
-  const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
+export async function deleteClient(clientId, confirmationName, password) {
+  const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/delete/`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ confirmation_name: confirmationName, password })
   });
-  if (!res.ok) throw new Error('Failed to delete client');
-  return true;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete client');
+  return data;
 }
 
 export async function downloadTemplateFile(clientId, stepKey, title, ext) {
   const res = await fetch(`${BASE_URL}/download/${encodeURIComponent(clientId)}/${encodeURIComponent(stepKey)}/`, {
     headers: getAuthHeaders()
   });
-  if (!res.ok) throw new Error('Download failed');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Download failed');
+  }
   const rawBlob = await res.blob();
   // Force octet-stream to prevent Adobe Acrobat extension from intercepting and losing the filename
   const blob = new Blob([rawBlob], { type: 'application/octet-stream' });
@@ -163,13 +251,14 @@ export async function fetchStepUploadFile(clientId, stepKey) {
   return { fileUrl, contentType, filename, blob };
 }
 
-export async function uploadStepFile(clientId, stepKey, file) {
+export async function uploadStepFile(clientId, stepKey, file, expirationDate) {
   const safeFilename = encodeURIComponent(file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/upload/`, {
     method: 'POST',
     credentials: 'include',
     headers: getAuthHeaders({
-      'X-Filename': safeFilename
+      'X-Filename': safeFilename,
+      'X-Expiration-Date': expirationDate
     }),
     body: file
   });
@@ -182,6 +271,7 @@ export async function uploadStepFile(clientId, stepKey, file) {
   if (!res.ok || data.success === false) {
     const err = new Error(data.error || 'Validation failed');
     err.checks = data.checks || [];
+    err.version = data.version || null;
     throw err;
   }
   return data;
@@ -206,6 +296,7 @@ export async function validateStaged835(clientId, file) {
   if (!res.ok || data.success === false) {
     const err = new Error(data.error || '835 validation failed');
     err.checks = data.checks || [];
+    err.fileId = data.file_id || null;
     throw err;
   }
   return data;
@@ -257,6 +348,18 @@ export async function addNote(clientId, stepKey, noteText) {
   return data;
 }
 
+export async function deleteNote(clientId, stepKey, noteId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(stepKey)}/notes/${encodeURIComponent(noteId)}/delete/`, {});
+}
+
+export async function deleteClientContact(clientId, contactId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/delete/`, {});
+}
+
+export async function deleteClientUser(clientId, userId) {
+  return postStepData(`/clients/${encodeURIComponent(clientId)}/users/${encodeURIComponent(userId)}/delete/`, {});
+}
+
 export async function fetchEmployeeRoles() {
   const res = await fetch(`${BASE_URL}/employee-roles/`, {
     headers: getAuthHeaders()
@@ -276,17 +379,18 @@ export async function addEmployeeRole(roleName, description = '') {
   return data;
 }
 
-export async function fetchAuditLogs(clientId = '', module = '') {
+export async function fetchAuditLogs(filters = {}) {
   const params = new URLSearchParams();
-  if (clientId) params.append('client_id', clientId);
-  if (module) params.append('module', module);
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) params.set(key, String(value));
+  });
   const qs = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`${BASE_URL}/audit-logs/${qs}`, {
     headers: getAuthHeaders()
   });
-  if (!res.ok) throw new Error('Failed to fetch audit logs');
   const data = await res.json();
-  return data.logs || [];
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch audit logs');
+  return data;
 }
 
 // --- 1. Client Documents Service ---
@@ -300,6 +404,15 @@ export async function fetchClientDocuments(clientId) {
 }
 
 export async function fetchClientEdiFiles(clientId) {
+  if (!clientId) {
+    const res = await fetch('/edi835/api/tracked-files/?scope=global', {
+      credentials: 'include',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to fetch global system EDI archive files');
+    const data = await res.json();
+    return data.files || [];
+  }
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/`, {
     headers: getAuthHeaders()
   });
@@ -308,7 +421,7 @@ export async function fetchClientEdiFiles(clientId) {
   return data.files || [];
 }
 
-export async function uploadClientDocument(clientId, file, docName = '', docType = 'General Document') {
+export async function uploadClientDocument(clientId, file, docName = '', docType = 'General Document', expirationDate = '') {
   const safeFilename = encodeURIComponent(file.name);
   const safeDocName = encodeURIComponent(docName || file.name);
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/documents/upload/`, {
@@ -317,7 +430,8 @@ export async function uploadClientDocument(clientId, file, docName = '', docType
     headers: getAuthHeaders({
       'X-Filename': safeFilename,
       'X-Doc-Name': safeDocName,
-      'X-Doc-Type': docType
+      'X-Doc-Type': encodeURIComponent(docType),
+      'X-Expiration-Date': expirationDate
     }),
     body: file
   });
@@ -457,13 +571,14 @@ export async function saveGoLiveSFTP(clientId, payload) {
   return data;
 }
 
-export async function saveGoLiveSchedule(clientId, productionDate, productionTime, notes) {
+export async function saveGoLiveSchedule(clientId, productionDate, productionTime, notes, timezone = 'America/New_York') {
   const res = await fetch(`${BASE_URL}/clients/${encodeURIComponent(clientId)}/golive/steps/4/schedule/`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       production_date: productionDate,
       production_time: productionTime,
+      timezone,
       notes: notes
     })
   });
@@ -508,10 +623,30 @@ export async function redoGoLiveStep(clientId, stepNum) {
 // --- 4. Access Matrix & Dynamic Last Login Service ---
 export async function fetchAccessInfo() {
   const res = await fetch(`${BASE_URL}/access/info/`, {
-    headers: getAuthHeaders()
+    headers: getAuthHeaders(),
+    cache: 'no-store'
   });
   if (!res.ok) throw new Error('Failed to fetch access matrix');
   return res.json();
+}
+
+export async function grantClientAccess(payload) {
+  const res = await fetch(`${BASE_URL}/access/grants/`, {
+    method: 'POST', headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include', body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to grant temporary client access.');
+  return data;
+}
+
+export async function revokeClientAccess(grantId) {
+  const res = await fetch(`${BASE_URL}/access/grants/${encodeURIComponent(grantId)}/revoke/`, {
+    method: 'POST', headers: getAuthHeaders(), credentials: 'include',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to revoke temporary client access.');
+  return data;
 }
 
 export async function createUser(userData) {
@@ -660,7 +795,10 @@ export async function saveClientSmtpConfig(clientId, payload) {
 // Offboarding API
 // ------------------------------------------------------------------
 export const fetchOffboardingState = async (clientId) => {
-  const res = await fetch(`/admin-panel/api/clients/${clientId}/offboarding/state/`);
+  const res = await fetch(`/admin-panel/api/clients/${clientId}/offboarding/state/`, {
+    credentials: 'include',
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error('Failed to fetch offboarding state');
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Failed to fetch offboarding state');
@@ -668,7 +806,7 @@ export const fetchOffboardingState = async (clientId) => {
 };
 
 export const completeOffboardingStep = async (clientId, stepNum, file = null) => {
-  let headers = {};
+  let headers = getAuthHeaders();
   let body = null;
 
   if (file) {
@@ -681,11 +819,12 @@ export const completeOffboardingStep = async (clientId, stepNum, file = null) =>
   const res = await fetch(`/admin-panel/api/clients/${clientId}/offboarding/steps/${stepNum}/complete/`, {
     method: 'POST',
     headers,
-    body
+    body,
+    credentials: 'include',
   });
-  
-  if (!res.ok) throw new Error('Failed to complete offboarding step');
-  const data = await res.json();
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Failed to complete offboarding step (HTTP ${res.status})`);
   if (!data.success) throw new Error(data.error || 'Failed to complete offboarding step');
   return data.state;
 };
@@ -693,9 +832,93 @@ export const completeOffboardingStep = async (clientId, stepNum, file = null) =>
 export const redoOffboardingStep = async (clientId, stepNum) => {
   const res = await fetch(`/admin-panel/api/clients/${clientId}/offboarding/steps/${stepNum}/redo/`, {
     method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error('Failed to redo offboarding step');
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Failed to redo offboarding step (HTTP ${res.status})`);
   if (!data.success) throw new Error(data.error || 'Failed to redo offboarding step');
   return data.state;
 };
+export async function viewEdiFile(clientId, fileId, fileType = 'input') {
+  const res = await fetch(
+    `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  if (!res.ok) {
+    let message = 'Failed to load file';
+
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch (_) {}
+
+    throw new Error(message);
+  }
+
+  const filename =
+    res.headers.get('X-OneSmarter-Filename') || 'file';
+
+  const contentType =
+    res.headers.get('Content-Type') || 'text/plain';
+
+  const blob = await res.blob();
+
+  const fileUrl = URL.createObjectURL(
+    new Blob([blob], { type: contentType })
+  );
+
+  return {
+    fileUrl,
+    filename,
+    contentType,
+    blob
+  };
+}
+
+export async function downloadEdiFile(
+  clientId,
+  fileId,
+  fileType = 'mir'
+) {
+  const res = await fetch(
+    `${BASE_URL}/clients/${encodeURIComponent(clientId)}/edi-files/${encodeURIComponent(fileId)}/${encodeURIComponent(fileType)}/?download=1`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+
+  if (!res.ok) {
+    let message = 'Failed to download file';
+
+    try {
+      const data = await res.json();
+      message = data.error || message;
+    } catch (_) {}
+
+    throw new Error(message);
+  }
+
+  const filename =
+    res.headers.get('X-OneSmarter-Filename') ||
+    (fileType === 'mir' ? 'output.mir' : 'input.x12');
+
+  const blob = await res.blob();
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 1500);
+}

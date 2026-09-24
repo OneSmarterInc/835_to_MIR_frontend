@@ -1,4 +1,10 @@
 import React, { useState } from "react";
+import { portalFetch } from "../utils/api";
+import FileActionButtons from "../components/FileActionButtons";
+import TimeDisplay from "../components/TimeDisplay";
+import { showAppAlert } from "../components/AppDialog";
+import ArchiveZipMenu from "../components/ArchiveZipMenu";
+import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function ArchiveView({
   metrics,
@@ -14,23 +20,22 @@ export default function ArchiveView({
   const [sortOrder, setSortOrder] = useState("desc");
   const [pushingId, setPushingId] = useState(null);
   const [convertingId, setConvertingId] = useState(null);
-  const [showZipMenu, setShowZipMenu] = useState(false);
 
   const handleConvertStatusClick = async (fileId) => {
     if (!fileId || convertingId) return;
     setConvertingId(fileId);
     try {
-      const res = await fetch("/api/convert/", {
+      const res = await portalFetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to convert file to MIR");
+        await showAppAlert(data.error || "Failed to convert file to MIR.", { title: "Conversion Failed", tone: "error" });
       }
     } catch (err) {
-      alert("Error converting file: " + err.message);
+      await showAppAlert("Error converting file: " + err.message, { title: "Conversion Failed", tone: "error" });
     } finally {
       setConvertingId(null);
       if (onRefreshData) onRefreshData();
@@ -39,32 +44,28 @@ export default function ArchiveView({
 
   const handlePushToSftp = async (fileId) => {
     if (!sftpConfig || sftpConfig.status !== "CONNECTED") {
-      alert(
+      await showAppAlert(
         "⚠️ No active SFTP connection.\n\nPlease go to the Connections section, enter your SFTP host/port/credentials, and click 'Test & save connection' before pushing files."
-      );
+      , { title: "SFTP Connection Required", tone: "error" });
       return;
     }
 
     setPushingId(fileId);
     try {
-      const res = await fetch("/edi835/api/sftp/push/", {
+      const res = await portalFetch("/edi835/api/sftp/push/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_id: fileId }),
       });
       const data = await res.json();
       if (data.success) {
-        alert("✓ " + data.message);
+        await showAppAlert(data.message || "MIR uploaded to SFTP successfully.", { title: "Upload Successful", tone: "success" });
         if (onRefreshData) onRefreshData();
       } else {
-        alert(
-          "❌ " +
-            (data.error ||
-              "Failed to push files to SFTP server. Check server connection and credentials.")
-        );
+        await showAppAlert(data.error || "Failed to push files to SFTP server. Check server connection and credentials.", { title: "Upload Failed", tone: "error" });
       }
     } catch (e) {
-      alert("❌ Unable to reach server to push files to SFTP.");
+      await showAppAlert("Unable to reach server to push files to SFTP.", { title: "Upload Failed", tone: "error" });
     } finally {
       setPushingId(null);
     }
@@ -94,7 +95,7 @@ export default function ArchiveView({
       if (fileId) query.append("file_id", fileId);
       if (nameToSave) query.append("file_name", nameToSave);
 
-      const res = await fetch(`/api/download/?${query.toString()}`, {
+      const res = await portalFetch(`/api/download/?${query.toString()}`, {
         method: "GET",
         credentials: "include",
       });
@@ -113,14 +114,13 @@ export default function ArchiveView({
         a.remove();
       }, 1000);
     } catch (err) {
-      alert("Download error: " + err.message);
+      await showAppAlert("Download error: " + err.message, { title: "Download Failed", tone: "error" });
     }
   };
 
   const handleDownloadZip = async (type) => {
-    setShowZipMenu(false);
     try {
-      const res = await fetch(`/api/download-zip/?type=${type}`, {
+      const res = await portalFetch(`/api/download-zip/?type=${type}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to generate ZIP archive");
@@ -136,10 +136,9 @@ export default function ArchiveView({
         a.remove();
       }, 1000);
     } catch (err) {
-      alert("ZIP Download error: " + err.message);
+      await showAppAlert("ZIP download error: " + err.message, { title: "Download Failed", tone: "error" });
     }
   };
-
 
   const handleSortHeader = (key) => {
     if (sortKey === key) {
@@ -196,140 +195,8 @@ export default function ArchiveView({
   const pageItems = filtered.slice(startIndex, startIndex + pageSize);
 
   return (
-    <section className="view on" id="v-archive">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-          <h1 style={{ margin: 0 }}>Archive</h1>
-          <span
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              color: "var(--ink-3)",
-              textTransform: "uppercase",
-            }}
-          >
-            ALL CONVERSION-SET HISTORY
-          </span>
-        </div>
-
-        {/* ZIP ARCHIVE DOWNLOAD BUTTON */}
-        <div style={{ position: "relative", display: "inline-block" }}>
-          <button
-            type="button"
-            className="btn-gray"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "7px 14px",
-              fontSize: "12px",
-              fontWeight: 600,
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-            onClick={() => setShowZipMenu(!showZipMenu)}
-            title="Export Archive to ZIP"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 8v13H3V8"></path>
-              <path d="M1 3h22v5H1z"></path>
-              <path d="M10 12h4"></path>
-            </svg>
-            <span>ZIP Archive</span>
-            <span style={{ fontSize: "10px", marginLeft: "2px" }}>▼</span>
-          </button>
-
-          {showZipMenu && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: "6px",
-                background: "#ffffff",
-                border: "1px solid var(--line, #e2e8f0)",
-                borderRadius: "6px",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                zIndex: 200,
-                minWidth: "210px",
-                overflow: "hidden",
-              }}
-             >
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #f1f5f9",
-                  fontWeight: 500,
-                }}
-                onClick={() => handleDownloadZip("mir")}
-              >
-                Download all MIR (.mir)
-              </button>
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "#1e293b",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #f1f5f9",
-                  fontWeight: 500,
-                }}
-                onClick={() => handleDownloadZip("835")}
-              >
-                Download all 835 (.x12 / .835)
-              </button>
-              <button
-                type="button"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "none",
-                  border: "none",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  color: "var(--teal, #0d9488)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-                onClick={() => handleDownloadZip("both")}
-              >
-                Download Complete Set (.zip)
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      <p className="sub" style={{ marginTop: "4px", marginBottom: "20px" }}>
-        One row represents one 835 conversion set. The 835 input(s), optional 837 reference, MIR
-        output, validation result, and processing result stay together.
-      </p>
-
+    <section className="view on table-screen" id="v-archive">
+      <WorkspaceHeader eyebrow="File history workspace" title="Archive" description="Review and export all retained 835, MIR, and reconciliation conversion sets."><ArchiveZipMenu onDownload={handleDownloadZip} /></WorkspaceHeader>
       {/* 5 METRIC CARDS METRICS BAR */}
       <div
         className="metrics"
@@ -402,8 +269,20 @@ export default function ArchiveView({
 
       {/* ARCHIVE DATA TABLE */}
       <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: "16px" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
+          <table className="datatable" style={{ width: "100%", maxWidth: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "7%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th
@@ -411,7 +290,7 @@ export default function ArchiveView({
                   onClick={() => handleSortHeader("date")}
                   style={{ fontSize: "11px", letterSpacing: "0.05em" }}
                 >
-                  835 DATE{" "}
+                  835 DATE / TIME (EST){" "}
                   <span className="sort-arrow">
                     {sortKey === "date" ? (sortOrder === "asc" ? "↑" : "↓") : "⇅"}
                   </span>
@@ -484,17 +363,23 @@ export default function ArchiveView({
                 </tr>
               ) : (
                 pageItems.map((f) => {
-                  const upDate = f.uploaded_at ? f.uploaded_at.substring(0, 10) : "—";
                   const shortId = "R-" + f.id.substring(0, 6).toUpperCase();
-                  const baseName = (f.original_filename || "").replace(/\.[^/.]+$/, "");
-                  const mirName = "MIR_" + baseName + ".mir";
+                  const mirName =
+                    f.output_filename ||
+                    f.mir_filename ||
+                    f.combined_filename ||
+                    (f.output_path ? f.output_path.split("/").pop() : "") ||
+                    "MIR_" +
+                      (f.original_filename || "").split(",")[0].trim().replace(/\.[^/.]+$/, "") +
+                      ".mir";
                   const isProcessed = f.status === "ARCHIVED";
                   const isSftpSuccess = Boolean(f.present_in_sftp);
+                  const canPushToSftp = isProcessed && !isSftpSuccess;
                   const sftpStatusText = isSftpSuccess
-                    ? "Success"
+                    ? "Pushed"
                     : f.status === "ERROR"
                     ? "Failed"
-                    : "Pending";
+                    : "Push to SFTP";
                   const sftpTagClass = isSftpSuccess
                     ? "ok"
                     : f.status === "ERROR"
@@ -547,17 +432,17 @@ export default function ArchiveView({
 
                   return (
                     <tr key={f.id}>
-                      <td className="num">{upDate}</td>
+                      <td className="num" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}><TimeDisplay value={f.uploaded_at} includeSeconds easternOnly /></td>
                       <td className="num" style={{ fontWeight: 600, fontSize: "11.5px" }}>
                         {shortId}
                       </td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ color: "var(--ink-2)", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {f.original_filename}
                       </td>
                       <td className="num" style={{ color: "var(--ink-3)" }}>
                         —
                       </td>
-                      <td className="num" style={{ color: "var(--ink-2)" }}>
+                      <td className="num" style={{ color: "var(--ink-2)", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
                         {isProcessed ? mirName : "—"}
                       </td>
                       <td className="num">{f.claims_count || 0}</td>
@@ -571,18 +456,25 @@ export default function ArchiveView({
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`tag ${sftpTagClass}`}
-                          style={{ cursor: "pointer" }}
-                          title={
-                            isSftpSuccess
-                              ? "Uploaded to SFTP: File has been pushed to configured SFTP server."
-                              : "Click to push 835 & MIR to SFTP"
-                          }
-                          onClick={() => handlePushToSftp(f.id)}
-                        >
-                          {pushingId === f.id ? "Pushing..." : sftpStatusText}
-                        </span>
+                        {canPushToSftp ? (
+                          <button
+                            type="button"
+                            className="tag work"
+                            style={{ cursor: "pointer" }}
+                            title="Upload the generated MIR file to the configured SFTP server"
+                            onClick={() => handlePushToSftp(f.id)}
+                            disabled={pushingId === f.id}
+                          >
+                            {pushingId === f.id ? "Pushing..." : "Push to SFTP"}
+                          </button>
+                        ) : (
+                          <span
+                            className={`tag ${sftpTagClass}`}
+                            title={isSftpSuccess ? "MIR uploaded to the configured SFTP server." : undefined}
+                          >
+                            {sftpStatusText}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span
@@ -600,39 +492,8 @@ export default function ArchiveView({
                           {convertingId === f.id ? "CONVERTING..." : displayStatus}
                         </span>
                       </td>
-                      <td
-                        className="num"
-                        style={{
-                          fontSize: "11px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="btn-eye"
-                          title="View / Edit Code"
-                          onClick={() => onOpenFileModal(f.id)}
-                        >
-                          <svg viewBox="0 0 24 24">
-                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                          </svg>
-                        </button>
-                        {isProcessed ? (
-                          <button
-                            type="button"
-                            className="btn-download"
-                            title="Download .mir File"
-                            onClick={() => handleDownloadMir(mirName, f.mir_text, f.id)}
-                          >
-                            <svg viewBox="0 0 24 24">
-                              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                            </svg>
-                          </button>
-                        ) : (
-                          "—"
-                        )}
+                      <td className="num" style={{ fontSize: "11px", whiteSpace: "nowrap", overflow: "visible" }}>
+                        <FileActionButtons onView={() => onOpenFileModal(f.id)} onDownload={isProcessed ? () => handleDownloadMir(mirName, f.mir_text, f.id) : null} viewTitle="View / Edit Code" downloadTitle="Download .mir File" />
                       </td>
                     </tr>
                   );
