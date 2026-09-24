@@ -7,6 +7,13 @@ function getAuthHeaders(extra = {}) {
   return { ...extra };
 }
 
+function getAuthHeaders(extra = {}) {
+  const token = localStorage.getItem("onesmarter_admin_token");
+  const headers = { ...extra };
+  if (token) headers.Authorization = `Token ${token}`;
+  return headers;
+}
+
 export default function SftpBrowserModal({
   isOpen,
   initialPath,
