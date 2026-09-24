@@ -521,9 +521,9 @@ export default function App() {
 
         <TotpSetupPage
 
-          onSetupSuccess={()=>{
+          onSetupSuccess={async()=>{
+            await checkUserStatus();
             setAuthNext(null);
-            checkUserStatus();
           }}
 
           onLogout={handleLogout}
@@ -546,9 +546,9 @@ export default function App() {
 
         <TotpVerifyPage
 
-          onVerifySuccess={()=>{
+          onVerifySuccess={async()=>{
+            await checkUserStatus();
             setAuthNext(null);
-            checkUserStatus();
           }}
 
           onSetupRequired={()=>
