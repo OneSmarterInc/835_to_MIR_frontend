@@ -315,10 +315,12 @@ a.link, .link {
   font-family: var(--body);
   color: #B9C6D4;
   overflow-y: auto;
+  pointer-events: none;
 }
 
 .client-drawer.open {
   transform: translateX(0);
+  pointer-events: auto;
 }
 
 .client-drawer .grp {
