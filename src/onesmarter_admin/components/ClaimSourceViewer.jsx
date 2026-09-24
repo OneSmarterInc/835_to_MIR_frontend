@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { portalFetch } from '../../utils/api';
+import { encodeDemoFileContent } from '../../utils/demoEncoder';
 import '../../pages/NoticesView.css';
 import './ClaimSourceViewer.css';
 
@@ -117,6 +118,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
   const [searchIndex, setSearchIndex] = useState(0);
   const [sliceBusy, setSliceBusy] = useState(false);
   const [sliceMessage, setSliceMessage] = useState('');
+  const [revealAll, setRevealAll] = useState(false);
   const selected = sources[selectedIndex];
   const is837 = String(selected?.type || '').toUpperCase() === '837';
 
@@ -125,7 +127,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
     let cancelled = false;
     setLoading(true); setError(''); setContent(''); setClaimRows([]);
     highmarkRefs.current = []; searchRefs.current = [];
-    setHighmarkIndex(0); setFileSearch(''); setSearchIndex(0); setSliceMessage('');
+    setHighmarkIndex(0); setFileSearch(''); setSearchIndex(0); setSliceMessage(''); setRevealAll(false);
     portalFetch(`${selected.download_url}?view=1`)
       .then(async response => {
         if (!response.ok) throw new Error('Unable to load the archived file.');
@@ -171,7 +173,8 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
   const pattern = terms.length ? new RegExp(`(${terms.map(escapePattern).join('|')})`, 'gi') : null;
   const displayRows = (claimRows.length ? claimRows : viewerLines(content, selected.type))
     .flatMap(row => String(row || '').replace(/\r\n?/g, '\n').replace(/[~∼˜]/g, '\n').split('\n'))
-    .map(row => row.trim()).filter(row => row.length);
+    .map(row => encodeDemoFileContent(row.trim(), selected.type, !revealAll))
+    .filter(row => row.length);
 
   const moveHighmark = direction => {
     if (!highmarkCount) return;
@@ -245,7 +248,7 @@ export default function ClaimSourceViewer({ claimNumber, sources, onClose }) {
         <small>{is837 ? 'Yellow = Highmark claim' : 'Yellow = Highmark claim · Blue = internal claim'}</small>
       </div>
       <div className={`mpl-file-content ${['835', 'MIR', 'RECON', '837'].includes(String(selected.type).toUpperCase()) ? 'one-claim-per-line' : ''}`}>
-        <div className="mpl-file-content-heading"><strong>File content</strong><div className="mpl-file-search"><label><span className="sr-only">Search file content</span><input type="search" value={fileSearch} onChange={event => { setFileSearch(event.target.value); setSearchIndex(0); searchRefs.current = []; }} placeholder="Search file…" /></label><span>{searchTerm ? `${searchCount ? searchIndex + 1 : 0} / ${searchCount}` : '0 / 0'}</span><button type="button" onClick={() => moveSearch(-1)} disabled={!searchCount} aria-label="Previous search result" title="Previous search result">↑</button><button type="button" onClick={() => moveSearch(1)} disabled={!searchCount} aria-label="Next search result" title="Next search result">↓</button></div><small>{selected.filename}</small></div>
+        <div className="mpl-file-content-heading"><strong>File content</strong><button type="button" className="mpl-reveal-all-button" onClick={() => setRevealAll(current => !current)}>{revealAll ? 'Mask All' : 'Reveal All'}</button><div className="mpl-file-search"><label><span className="sr-only">Search file content</span><input type="search" value={fileSearch} onChange={event => { setFileSearch(event.target.value); setSearchIndex(0); searchRefs.current = []; }} placeholder="Search file…" /></label><span>{searchTerm ? `${searchCount ? searchIndex + 1 : 0} / ${searchCount}` : '0 / 0'}</span><button type="button" onClick={() => moveSearch(-1)} disabled={!searchCount} aria-label="Previous search result" title="Previous search result">↑</button><button type="button" onClick={() => moveSearch(1)} disabled={!searchCount} aria-label="Next search result" title="Next search result">↓</button></div><small>{selected.filename}</small></div>
         {loading ? <p className="mpl-empty">Loading archived file…</p> : error ? <p className="mpl-file-view-error">{error}</p> : <div className="mpl-source-code" role="region" aria-label="Matched source file content">{displayRows.map(renderLine)}</div>}
       </div>
     </section>

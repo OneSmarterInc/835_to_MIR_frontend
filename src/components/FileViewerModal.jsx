@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { portalFetch } from "../utils/api";
+import { encodeDemoFileContent } from "../utils/demoEncoder";
+import { isDemoModeEnabled } from "../utils/demoSubstitution";
 import "./FileViewerPage.css";
 
 function findOccurrences(content, search) {
@@ -34,6 +36,9 @@ export default function FileViewerModal({ fileId, onClose }) {
   const [filename, setFilename] = useState("Loading file...");
   const [ediText, setEdiText] = useState("");
   const [mirText, setMirText] = useState("");
+  const [ediFullText, setEdiFullText] = useState("");
+  const [mirFullText, setMirFullText] = useState("");
+  const [revealAll, setRevealAll] = useState(false);
   const [activeTab, setActiveTab] = useState("835");
   const [copyStatus, setCopyStatus] = useState("Copy");
   const [error, setError] = useState(null);
@@ -58,6 +63,7 @@ export default function FileViewerModal({ fileId, onClose }) {
     setLoadedFileId(null);
     setError(null);
     setActiveTab("835");
+    setRevealAll(false);
     setFileSearch("");
     setSearchIndex(0);
     matchRefs.current = [];
@@ -70,8 +76,12 @@ export default function FileViewerModal({ fileId, onClose }) {
       })
       .then((data) => {
         setFilename(data.filename || "File Viewer");
-        setEdiText(format835ForViewer(data.edi_text || noDataMessage));
-        setMirText(data.mir_text || noDataMessage);
+        const raw835 = format835ForViewer(data.edi_text || noDataMessage);
+        const rawMir = data.mir_text || noDataMessage;
+        setEdiText(encodeDemoFileContent(raw835, "835", true));
+        setMirText(encodeDemoFileContent(rawMir, "MIR", true));
+        setEdiFullText(encodeDemoFileContent(raw835, "835", false));
+        setMirFullText(encodeDemoFileContent(rawMir, "MIR", false));
         setLoadedFileId(fileId);
         setLoading(false);
       })
@@ -86,8 +96,11 @@ export default function FileViewerModal({ fileId, onClose }) {
     return () => controller.abort();
   }, [fileId]);
 
-  const currentText = activeTab === "835" ? ediText : mirText;
+  const maskedCurrentText = activeTab === "835" ? ediText : mirText;
+  const fullCurrentText = activeTab === "835" ? ediFullText : mirFullText;
   const isCurrentFileLoading = Boolean(fileId) && (loading || loadedFileId !== fileId);
+  const currentText = revealAll ? fullCurrentText : maskedCurrentText;
+  const canRevealAll = isDemoModeEnabled() && !isCurrentFileLoading && !error && maskedCurrentText !== fullCurrentText;
   const displayText = isCurrentFileLoading
     ? "Loading file content..."
     : error
@@ -197,6 +210,17 @@ export default function FileViewerModal({ fileId, onClose }) {
         <div className="file-viewer-page-tabs">
           <button type="button" className={`tab-btn ${activeTab === "835" ? "active" : ""}`} onClick={() => selectTab("835")}>835 Code</button>
           <button type="button" className={`tab-btn ${activeTab === "MIR" ? "active" : ""}`} onClick={() => selectTab("MIR")}>MIR Code</button>
+        </div>
+        <div className="file-viewer-page-toolbar-actions">
+          {canRevealAll && (
+            <button
+              type="button"
+              className={`file-viewer-reveal-all ${revealAll ? "active" : ""}`}
+              onClick={() => setRevealAll((current) => !current)}
+            >
+              {revealAll ? "Mask All" : "Reveal All"}
+            </button>
+          )}
         </div>
         <div className="file-viewer-page-search">
           <label>

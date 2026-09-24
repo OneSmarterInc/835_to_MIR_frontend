@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReconArchiveOverlay.css';
+import { encodeDemoFileContent } from '../utils/demoEncoder.js';
 
 const EyeIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>;
 const DownloadIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>;
@@ -86,6 +87,9 @@ function findOccurrences(text, query) {
 
 function ReconFilePreview({ file, onBack }) {
   const [text, setText] = useState('');
+  const [fullText, setFullText] = useState('');
+  const [revealed, setRevealed] = useState(() => new Set());
+  const [revealAll, setRevealAll] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -102,9 +106,15 @@ function ReconFilePreview({ file, onBack }) {
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.success) throw new Error(data.error || `Unable to open file (${response.status}).`);
-        return String(data.content || '');
+        const raw = String(data.content || '');
+        return { masked: encodeDemoFileContent(raw, 'RECON', true), full: encodeDemoFileContent(raw, 'RECON', false) };
       })
-      .then((value) => setText(value || '(Empty file)'))
+      .then(({ masked, full }) => {
+        setText(masked || '(Empty file)');
+        setFullText(full || '(Empty file)');
+        setRevealed(new Set());
+        setRevealAll(false);
+      })
       .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message || 'Unable to open file.'); })
       .finally(() => setLoading(false));
     return () => controller.abort();
@@ -132,23 +142,51 @@ function ReconFilePreview({ file, onBack }) {
   }, [query, text, index, occurrences.length]);
 
   const rendered = useMemo(() => {
-    const term = query.trim();
-    if (!term || !text) return text;
-    const lower = text.toLocaleLowerCase();
-    const needle = term.toLocaleLowerCase();
-    const output = [];
-    let cursor = 0;
-    let matchIndex = 0;
-    while (cursor < text.length) {
-      const at = lower.indexOf(needle, cursor);
-      if (at < 0) { output.push(text.slice(cursor)); break; }
-      if (at > cursor) output.push(text.slice(cursor, at));
-      const current = matchIndex++;
-      output.push(<mark key={`${at}-${current}`} ref={(node) => { matchRefs.current[current] = node; }} className={current === index ? 'recon-file-search active' : 'recon-file-search'}>{text.slice(at, at + term.length)}</mark>);
-      cursor = at + term.length;
-    }
-    return output;
-  }, [text, query, index]);
+    const lines = String(text || '').split(/(\r?\n)/);
+    const fullLines = String(fullText || '').split(/(\r?\n)/);
+    let searchMatchIndex = 0;
+
+    return lines.map((line, lineIndex) => {
+      if (/^\r?\n$/.test(line)) return line;
+
+      const fullLine = fullLines[lineIndex] || line;
+      const maskedTokens = line.split(/(\s+)/);
+      const fullTokens = fullLine.split(/(\s+)/);
+
+      return maskedTokens.map((token, tokenIndex) => {
+        if (/^\s+$/.test(token) || !token) return token;
+
+        const fullToken = fullTokens[tokenIndex] ?? token;
+        const tokenKey = file.id + '-' + lineIndex + '-' + tokenIndex;
+        const isMasked = token.includes('*') && fullToken !== token;
+        const displayed = isMasked && !revealAll && !revealed.has(tokenKey) ? token : fullToken;
+        const needle = query.trim().toLocaleLowerCase();
+        const lower = displayed.toLocaleLowerCase();
+
+        if (!needle) {
+          return isMasked ? (
+            <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealed((current) => new Set(current).add(tokenKey))}>{displayed}</button>
+          ) : displayed;
+        }
+
+        const pieces = [];
+        let cursor = 0;
+        while (cursor < displayed.length) {
+          const at = lower.indexOf(needle, cursor);
+          if (at < 0) { pieces.push(displayed.slice(cursor)); break; }
+          if (at > cursor) pieces.push(displayed.slice(cursor, at));
+          const currentMatch = searchMatchIndex++;
+          pieces.push(<mark key={tokenKey + '-match-' + currentMatch} ref={(node) => { matchRefs.current[currentMatch] = node; }} className={currentMatch === index ? 'recon-file-search active' : 'recon-file-search'}>{displayed.slice(at, at + needle.length)}</mark>);
+          cursor = at + needle.length;
+        }
+
+        const content = pieces.length ? pieces : [displayed];
+        return isMasked ? (
+          <button key={tokenKey} type="button" className="recon-masked-value" title="Click to reveal encoded data" onClick={() => setRevealed((current) => new Set(current).add(tokenKey))}>{content}</button>
+        ) : <React.Fragment key={tokenKey}>{content}</React.Fragment>;
+      });
+    });
+  }, [text, fullText, query, index, revealed, revealAll, file.id]);
 
   const move = (direction) => {
     if (!occurrences.length) return;
@@ -158,6 +196,11 @@ function ReconFilePreview({ file, onBack }) {
   return <section className="recon-file-preview-page recon-react-preview">
     <header><div><span>RECON FILE VIEWER</span><h2>{file.original_filename}</h2></div><button type="button" className="recon-archive-back" onClick={onBack}>← Back to Uploaded RECON files</button></header>
     <div className="recon-file-preview-toolbar">
+      {typeof window !== 'undefined' && localStorage.getItem('mir-demo-substitution') === 'true' && (
+        <button type="button" className="recon-file-nav" onClick={() => setRevealAll(current => !current)} title={revealAll ? 'Mask all PHI' : 'Reveal all PHI'}>
+          {revealAll ? 'Mask All' : 'Reveal All'}
+        </button>
+      )}
       <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search file…" aria-label="Search RECON file" />
       <button type="button" className="recon-file-nav" onClick={() => move(-1)} disabled={!occurrences.length} aria-label="Previous match">↑</button>
       <span>{query.trim() ? `${occurrences.length ? index + 1 : 0} / ${occurrences.length}` : '0 / 0'}</span>
