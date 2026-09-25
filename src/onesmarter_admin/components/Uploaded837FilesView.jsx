@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ClientSelectDropdown from './ClientSelectDropdown';
 import { fetch837Files } from '../services/api';
 import { EASTERN_TIME_ZONE, formatInZone } from '../../utils/timezone';
+import { withCsrf } from '../../utils/api';
 import './ClaimSearchView.css';
 
 const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
@@ -50,11 +51,12 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
     setError('');
     setNotice('');
     try {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
       const headers = { 'Content-Type': 'application/json', 'X-Admin-Screen': 'search' };
-      const queueRes = await fetch('/edi835/api/837/files/', {
+      const queueRes = await fetch('/edi835/api/837/files/', withCsrf({
         method: 'POST', credentials: 'include', headers,
         body: JSON.stringify({ client_id: activeClientId }),
-      });
+      }));
       const queued = await queueRes.json().catch(() => ({}));
       if (!queueRes.ok || !queued.success) throw new Error(queued.error || 'Unable to queue pending 837 files for SFTP delivery.');
       if (!queued.job_id || queued.state === 'COMPLETED') {

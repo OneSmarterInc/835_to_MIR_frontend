@@ -5,7 +5,7 @@ import ClaimSourceViewer from './ClaimSourceViewer';
 import EyeIcon from '../../components/EyeIcon';
 import { fetch837Files, process837Upload } from '../services/api';
 import { searchUniversalClaims } from '../services/claimSearchApi';
-import { portalFetch } from '../../utils/api';
+import { portalFetch, withCsrf } from '../../utils/api';
 import { formatEasternDate, formatEasternTime } from '../../utils/timezone';
 import './ClaimSearchView.css';
 import './ClaimSourceActions.css';
@@ -242,8 +242,9 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
     if (!activeClientId || renaming) return;
     setRenaming(true); setError(''); setNotice('');
     try {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
       const headers = { 'Content-Type': 'application/json', 'X-Admin-Screen': 'search' };
-      const res = await fetch('/edi835/api/837/sftp-rename/', { method: 'POST', credentials: 'include', headers, body: JSON.stringify({ client_id: activeClientId, filename_format: filename }) });
+      const res = await fetch('/edi835/api/837/sftp-rename/', withCsrf({ method: 'POST', credentials: 'include', headers, body: JSON.stringify({ client_id: activeClientId, filename_format: filename }) }));
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Unable to rename the 837 files on SFTP.');
       const savedFormat = String(data.filename_format || filename || DEFAULT_837_FILENAME_FORMAT).trim();

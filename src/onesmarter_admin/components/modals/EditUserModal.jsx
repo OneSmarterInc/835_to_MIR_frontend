@@ -4,6 +4,7 @@ import { showAppAlert, showAppConfirm } from '../../../components/AppDialog';
 import { isSuperAdminAccount } from '../../utils/adminRoles';
 import PhoneNumberField from '../../../components/PhoneNumberField';
 import { splitE164, toE164, validateNationalNumber } from '../../../utils/phone';
+import { withCsrf } from '../../../utils/api';
 
 export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clients, user, currentUser }) {
   const [name, setName] = useState('');
@@ -190,10 +191,11 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
               })) {
                 setLoading(true);
                 try {
-                  const res = await fetch(`/accounts/api/admin/users/${user.id}/reset-password/`, {
+                  // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+                  const res = await fetch(`/accounts/api/admin/users/${user.id}/reset-password/`, withCsrf({
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
-                  });
+                  }));
                   const data = await res.json();
                   if (res.ok && data.success) {
                     await showAppAlert(data.message, { title: 'Password Reset', tone: 'success' });
