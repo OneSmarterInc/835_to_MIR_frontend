@@ -1,20 +1,22 @@
 const BASE_URL = '/admin-panel/api';
 
+// 2026-09-25 - Yash: Task 6b - Include X-CSRFToken in admin API headers and remove dead onesmarter_admin_token read
+function readCookie(name) {
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : "";
+}
+
 function getAuthHeaders(extraHeaders = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = { ...extraHeaders };
-  if (token) {
-    headers['Authorization'] = `Token ${token}`;
-  }
-  const activeScreen = new URLSearchParams(window.location.search).get('nav');
-  if (activeScreen) headers['X-Admin-Screen'] = activeScreen;
+  const headers = { ...extraHeaders, "X-CSRFToken": readCookie("csrftoken") };
+  const activeScreen = new URLSearchParams(window.location.search).get("nav");
+  if (activeScreen) headers["X-Admin-Screen"] = activeScreen;
   return headers;
 }
 
 export async function loginAdmin(email, password, code) {
   const res = await fetch(`${BASE_URL}/auth/login/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ email, password, code })
   });
   const data = await res.json();
@@ -25,7 +27,7 @@ export async function loginAdmin(email, password, code) {
 export async function registerAdmin(email, password, name) {
   const res = await fetch(`${BASE_URL}/auth/register/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ email, password, name })
   });
   const data = await res.json();

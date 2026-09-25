@@ -15,10 +15,14 @@ import {
 } from '../../utils/timezone';
 import './StepUploadModal.css';
 
+// 2026-09-25 - Yash: Task 6b - Include X-CSRFToken in getAuthHeaders for StepRung
+function readCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
 function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = { ...extra };
-  if (token) headers['Authorization'] = `Token ${token}`;
+  const headers = { ...extra, 'X-CSRFToken': readCookie('csrftoken') };
   return headers;
 }
 
