@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import CenteredModal from './CenteredModal';
 import TimeDisplay from '../../../components/TimeDisplay';
+import { withCsrf } from '../../../utils/api';
 
 export default function UserDetailsModal({ isOpen, onClose, user, availableScreens = [], canManageScreens = false, onSaveScreens, clients = [], activeGrants = [], onGrantClientAccess, onRevokeClientAccess }) {
   const [screens, setScreens] = useState([]);
@@ -76,12 +77,13 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
     setUnblocking(true);
     setSecurityError('');
     try {
-      const res = await fetch(`/accounts/api/admin/users/${encodeURIComponent(user.id)}/security/`, {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+      const res = await fetch(`/accounts/api/admin/users/${encodeURIComponent(user.id)}/security/`, withCsrf({
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Screen': 'access' },
         body: JSON.stringify({ action: 'unblock' }),
-      });
+      }));
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Unable to unblock this account.');
       setSecurity(data.security || { blocked: false, failed_login_attempts: 0 });
