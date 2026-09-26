@@ -15,6 +15,12 @@ import DemoRevealLayer from './components/DemoRevealLayer.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 import { encodeDemoData } from './utils/demoEncoder.js'
 
+const demoStorageKey = 'mir-demo-substitution';
+
+// Demo masking is mandatory. Set it before the app renders or starts API
+// requests so every supported PHI field is encoded from the first response.
+localStorage.setItem(demoStorageKey, 'true');
+
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 const originalFetch = window.fetch;
@@ -56,8 +62,6 @@ window.fetch = function (url, options = {}) {
 
 
 installBrowserHistoryNavigation();
-
-const demoStorageKey = 'mir-demo-substitution';
 
 window.addEventListener('storage', (event) => {
   if (event.key === demoStorageKey) {
