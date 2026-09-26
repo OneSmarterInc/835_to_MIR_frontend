@@ -15,6 +15,7 @@ const PHI_KEY_PATTERNS = [
   /^(patient_name|patient_first_name|patient_last_name|patient_middle_name|subscriber_name|member_name|beneficiary_name|provider_name|physician_name|doctor_name|contact_name)(_|$)/i,
   /^(address|street|street_address|city|county|zip|zipcode|postal|phone|telephone|fax|email)(_|$)/i,
   /^(ssn|social_security|mrn|member_number|member_id|subscriber_id|beneficiary_id|patient_id|account_number|policy_number)(_|$)/i,
+  /^(group_number|group_num|group_no|group_id|sub_group_number|subgroup_number)(_|$)/i,
   /^(diagnosis|procedure|service|revenue|icd|cpt|hcpcs|drg)(_|$)/i,
   /^(gender|sex|age)(_|$)/i,
 ];
@@ -142,7 +143,7 @@ export function encodeDemoFileContent(rawContent, fileType = '', mask = true) {
       if (/^\r?\n$/.test(part)) return part;
 
       let line = part.replace(
-        /(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\s*[:=]\s*)([^,|;\t]+)/gi,
+        /(claim(?:_number|number)?|member(?:_id|_number)?|subscriber(?:_id|_number)?|patient(?:_id|_name)?|medical_record_number|account_number|policy_number|(?:sub_?group|group)_?(?:number|num|no|id)|date_of_birth|dob|service_date|first_name|last_name|middle_name|full_name|patient_name|subscriber_name|member_name|provider_name|physician_name|doctor_name|contact_name)(\s*[:=]\s*)([^,|;\t]+)/gi,
         (_, key, separator, value) => key + separator + encodeX12Field(value, mask)
       );
 
