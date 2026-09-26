@@ -560,4 +560,5 @@ td.num{font-family:var(--display);font-variant-numeric:tabular-nums}
 @media (max-width: 820px) { .admin-client-grant-form { grid-template-columns: 1fr 1fr; } .admin-client-grant-form > :nth-child(2), .admin-client-grant-form > button { grid-column: 1 / -1; } }
 
 .admin-demo-toggle{display:flex;align-items:center;gap:6px;margin-right:14px;font-family:var(--body);font-size:12px;color:#B9C6D4;white-space:nowrap}
+.admin-demo-toggle[hidden]{display:none!important}
 .admin-demo-toggle input{margin:0;cursor:pointer;accent-color:#0f8b78}
