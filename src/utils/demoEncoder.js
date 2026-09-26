@@ -147,6 +147,13 @@ export function encodeDemoFileContent(rawContent, fileType = '', mask = true) {
         (_, key, separator, value) => key + separator + encodeX12Field(value, mask)
       );
 
+      // Fixed-width MIR rows do not label fields. The group number is the
+      // first standalone 8-digit field after the combined service-date field.
+      line = line.replace(
+        /^(\s*\S+\s+\d{16,18}\s+(?:(?!\d{8}(?=\s|$))\S+\s+)*)(\d{8})(?=\s|$)/,
+        (_, prefix, groupNumber) => prefix + encodeX12Field(groupNumber, mask)
+      );
+
       line = line.replace(
         /^(M)([A-Z0-9]{15,40})(?=\s|$)/i,
         (_, prefix, identifiers) => prefix + encodeX12Field(identifiers, mask)
