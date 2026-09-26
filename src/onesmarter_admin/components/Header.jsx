@@ -67,12 +67,14 @@ export default function Header({ onSignOut, currentUser, onToggleSidebar, isSide
           <div className="wordmark">ONESMARTER <span>/ MIR RELAY ADMIN</span></div>
         </div>
         <div className="spacer" />
-        <label className="admin-demo-toggle">
+        <label className="admin-demo-toggle" hidden aria-hidden="true">
           <span>Demo Data</span>
           <input
             type="checkbox"
             checked={demoMode}
             onChange={handleDemoToggle}
+            disabled
+            tabIndex={-1}
             title="Enable demo data encoding"
           />
         </label>
