@@ -28,6 +28,7 @@ export default function LoginGate({ onLoginSuccess }) {
       } else if (res.require_mfa) {
         setStep(2);
       } else if (res.ok) {
+        localStorage.setItem('onesmarter_admin_token', res.token);
         onLoginSuccess(res);
       }
     } catch (err) {
@@ -70,6 +71,7 @@ export default function LoginGate({ onLoginSuccess }) {
     try {
       const res = await loginAdmin(email, password, otpCode);
       if (res.ok) {
+        localStorage.setItem('onesmarter_admin_token', res.token);
         onLoginSuccess(res);
       }
     } catch (err) {

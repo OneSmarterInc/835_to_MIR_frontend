@@ -1,14 +1,8 @@
 import React from 'react';
 import Select from 'react-select';
 
-export default function ClientSelectDropdown({ clients, value, onChange, id, includeGlobal = false, fullWidth = false }) {
-  const options = [
-    ...(includeGlobal ? [{ value: '', label: '-- None (Global System Default) --' }] : []),
-    ...clients.map(c => ({
-      value: c.id,
-      label: `${c.name}${c.client_code || c.code ? ` (${c.client_code || c.code})` : ''}`,
-    }))
-  ];
+export default function ClientSelectDropdown({ clients, value, onChange, id }) {
+  const options = clients.map(c => ({ value: c.id, label: c.name }));
   const selectedOption = options.find(o => o.value === value) || null;
 
   const customStyles = {
@@ -45,12 +39,7 @@ export default function ClientSelectDropdown({ clients, value, onChange, id, inc
       background: state.isFocused ? 'rgba(0,0,0,0.05)' : 'transparent',
       color: 'var(--ink)',
       cursor: 'pointer'
-    }),
-    container: (base) => ({
-      ...base,
-      width: fullWidth ? '100%' : 'min(560px, 100%)',
-      minWidth: 0,
-    }),
+    })
   };
 
   return (

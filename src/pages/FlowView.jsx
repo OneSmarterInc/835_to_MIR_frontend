@@ -1,18 +1,36 @@
 import React from "react";
-import TimeDisplay from "../components/TimeDisplay";
-import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function FlowView({
   metrics,
   recentFiles,
   inboundConfig,
-  outboundConfig
+  outboundConfig,
+  onNavigateTab,
 }) {
   const todayDateStr = new Date().toISOString().substring(0, 10);
+  const firstFile = recentFiles && recentFiles.length > 0 ? recentFiles[0] : null;
 
   return (
     <section className="view on" id="v-flow">
-      <WorkspaceHeader eyebrow={`Flow workspace · ${todayDateStr}`} title="Flow" description="837 is optional reference only. MIR is built from validated 835 files using the active mapping, then prepared for the configured delivery path." />
+      <div className="flow-title-row">
+        <div>
+          <h1>Flow</h1>
+          <p className="sub">
+            <span className="eyebrow" style={{ marginRight: "8px" }}>
+              TODAY &bull; {todayDateStr}
+            </span>
+            837 is optional reference only. MIR is built from validated 835 files using the active
+            mapping, then the output is ready for the configured MPL delivery path.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-sftp"
+          onClick={() => onNavigateTab("conn")}
+        >
+          SFTP connection
+        </button>
+      </div>
 
       {/* DYNAMIC PIPELINE TRACK */}
       <div className="pipe">
@@ -71,27 +89,18 @@ export default function FlowView({
             <div className="chipstack" id="stage3Chips">
               {recentFiles &&
               recentFiles.filter(
-                (f) =>
-                  (f.status === "ARCHIVED" || f.status === "COMPLETED") &&
-                  f.mir_filename
+                (f) => f.status === "ARCHIVED" || f.status === "COMPLETED"
               ).length > 0 ? (
                 recentFiles
                   .filter(
-                    (f) =>
-                      (f.status === "ARCHIVED" || f.status === "COMPLETED") &&
-                      f.mir_filename
+                    (f) => f.status === "ARCHIVED" || f.status === "COMPLETED"
                   )
                   .map((f, idx) => {
-                    const mirName = f.mir_filename;
-
+                    const base = (f.original_filename || "").replace(/\.[^/.]+$/, "");
+                    const mirName = "MIR_" + base + ".mir";
                     return (
                       <div key={idx} className="chip ok">
-                        <span title={mirName}>
-                          {mirName.length > 24
-                            ? `${mirName.substring(0, 24)}...`
-                            : mirName}
-                        </span>
-
+                        <span title={mirName}>{mirName.substring(0, 24)}</span>
                         <span className="c">
                           {`${f.records_count || f.claims_count || 0} rec`}
                         </span>
@@ -126,6 +135,13 @@ export default function FlowView({
               )}
             </div>
           </div>
+        </div>
+
+        {/* VAULT FOOTER BAR */}
+        <div className="vault">
+          <span className="lock">&squarf; 837 never feeds MIR generation</span>
+          <span className="lock">&squarf; 835 validation happens on the backend</span>
+          <span className="lock">&squarf; Plan and file metadata persist in SQLite</span>
         </div>
       </div>
 
@@ -279,9 +295,9 @@ export default function FlowView({
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-            <span className="k">Last connection test (EST)</span>
+            <span className="k">Last connection test</span>
             <span className="v" id="flowOutboundLastTest" style={{ color: "var(--ink-3)" }}>
-              {outboundConfig ? <TimeDisplay value={outboundConfig.last_tested_at} easternOnly /> : "–"}
+              {outboundConfig ? outboundConfig.last_tested_at || "–" : "–"}
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0" }}>

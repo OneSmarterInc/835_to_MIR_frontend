@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { safeFetchJson } from "../utils/api";
-import TimeDisplay from "../components/TimeDisplay";
-import WorkspaceHeader from "../components/WorkspaceHeader";
 
 export default function ContactsView() {
   const [contacts, setContacts] = useState([]);
@@ -27,8 +25,15 @@ export default function ContactsView() {
   }, []);
 
   return (
-    <section className="view on table-screen" id="v-contacts">
-      <WorkspaceHeader eyebrow="Support workspace" title="Your Assigned Contacts" description="The personnel registered during your onboarding phase." />
+    <section className="view on" id="v-contacts">
+      <div className="hdr-row">
+        <div>
+          <h1 id="contacts-title">Your Assigned Contacts</h1>
+          <p className="sub">
+            The personnel registered during your onboarding phase.
+          </p>
+        </div>
+      </div>
 
       {loading && (
         <div style={{ textAlign: "center", padding: "40px" }}>
@@ -43,7 +48,7 @@ export default function ContactsView() {
       )}
 
       {!loading && !error && (
-        <div className="table-wrapper table-screen-scroll">
+        <div className="table-wrapper">
           <table className="table" style={{ width: "100%" }}>
             <thead>
               <tr>
@@ -51,7 +56,7 @@ export default function ContactsView() {
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Name</th>
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Email</th>
                 <th style={{ textAlign: "left", padding: "12px 16px" }}>Phone</th>
-                <th style={{ textAlign: "left", padding: "12px 16px" }}>Added On (EST)</th>
+                <th style={{ textAlign: "left", padding: "12px 16px" }}>Added On</th>
               </tr>
             </thead>
             <tbody>
@@ -77,7 +82,7 @@ export default function ContactsView() {
                       {c.phone || "—"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <TimeDisplay value={c.created_at} easternOnly />
+                      {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
                     </td>
                   </tr>
                 ))

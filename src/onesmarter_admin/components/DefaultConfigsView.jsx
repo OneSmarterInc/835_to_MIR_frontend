@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import SftpBrowserModal from '../../components/SftpBrowserModal';
-import SftpConfigurationPanel from '../../components/SftpConfigurationPanel';
-import WorkspaceHeader from '../../components/WorkspaceHeader';
 
 function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem('onesmarter_admin_token');
@@ -26,11 +24,9 @@ export default function DefaultConfigsView() {
   const [sftpPass, setSftpPass] = useState('');
   const [sftpInbound835, setSftpInbound835] = useState('');
   const [sftpInbound837, setSftpInbound837] = useState('');
-  const [sftpInboundRecon, setSftpInboundRecon] = useState('');
   const [sftpOutboundMir, setSftpOutboundMir] = useState('');
   const [sftpStatus, setSftpStatus] = useState('');
-  const [sftpTesting, setSftpTesting] = useState(false);
-  const [sftpSaving, setSftpSaving] = useState(false);
+  const [sftpLoading, setSftpLoading] = useState(false);
   const [sftpConnected, setSftpConnected] = useState(false);
   const [showSftpPass, setShowSftpPass] = useState(false);
   const [sftpHasPassword, setSftpHasPassword] = useState(false);
@@ -70,7 +66,6 @@ export default function DefaultConfigsView() {
             setSftpHasPassword(Boolean(cfg.has_password));
             setSftpInbound835(cfg.inbound_835_folder || '');
             setSftpInbound837(cfg.inbound_837_folder || '');
-            setSftpInboundRecon(cfg.inbound_recon_folder || '');
             setSftpOutboundMir(cfg.outbound_mir_folder || '');
             setSftpConnected(cfg.status === 'CONNECTED');
             setSftpStatus(`Loaded — Status: ${cfg.status || 'PENDING'}`);
@@ -104,8 +99,8 @@ export default function DefaultConfigsView() {
   }, []);
 
   const openBrowser = (currentVal, setter) => {
-    const configId = String(sftpConfigId ?? '').trim();
-    if (!configId) {
+    const configId = Number(sftpConfigId);
+    if (!Number.isInteger(configId) || configId <= 0) {
       setSftpStatus('Please save the SFTP configuration before browsing folders.');
       return;
     }
@@ -161,11 +156,9 @@ export default function DefaultConfigsView() {
     </button>
   );
 
-  const persistSftp = async (action) => {
-    const isTest = action === 'test';
-    if (isTest) setSftpTesting(true);
-    else setSftpSaving(true);
-    setSftpStatus(isTest ? 'Testing and saving connection details...' : 'Saving default SFTP folders...');
+  const handleSaveSftp = async () => {
+    setSftpLoading(true);
+    setSftpStatus('Testing and saving connection details...');
     try {
       const payload = {
         host: sftpHost.trim(),
@@ -173,7 +166,6 @@ export default function DefaultConfigsView() {
         username: sftpUser.trim(),
         inbound_835_folder: sftpInbound835.trim(),
         inbound_837_folder: sftpInbound837.trim(),
-        inbound_recon_folder: sftpInboundRecon.trim(),
         outbound_mir_folder: sftpOutboundMir.trim(),
         connection_type: 'UNIFIED',
         use_same_server: true
@@ -195,8 +187,8 @@ export default function DefaultConfigsView() {
           data.config?.id ??
           data.config?.config_id;
 
-        const normalizedConfigId = String(savedConfigId ?? '').trim();
-        if (!normalizedConfigId) {
+        const normalizedConfigId = Number(savedConfigId);
+        if (!Number.isInteger(normalizedConfigId) || normalizedConfigId <= 0) {
           throw new Error(
             "SFTP was saved, but the server did not return its configuration ID."
           );
@@ -207,24 +199,16 @@ export default function DefaultConfigsView() {
         setSftpHasPassword(Boolean(data.has_password || sftpHasPassword || sftpPass.trim()));
         setSftpPass('');
         setShowSftpPass(false);
-        setSftpStatus(
-          isTest
-            ? `✓ Connection verified and saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`
-            : `✓ Default SFTP configuration saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`
-        );
+        setSftpStatus(`✓ Default SFTP Saved. Status: ${data.connected ? 'CONNECTED' : 'SAVED'}`);
       } else {
         setSftpStatus(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
     } catch (err) {
       setSftpStatus(`❌ Failed: ${err.message}`);
     } finally {
-      if (isTest) setSftpTesting(false);
-      else setSftpSaving(false);
+      setSftpLoading(false);
     }
   };
-
-  const handleTestSftp = () => persistSftp('test');
-  const handleSaveSftp = () => persistSftp('save');
 
   const handleSaveSmtp = async () => {
     setSmtpLoading(true);
@@ -266,11 +250,74 @@ export default function DefaultConfigsView() {
 
   return (
     <section className="view on" id="v-defaults">
-      <WorkspaceHeader eyebrow="System standards workspace" title="Default Configurations" description="Define global fallback SMTP and SFTP settings available to client tenants." />
+      <div className="hdr-row">
+        <div>
+          <div className="eyebrow">System Standards</div>
+          <h1 style={{ margin: 0 }}>Default Configurations</h1>
+          <p className="sub">Define global fallback SMTP and SFTP settings. Clients can choose to use these system defaults to bypass separate tenant setups.</p>
+        </div>
+      </div>
 
-      <div className="admin-responsive-grid" style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px', marginTop: '20px' }}>
 
-        <SftpConfigurationPanel />
+        {/* SFTP Default Card */}
+        <div className="card" style={{ padding: '20px' }}>
+          <h2 style={{ margin: '0 0 10px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📁 Global Default SFTP Server Settings
+          </h2>
+          <p style={{ fontSize: '12.5px', color: 'var(--ink-2)', marginBottom: '16px' }}>Used when a client checks the "Use Default SFTP" onboarding step.</p>
+
+          <div className="field">
+            <label>SFTP Host</label>
+            <input type="text" value={sftpHost} onChange={e => setSftpHost(e.target.value)} placeholder="sftp.provider.com" />
+          </div>
+          <div className="field">
+            <label>SFTP Port</label>
+            <input type="text" value={sftpPort} onChange={e => setSftpPort(e.target.value)} placeholder="22" />
+          </div>
+          <div className="field">
+            <label>Username</label>
+            <input type="text" value={sftpUser} onChange={e => setSftpUser(e.target.value)} placeholder="sftp_user" autoComplete="off" />
+          </div>
+          <div className="field">
+            <label>Password / Private Key Passphrase</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showSftpPass ? 'text' : 'password'}
+                value={sftpPass}
+                onChange={e => { setSftpPass(e.target.value); if (sftpConnected && e.target.value) setSftpConnected(false); }}
+                placeholder={sftpHasPassword ? 'Saved — enter a new password to change' : 'Enter SFTP password'}
+                style={{ width: '100%', paddingRight: '34px', background: sftpHasPassword && !sftpPass ? '#f8fafc' : '#fff' }}
+                autoComplete="new-password"
+              />
+              <EyeButton show={showSftpPass} set={setShowSftpPass} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 0 14px' }}>
+            <button className="btn primary" onClick={handleSaveSftp} disabled={sftpLoading} style={{ padding: '6px 16px', fontSize: '13px' }}>
+              {sftpLoading ? 'Testing...' : 'Save & Test Connection'}
+            </button>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <FolderBrowse label="Inbound 835 Folder" value={sftpInbound835} onChange={setSftpInbound835} setter={setSftpInbound835} />
+            <FolderBrowse label="Inbound 837 Folder" value={sftpInbound837} onChange={setSftpInbound837} setter={setSftpInbound837} />
+            <FolderBrowse label="Outbound MIR Folder" value={sftpOutboundMir} onChange={setSftpOutboundMir} setter={setSftpOutboundMir} />
+          </div>
+
+          {sftpStatus && (
+            <div style={{ padding: '8px 12px', background: 'var(--paper)', borderRadius: '4px', fontSize: '12px', margin: '12px 0', border: '1px solid var(--line-soft)' }}>
+              {sftpStatus}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <button className="btn primary" onClick={handleSaveSftp} disabled={sftpLoading}>
+              {sftpLoading ? 'Saving...' : '💾 Save SFTP Default'}
+            </button>
+          </div>
+        </div>
 
         {/* SMTP Default Card */}
         <div className="card" style={{ padding: '20px' }}>
@@ -343,3 +390,4 @@ export default function DefaultConfigsView() {
     </section>
   );
 }
+
