@@ -4,10 +4,6 @@ import { showAppAlert } from "./AppDialog";
 import { validateFileExtensions } from "../utils/fileTypes";
 
 function getAuthHeaders(extra = {}) {
-  return { ...extra };
-}
-
-function getAuthHeaders(extra = {}) {
   const token = localStorage.getItem("onesmarter_admin_token");
   const headers = { ...extra };
   if (token) headers.Authorization = `Token ${token}`;

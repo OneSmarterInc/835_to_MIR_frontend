@@ -50,6 +50,12 @@ export default function App({ user, onLogout }) {
     return { name: "Sahil Asarkar", email: "admin@onesmarter.com", role: "Admin", client: "OneSmarter" };
   });
 
+  useEffect(() => {
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, [user]);
+
   const [clients, setClients] = useState([]);
   const [activeClientId, setActiveClientId] = useState(() => {
     const params = new URLSearchParams(window.location.search);
