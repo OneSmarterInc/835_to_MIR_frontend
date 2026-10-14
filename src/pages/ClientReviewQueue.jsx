@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { encodeDemoValue } from "../utils/demoEncoder";
+import { showAppConfirm } from "../components/AppDialog";
 import "./ClientUserPortal.css";
 
 const safe = v => v ? encodeDemoValue(String(v), true) : "—";
@@ -25,7 +26,7 @@ export default function ClientReviewQueue() {
   useEffect(() => { reload(); }, [reload]);
 
   const reviewed = async row => {
-    if (!window.confirm("Mark this request reviewed? This will not change claim data, code dictionaries or SFTP files.")) return;
+    if (!await showAppConfirm("Mark this request reviewed? This will not change claim data, code dictionaries or SFTP files.", { title: "Confirm Review", confirmLabel: "Mark reviewed" })) return;
     setBusy(row.id); setError(""); setMessage("");
     try {
       const response = await fetch("/edi835/api/client-portal/actions/" + row.id + "/review/", {
