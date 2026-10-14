@@ -64,6 +64,9 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [upload, setUpload] = useState(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [conversionResult, setConversionResult] = useState(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyResult, setHistoryResult] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const reload = useCallback(() => setRefresh(v => v + 1), []);
   useEffect(() => {
@@ -81,7 +84,19 @@ export default function ClientUserPortal({ user, onLogout }) {
     return () => controller.abort();
   }, [date, refresh]);
 
+  useEffect(() => {
+    if (tab !== "history") return undefined;
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    jsonFetch(baseUrl + "history/?page=" + historyPage, { signal: controller.signal })
+      .then(setHistoryResult)
+      .catch(e => { if (e.name !== "AbortError") setError(e.message); })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [tab, historyPage, refresh]);
+
   const go = next => {
+    if (next === "history") setHistoryPage(1);
     setTab(next);
     setDetail(null);
     setDecision(null);
@@ -316,7 +331,15 @@ export default function ClientUserPortal({ user, onLogout }) {
 
         {tab==="history" && <section className="cu-card">
           <div className="cu-section-title"><h2>File history</h2><span>Latest 30 MIR outputs · {dashboard?.client}</span></div>
-          <History rows={dashboard?.history||[]} />
+          {historyLoading && <p>Loading conversion history…</p>}
+          <History rows={historyResult?.files||dashboard?.history||[]} />
+          <div className="cu-history-pagination">
+            <span>Page {historyResult?.page||1} of {historyResult?.pages||1} · {historyResult?.count||0} files</span>
+            <button type="button" className="cu-btn" disabled={historyPage<=1||historyLoading}
+              onClick={()=>setHistoryPage(v=>Math.max(1,v-1))}>Previous</button>
+            <button type="button" className="cu-btn" disabled={historyLoading||historyPage>=(historyResult?.pages||1)}
+              onClick={()=>setHistoryPage(v=>v+1)}>Next</button>
+          </div>
           <h3>Recent client review activity</h3>
           <Activity rows={actions} />
           {!!(dashboard?.ignored_files || []).length && <section className="cu-explanation">
@@ -406,11 +429,11 @@ export default function ClientUserPortal({ user, onLogout }) {
 
 function History({rows}) {
   return <div className="cu-table-scroll"><table className="cu-table"><thead><tr>
-    <th>Date</th><th>File</th><th>Claims</th><th>Result</th></tr></thead>
+    <th>Date</th><th>835 source</th><th>MIR file</th><th>Claims</th><th>Result</th></tr></thead>
     <tbody>{rows.map(r=><tr key={r.id}><td>{timestamp(r.date)}</td>
-      <td>{safe(r.filename)}</td><td>{r.count}</td>
+      <td>{safe(r.source_filename)}</td><td>{safe(r.filename)}</td><td>{r.count}</td>
       <td><span className={"cu-tag "+(r.status==="PUSHED"?"ok":"work")}>{r.status==="PUSHED"?"Sent to MPL":r.status==="PUSH_FAILED"?"Delivery failed":"Converted; pending delivery"}</span></td>
-    </tr>)}{!rows.length&&<tr><td colSpan="4">No conversions recorded for this client.</td></tr>}</tbody>
+    </tr>)}{!rows.length&&<tr><td colSpan="5">No conversions recorded for this client.</td></tr>}</tbody>
   </table></div>;
 }
 function Activity({rows}) {
