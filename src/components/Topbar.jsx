@@ -9,7 +9,7 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
           <button type="button" className="btn-drawer-toggle" title="Toggle Navigation Menu" aria-label="Toggle navigation menu" onClick={onToggleDrawer}>
             ☰
           </button>
-          <div className="wordmark">FileX</div>
+          <div className="wordmark" style={{ textTransform: "none" }}>File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span></div>
         </div>
 
         <div className="spacer" />
