@@ -72,6 +72,7 @@ export default function App() {
 
 
   const [isDrawerOpen,setIsDrawerOpen] = useState(false);
+  const [dashboardWorkspace, setDashboardWorkspace] = useState("");
 
 
   useEffect(()=>{
@@ -120,6 +121,7 @@ export default function App() {
 
 
     setActiveTab(tab);
+    if (tab !== "claims-dashboard") setDashboardWorkspace("");
 
 
     try{
@@ -689,9 +691,9 @@ export default function App() {
         <main className="main">
 
 
-          {activeTab === "claims-dashboard" && <ClaimsDashboard onOpenFileModal={setViewerFileId} />}
+          {activeTab === "claims-dashboard" && <ClaimsDashboard onOpenFileModal={setViewerFileId} activeWorkspace={dashboardWorkspace} onSelectWorkspace={setDashboardWorkspace} />}
           {
-            activeTab==="flow" &&
+            (activeTab==="flow" || (activeTab==="claims-dashboard" && dashboardWorkspace==="flow")) &&
 
             <FlowView
 
@@ -710,7 +712,7 @@ export default function App() {
 
 
           {
-            activeTab==="batches" &&
+            (activeTab==="batches" || (activeTab==="claims-dashboard" && dashboardWorkspace==="batches")) &&
 
             <ConversionsView
 
@@ -731,24 +733,24 @@ export default function App() {
 
 
           {
-            activeTab==="checks" &&
+            (activeTab==="checks" || (activeTab==="claims-dashboard" && dashboardWorkspace==="checks")) &&
             <ChecksView
               trackedFiles={trackedFiles}
             />
           }
 
           {
-            activeTab==="search" &&
+            (activeTab==="search" || (activeTab==="claims-dashboard" && dashboardWorkspace==="search")) &&
             <ClientClaimSearchView />
           }
 
           {
-            activeTab==="code-dictionary" &&
+            (activeTab==="code-dictionary" || (activeTab==="claims-dashboard" && dashboardWorkspace==="code-dictionary")) &&
             <CodeDictionaryView/>
           }
 
           {
-            activeTab==="notices" &&
+            (activeTab==="notices" || (activeTab==="claims-dashboard" && dashboardWorkspace==="notices")) &&
             <NoticesView/>
           }
 
@@ -756,7 +758,7 @@ export default function App() {
 
 
           {
-            activeTab==="archive" &&
+            (activeTab==="archive" || (activeTab==="claims-dashboard" && dashboardWorkspace==="archive")) &&
 
             <ArchiveView
 
@@ -779,14 +781,14 @@ export default function App() {
           }
 
           {
-            activeTab==="result" &&
+            (activeTab==="result" || (activeTab==="claims-dashboard" && dashboardWorkspace==="result")) &&
             <ResultView />
           }
 
 
 
           {
-            activeTab==="conn" &&
+            (activeTab==="conn" || (activeTab==="claims-dashboard" && dashboardWorkspace==="conn")) &&
 
             <ConnectionsView
 
@@ -810,12 +812,12 @@ export default function App() {
 
 
           {
-            activeTab==="contacts" &&
+            (activeTab==="contacts" || (activeTab==="claims-dashboard" && dashboardWorkspace==="contacts")) &&
             <ContactsView/>
           }
 
           {
-            activeTab==="security" &&
+            (activeTab==="security" || (activeTab==="claims-dashboard" && dashboardWorkspace==="security")) &&
             <SecurityView/>
           }
 
