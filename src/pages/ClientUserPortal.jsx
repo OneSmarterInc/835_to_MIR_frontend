@@ -300,6 +300,13 @@ export default function ClientUserPortal({ user, onLogout }) {
           <History rows={dashboard?.history||[]} />
           <h3>Recent client review activity</h3>
           <Activity rows={actions} />
+          {!!(dashboard?.ignored_files || []).length && <section className="cu-explanation">
+            <h3>Ignored file issues</h3>
+            {(dashboard?.issues || []).filter(i => (dashboard?.ignored_files || []).includes(i.id)).map(i =>
+              <div className="cu-issue-mini" key={i.id}><span>{i.filename} · {i.reason}</span>
+                <button className="cu-btn" onClick={() => choose("REOPEN_FILE", i.id, null, "Restore issue to Needs Attention")}>Restore</button>
+              </div>)}
+          </section>}
         </section>}
 
         {tab==="claim" && detail && <>
