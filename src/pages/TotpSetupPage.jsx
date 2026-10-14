@@ -65,8 +65,8 @@ export default function TotpSetupPage({ onSetupSuccess, onGoDashboard, onLogout 
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-brand">
-        FileX <span>/ SECURITY</span>
+      <div className="auth-brand" style={{ textTransform: "none" }}>
+        File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span> <span>/ SECURITY</span>
       </div>
       <div className="auth-card">
         <h1>Two-Factor Authentication</h1>
