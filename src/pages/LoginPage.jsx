@@ -102,11 +102,11 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
 
   const brandLabel = isAdminRoute ? (
     <div className="auth-brand" style={{ textTransform: "none" }}>
-      File<span style={{ fontSize: "1em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ ADMIN</span>
+      <span style={{ fontSize: "1.12em", color: "#fff", fontWeight: "inherit" }}>F</span>ile<span style={{ fontSize: "1.12em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ ADMIN</span>
     </div>
   ) : (
     <div className="auth-brand" style={{ textTransform: "none" }}>
-      File<span style={{ fontSize: "1em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ PORTAL</span>
+      <span style={{ fontSize: "1.12em", color: "#fff", fontWeight: "inherit" }}>F</span>ile<span style={{ fontSize: "1.12em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ PORTAL</span>
     </div>
   );
 
