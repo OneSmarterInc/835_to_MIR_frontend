@@ -151,7 +151,7 @@ export default function ArchiveView({
 
   let filtered = (trackedFiles || []).filter((item) => {
     if (searchText) {
-      const query = searchText.toLowerCase();
+      const query = searchText.trim().toLowerCase();
       const fullStr = (
         item.id +
         " " +
