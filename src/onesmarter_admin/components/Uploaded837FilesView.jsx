@@ -42,7 +42,13 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
       }
     }, query ? 250 : 0);
     return () => clearTimeout(timer);
-  }, [activeClientId, query, page, refresh]);
+  }, [activeClientId, page, refresh]);
+
+  const visibleFiles = (data.results || []).filter(file => !query.trim() ||
+    ['original_filename', 'filename', 'inbound_filename', 'outbound_filename',
+      'sftp_filename', 'status', 'inbound_status', 'outbound_status', 'inbound_source',
+      'processing_status'].some(key => String(file[key] ?? '').toLowerCase()
+        .includes(query.trim().toLowerCase())));
 
   const pushAllPending837 = async () => {
     if (!activeClientId || pushingPending) return;
@@ -130,7 +136,7 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
       </div>
 
       <div className="claim-search-results" style={{ marginTop: '12px' }}><div className="claim837-table-wrap"><table className="claim-files-table"><thead><tr><th>Inbound 837 file</th><th>Outbound 837 file</th><th>Processing status</th><th>Inbound</th><th>Inbound status</th><th>Outbound status</th><th>Claims</th><th>Services</th><th>Total charge</th><th>Processed</th></tr></thead><tbody>
-        {!data.results.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : data.results.map(file => <tr key={file.id}>
+        {!visibleFiles.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : visibleFiles.map(file => <tr key={file.id}>
           <td className="file-name-cell">{file.original_file_name || file.file_name || '—'}</td>
           <td className="file-name-cell">{file.outbound_file_name || '—'}</td>
           <td><span className={`file-status status-${String(file.status || '').toLowerCase()}`}>{file.status || '—'}</span></td>
