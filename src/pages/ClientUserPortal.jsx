@@ -59,6 +59,15 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSegments, setShowSegments] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  useEffect(() => {
+    if (!drawer) return undefined;
+    const onEscape = event => {
+      if (event.key === "Escape") setDrawer(false);
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [drawer]);
+
   const [decision, setDecision] = useState(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -187,22 +196,28 @@ export default function ClientUserPortal({ user, onLogout }) {
   ] : [];
 
   return <>
-    <Topbar user={user} onToggleDrawer={() => setDrawer(v => !v)} onLogout={onLogout} />
+    <Topbar user={user} clientUser onToggleDrawer={() => setDrawer(v => !v)} onLogout={onLogout} />
     <div className="cu-shell">
-      <aside className={"cu-sidebar" + (drawer ? " cu-sidebar-open" : "")}>
-        <div className="cu-org">{dashboard?.client || user.client || "Client"}</div>
-        <div className="eyebrow cu-role">CLIENT USER</div>
-        <nav aria-label="Client navigation">
-          {navigation.map(([key,label]) => <button key={key} type="button"
-            className={tab === key || (tab === "claim" && key === "home") ? "cu-selected" : ""}
-            onClick={() => go(key)}>{label}
+      {drawer && <button type="button" className="cu-sidebar-backdrop"
+        aria-label="Close navigation menu" onClick={() => setDrawer(false)}/>}
+      <nav className={"cu-sidebar" + (drawer ? " cu-sidebar-open" : "")}
+        aria-label="Client navigation" aria-hidden={!drawer} inert={!drawer}>
+        <div className="grp eyebrow">Operations</div>
+        {navigation.filter(([key]) => key !== "history").map(([key,label]) =>
+          <button type="button" key={key}
+            className={"cu-navitem" + ((tab === key || (key === "home" && tab === "claim")) ? " on" : "")}
+            onClick={() => go(key)}><span>{label}</span>
             {key === "attention" && issues.length > 0 &&
               <span className="cu-count">{issues.length}</span>}
-          </button>)}
-        </nav>
-        <button className="cu-sidebar-settings" onClick={() => go("settings")}>Settings</button>
-        <div className="cu-sidebar-foot">{user.name}<small>Client User</small></div>
-      </aside>
+          </button>
+        )}
+        <div className="grp eyebrow cu-nav-section">Records</div>
+        <button type="button" className={"cu-navitem" + (tab === "history" ? " on" : "")}
+          onClick={() => go("history")}><span>History</span></button>
+        <div className="grp eyebrow cu-nav-section">Account</div>
+        <button type="button" className={"cu-navitem" + (tab === "settings" ? " on" : "")}
+          onClick={() => go("settings")}><span>Settings</span></button>
+      </nav>
       <main className="cu-main">
         {tab !== "home" && <button type="button" className="cu-back-link" onClick={() => go("home")}>← Back to Home</button>}
         <header className="cu-heading">
