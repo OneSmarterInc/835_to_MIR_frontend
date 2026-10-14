@@ -41,27 +41,6 @@ function visibleSearchValues(row, field) {
 }
 
 export async function searchUniversalClaims(clientId, query = '', field = 'all', page = 1, pageSize = 25, signal) {
-  const term = String(query || '').trim().toLocaleLowerCase();
-  if (!term) return getClaimsPage(clientId, page, pageSize, signal);
-
-  // Backend searches original PHI and therefore cannot search encoded display
-  // text. Fetch unfiltered pages and match the frontend representation instead.
-  const first = await getClaimsPage(clientId, 1, 250, signal);
-  const all = [...(first.results || [])];
-  const totalPages = Math.max(1, Number(first.pages || 1));
-  for (let current = 2; current <= totalPages; current += 1) {
-    const next = await getClaimsPage(clientId, current, 250, signal);
-    all.push(...(next.results || []));
-  }
-  const matches = all.filter(row => visibleSearchValues(row, field)
-    .some(value => value.includes(term)));
-  const count = matches.length;
-  const pages = Math.ceil(count / pageSize);
-  const currentPage = Math.max(1, Math.min(page, pages || 1));
-  return {
-    ...first, results: matches.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    count, pages, page: currentPage,
-    has_previous: currentPage > 1,
-    has_next: currentPage < pages,
-  };
+  // Fetch only the selected backend page. UI filters the loaded rows.
+  return getClaimsPage(clientId, page, pageSize, signal);
 }
