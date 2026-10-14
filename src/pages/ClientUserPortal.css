@@ -296,3 +296,14 @@
   .cu-history-pagination span { flex: 1 1 100%; }
   .cu-held-panel { padding: 12px; }
 }
+
+.cu-dialog-note-history {
+  background: #F7F9FB; border: 1px solid var(--line-soft);
+  padding: 12px 14px; border-radius: 3px; max-height: 220px; overflow-y: auto;
+  margin: 15px 0;
+}
+.cu-dialog-note-history h3 { font-size: 12px; font-weight: 700; margin: 0 0 9px; }
+.cu-dialog-note-history .cu-file-activity-row { grid-template-columns: 125px minmax(0,1fr) auto; }
+@media(max-width: 560px) {
+  .cu-dialog-note-history .cu-file-activity-row { grid-template-columns: 1fr; }
+}
