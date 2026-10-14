@@ -82,8 +82,8 @@ export default function LoginGate({ onLoginSuccess }) {
   return (
     <div className="gate" id="gate">
       <div style={{ width: 'min(400px, 100%)' }}>
-        <div className="brand">
-          FileX <em>/ Admin</em>
+        <div className="brand" style={{ textTransform: "none" }}>
+          File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span> <em>/ Admin</em>
         </div>
         <div className="panel">
           <div className="inner">
