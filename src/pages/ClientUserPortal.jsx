@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
+import SecurityView from "./SecurityView";
 import { encodeDemoValue, encodeDemoFileContent } from "../utils/demoEncoder";
 import "./ClientUserPortal.css";
 
@@ -168,6 +169,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span className="cu-count">{issues.length}</span>}
           </button>)}
         </nav>
+        <button className="cu-sidebar-settings" onClick={() => go("settings")}>Settings</button>
         <div className="cu-sidebar-foot">{user.name}<small>Client User</small></div>
       </aside>
       <main className="cu-main">
@@ -177,13 +179,13 @@ export default function ClientUserPortal({ user, onLogout }) {
             <span className="eyebrow">{dashboard?.client || user.client} · {date}</span>
             <h1>{tab === "home" ? "Claims overview" : tab === "attention" ?
               (issues.length + " things need a decision from you") : tab === "history" ?
-              "Recent conversions" : tab === "convert" ? "Convert an 835 file" :
+              "Recent conversions" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
             <p>{tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "attention" ? "Everything else continues through the conversion pipeline." :
               tab === "history" ? "MIR conversions and delivery status from your client." :
-              tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." :
+              tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
               detail?.file_name || ""}</p>
           </div>
           {tab === "home" && <div className="cu-controls">
@@ -294,6 +296,8 @@ export default function ClientUserPortal({ user, onLogout }) {
             <button className="cu-link" onClick={()=>go("history")}>View conversion history</button>
           </div>}
         </section>}
+
+        {tab==="settings" && <section className="cu-card"><SecurityView /></section>}
 
         {tab==="history" && <section className="cu-card">
           <div className="cu-section-title"><h2>File history</h2><span>Latest 30 MIR outputs · {dashboard?.client}</span></div>
