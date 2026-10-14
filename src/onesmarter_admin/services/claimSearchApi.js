@@ -20,7 +20,7 @@ async function getClaimsPage(clientId, page, pageSize, signal) {
   return data;
 }
 
-function visibleSearchValues(row, field) {
+export function visibleSearchValues(row, field) {
   const lifecycle = row.lifecycle || {};
   const sourceName = type => {
     const source = lifecycle[type] || {};
