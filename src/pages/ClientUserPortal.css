@@ -149,3 +149,7 @@
   .cu-section-title { align-items: start; flex-wrap: wrap; }
   .cu-heading .cu-btn { align-self: flex-start; }
 }
+
+.cu-sidebar-settings { color: #b4c5d6; text-align: left; padding: 12px; border-radius: 6px; margin-top: auto; }
+.cu-sidebar-settings:hover { background: #284055; color: white; }
+.cu-sidebar-foot { margin-top: 0; }
