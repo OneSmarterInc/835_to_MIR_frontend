@@ -4,7 +4,7 @@ import Uploaded837FilesView from './Uploaded837FilesView';
 import ClaimSourceViewer from './ClaimSourceViewer';
 import EyeIcon from '../../components/EyeIcon';
 import { fetch837Files, process837Upload } from '../services/api';
-import { searchUniversalClaims } from '../services/claimSearchApi';
+import { searchUniversalClaims, visibleSearchValues } from '../services/claimSearchApi';
 import { portalFetch } from '../../utils/api';
 import { formatEasternDate, formatEasternTime } from '../../utils/timezone';
 import './ClaimSearchView.css';
