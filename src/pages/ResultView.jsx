@@ -8,6 +8,7 @@ import { fileAccept, validateFileExtensions } from "../utils/fileTypes";
 import OffboardedClientBanner from "../onesmarter_admin/components/OffboardedClientBanner";
 import ReconciliationModal from "../components/ReconciliationModal";
 import { claimParts } from "../utils/claimNumber";
+import { encodeDemoValue, getDemoRevealValue } from "../utils/demoEncoder";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 
 function authHeaders(extra = {}) {
@@ -101,8 +102,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     const value = search.trim();
     const timer = window.setTimeout(() => {
       setActiveSearch(value);
-      setPage(1);
-      // Search only the already loaded page; no additional request.
+      // Search only the already loaded page; preserve pagination.
     }, 300);
     return () => window.clearTimeout(timer);
   }, [search]);
@@ -229,11 +229,25 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       URL.revokeObjectURL(url);
     } catch (error) { setMessage({ kind: "error", text: error.message }); }
   };
-  const rows = (data.claims || []).filter(row => !activeSearch ||
-    [claimParts(row).highmarkClaimNumber, claimParts(row).internalClaimNumber,
-      row.patient_name, row.member_id, row.mir_filename, row.recon_filename,
-      ...(row.recon_matches || []).map(match => match.filename), label(row.status)]
-      .some(value => String(value ?? '').toLowerCase().includes(activeSearch.toLowerCase())));
+  const rows = (data.claims || []).filter(row => {
+    if (!activeSearch) return true;
+    const term = activeSearch.toLowerCase();
+    const parts = claimParts(row);
+    const displayedValues = [
+      parts.highmarkClaimNumber, parts.internalClaimNumber, row.patient_name,
+      row.member_id, row.mir_filename, row.recon_filename,
+      ...(row.recon_matches || []).map(match => match.filename), label(row.status),
+    ];
+    return displayedValues.some(value => {
+      if (value == null) return false;
+      const shown = String(value);
+      // The table may show the encoded value while the API result still holds
+      // its original form. Match only display-compatible variants.
+      return [shown, getDemoRevealValue(shown), encodeDemoValue(shown, false),
+        encodeDemoValue(shown, true)].some(candidate =>
+        candidate != null && String(candidate).toLowerCase().includes(term));
+    });
+  });
   const changeSort = (key) => {
     const current = sortRef.current;
     const next = {
