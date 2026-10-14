@@ -43,8 +43,8 @@ export default function FirstLoginPasswordPage({ onPasswordChangeSuccess, onLogo
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-brand">
-        FileX <span>/ PASSWORD</span>
+      <div className="auth-brand" style={{ textTransform: "none" }}>
+        File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span> <span>/ PASSWORD</span>
       </div>
       <div className="auth-card">
         <h1>Reset Password</h1>
