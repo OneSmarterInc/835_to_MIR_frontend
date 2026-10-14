@@ -1,3 +1,5 @@
+import { encodeDemoValue, getDemoRevealValue } from '../../utils/demoEncoder.js';
+
 function getAuthHeaders() {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = {};
@@ -37,7 +39,16 @@ export function visibleSearchValues(row, field) {
   };
   // Never search raw record contents, internal database identifiers, or hidden fields.
   const values = field === 'all' ? Object.values(fields).flat() : fields[field] || [];
-  return values.filter(value => value != null).map(value => String(value).toLocaleLowerCase());
+  return values.filter(value => value != null).flatMap(value => {
+    const displayed = String(value);
+    // JSON values can be encoded by the client response interceptor; other
+    // paths may render the frontend encoded representation after data loading.
+    // Match either visible variant without searching any unloaded claims.
+    const unmasked = getDemoRevealValue(displayed);
+    const candidates = [displayed, unmasked, encodeDemoValue(displayed, false),
+      encodeDemoValue(displayed, true)];
+    return candidates.filter(Boolean).map(text => String(text).toLocaleLowerCase());
+  });
 }
 
 export async function searchUniversalClaims(clientId, query = '', field = 'all', page = 1, pageSize = 25, signal) {
