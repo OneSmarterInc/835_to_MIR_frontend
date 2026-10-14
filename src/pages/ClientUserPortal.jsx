@@ -123,7 +123,11 @@ export default function ClientUserPortal({ user, onLogout }) {
     finally { setSending(false); }
   };
 
-  const hidden = useMemo(() => hiddenFiles(actions), [actions]);
+  const hidden = useMemo(() => {
+    const flags = hiddenFiles(actions);
+    (dashboard?.ignored_files || []).forEach(id => flags.set(id, true));
+    return flags;
+  }, [actions, dashboard]);
   const issues = (dashboard?.issues || []).filter(i => !hidden.get(i.id));
   const claims = dashboard?.claims || [];
   const visible = claims.filter(c =>
