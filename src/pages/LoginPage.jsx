@@ -101,12 +101,12 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
   };
 
   const brandLabel = isAdminRoute ? (
-    <div className="auth-brand">
-      FileX <span>/ ADMIN</span>
+    <div className="auth-brand" style={{ textTransform: "none" }}>
+      File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span> <span>/ ADMIN</span>
     </div>
   ) : (
-    <div className="auth-brand">
-      FileX <span>/ PORTAL</span>
+    <div className="auth-brand" style={{ textTransform: "none" }}>
+      File<span style={{ fontSize: "1.3em", lineHeight: 1, display: "inline-block", verticalAlign: "-0.04em" }}>X</span> <span>/ PORTAL</span>
     </div>
   );
 
