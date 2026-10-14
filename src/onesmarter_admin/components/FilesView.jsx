@@ -58,7 +58,7 @@ export default function FilesView({ clients = [], activeClientId, onSelectClient
 
   let filtered = ediFiles.filter((item) => {
     if (!searchText) return true;
-    const query = searchText.toLowerCase();
+    const query = searchText.trim().toLowerCase();
     const fullStr = (
       (item.id || '') + ' ' +
       (item.original_filename || '') + ' ' +
