@@ -66,7 +66,9 @@ export async function pushEdiFileToSftp(fileId, { force = false, confirmedByClie
   const res = await fetch('/edi835/api/sftp/push/', {
     method: 'POST',
     credentials: 'include',
-    headers: getAuthHeaders({ 'Content-Type': 'application/json', ...(confirmedByClientUser ? { 'X-FileX-Confirm-Send': 'yes' } : {}) }),
+    headers: confirmedByClientUser
+      ? { 'Content-Type': 'application/json', 'X-FileX-Confirm-Send': 'yes' }
+      : getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ file_id: fileId, force }),
   });
   const data = await res.json().catch(() => ({}));
