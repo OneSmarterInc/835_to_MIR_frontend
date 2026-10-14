@@ -503,6 +503,23 @@ export default function ClientUserPortal({ user, onLogout }) {
             <p>{decision.kind==="IGNORE_FILE"?"This removes the issue from your client's active attention list, but keeps the underlying file and audit record.":
               decision.kind==="NOTE"?"This note will be visible to your Client Admin.":
               "A review request will be saved for Client Admin action. FileX will not automatically correct the 835 or resend the source."}</p>
+            <section className="cu-dialog-note-history" aria-label="Earlier notes and requests">
+              <h3>Previous notes and requests</h3>
+              {actions.filter(a => String(a.file_id) === String(decision.file_id) &&
+                (decision.claim_id ? a.claim_id === decision.claim_id : !a.claim_id) &&
+                (a.kind === "NOTE" || a.kind.startsWith("REQUEST_"))).map(a => (
+                <div className="cu-file-activity-row" key={a.id}>
+                  <span className="cu-activity-date">{timestamp(a.at)}</span>
+                  <div><strong>{a.label}</strong><span className="cu-activity-author"> · {a.by}</span>
+                    {a.message && <p>{a.message}</p>}</div>
+                  <span className="cu-activity-status">{a.status}</span>
+                </div>
+              ))}
+              {!actions.some(a => String(a.file_id) === String(decision.file_id) &&
+                (decision.claim_id ? a.claim_id === decision.claim_id : !a.claim_id) &&
+                (a.kind === "NOTE" || a.kind.startsWith("REQUEST_"))) &&
+                <p className="cu-help">No previous notes for this {decision.claim_id ? "claim" : "file"}.</p>}
+            </section>
             <label>Notes {decision.kind==="NOTE"?"(required)":"(optional)"}
               <textarea rows="4" maxLength="2000" value={note} onChange={e=>setNote(e.target.value)} placeholder="Explain the correction or action required…" />
             </label>
