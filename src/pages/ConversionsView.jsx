@@ -455,7 +455,7 @@ export default function ConversionsView({
       return false;
     }
     if (searchText) {
-      const query = searchText.toLowerCase();
+      const query = searchText.trim().toLowerCase();
       const fullStr = (
         item.id +
         " " +
