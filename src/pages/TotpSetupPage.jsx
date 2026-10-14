@@ -66,7 +66,7 @@ export default function TotpSetupPage({ onSetupSuccess, onGoDashboard, onLogout 
   return (
     <div className="auth-wrapper">
       <div className="auth-brand" style={{ textTransform: "none" }}>
-        File<span style={{ fontSize: "1em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ SECURITY</span>
+        <span style={{ fontSize: "1.12em", color: "#fff", fontWeight: "inherit" }}>F</span>ile<span style={{ fontSize: "1.12em", fontWeight: "inherit", color: "#fff", lineHeight: "inherit", verticalAlign: "baseline", letterSpacing: "inherit" }}>X</span> <span>/ SECURITY</span>
       </div>
       <div className="auth-card">
         <h1>Two-Factor Authentication</h1>
