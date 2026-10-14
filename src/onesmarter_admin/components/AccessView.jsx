@@ -289,7 +289,7 @@ export default function AccessView({ currentUser }) {
                           onClick={() => {
                             setSelectedUser({
                               ...member,
-                              client_id: clients.find(c => c.name === member.clients?.[0])?.id || ''
+                              client_id: member.client_id || clients.find(c => c.name === member.clients?.[0])?.id || ''
                             });
                             setShowEditModal(true);
                           }}
