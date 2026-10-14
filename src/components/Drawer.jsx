@@ -1,6 +1,6 @@
 import React from "react";
 //test
-export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
+export default function Drawer({ isOpen, activeTab, onSelectTab, onClose, isClientAdmin = false }) {
   return (
     <>
       {/* Drawer Backdrop Overlay */}
@@ -41,6 +41,12 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
         >
           Notices from MPL <span className="count">3</span>
         </button>
+        {isClientAdmin && (
+          <button className={`navitem ${activeTab === "client-requests" ? "on" : ""}`}
+            data-v="client-requests" onClick={() => onSelectTab("client-requests")}>
+            Client review requests
+          </button>
+        )}
         <div className="grp eyebrow" style={{ paddingTop: "18px" }}>
           Records
         </div>
