@@ -17,6 +17,21 @@ async function jsonFetch(url, options = {}) {
   return body;
 }
 const baseUrl = "/edi835/api/client-portal/";
+const adjustmentMeaning = (group, code) => {
+  const known = {
+    "45": "Charge exceeds the fee schedule or contracted allowed amount",
+    "1": "Deductible",
+    "2": "Coinsurance",
+    "3": "Copayment",
+    "29": "Time limit for filing has expired",
+    "97": "Payment included in another service",
+  };
+  const category = group === "CO" ? "Contractual adjustment" :
+    group === "PR" ? "Patient responsibility" :
+    group === "OA" ? "Other adjustment" : "Adjustment";
+  return category + ": " + (known[String(code)] || "reason code " + code);
+};
+
 const isPlanIssue = issue => /plan.?id|subscriber.?id|member.?id/i.test(issue.reason || "");
 const isDictionaryIssue = issue => /dictionary|remark|code.?mapping|unknown.?code/i.test(issue.reason || "");
 const hiddenFiles = actions => {
@@ -342,14 +357,14 @@ export default function ClientUserPortal({ user, onLogout }) {
               <th>Procedure</th><th>Billed</th><th>After CO adjustments</th><th>Paid</th><th>Units / date</th><th>Payer adjustments</th></tr></thead>
               <tbody>{(detail.services||[]).map((svc,i)=><tr key={i}>
                 <td><strong>{safe(svc.code)}</strong></td><td>{cash(svc.billed)}</td><td>{cash(svc.allowed)}</td><td>{cash(svc.paid)}</td><td>{svc.units||"—"} {svc.date||""}</td>
-                <td>{(svc.adjustments||[]).map((a,j)=><div key={j}>{a.group}-{a.code}: {cash(a.amount)}</div>)}</td>
+                <td>{(svc.adjustments||[]).map((a,j)=><div key={j}>{cash(a.amount)} — {adjustmentMeaning(a.group,a.code)} ({a.group}-{a.code})</div>)}</td>
               </tr>)}
               {!detail.services?.length&&<tr><td colSpan="6">No service lines recorded in this 835 claim.</td></tr>}
               </tbody></table></div>
             <p className="cu-help">Amounts after contractual adjustments are calculated from recorded CAS CO adjustments, not an explicit payer allowed field.</p>
             {!!detail.adjustments?.length && <details><summary>All payer adjustment codes ({detail.adjustments.length})</summary>
               <div className="cu-table-scroll"><table className="cu-table"><thead><tr><th>Group</th><th>Code</th><th>Amount</th></tr></thead>
-                <tbody>{detail.adjustments.map((a,i)=><tr key={i}><td>{a.group}</td><td>{a.code}</td><td>{cash(a.amount)}</td></tr>)}</tbody></table></div></details>}
+                <tbody>{detail.adjustments.map((a,i)=><tr key={i}><td>{a.group}</td><td>{a.code} · {adjustmentMeaning(a.group,a.code)}</td><td>{cash(a.amount)}</td></tr>)}</tbody></table></div></details>}
           </section>
           {detail.reason && <section className="cu-card cu-issue">
             <h2>Why it is waiting on you</h2><p>{detail.reason}</p>
