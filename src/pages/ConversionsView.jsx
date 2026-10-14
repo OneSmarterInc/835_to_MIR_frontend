@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { splitClaimNumber } from "../utils/claimNumber";
 import { pushEdiFileToSftp } from "../onesmarter_admin/services/api";
 import WorkspaceHeader from "../components/WorkspaceHeader";
+import { showAppConfirm } from "../components/AppDialog";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
 
 export default function ConversionsView({
@@ -10,6 +11,7 @@ export default function ConversionsView({
   onOpenFileModal,
   clients = [],
   isAdmin = false,
+  isClientUser = false,
   activeClientId = "",
   onSelectClient,
 }) {
@@ -199,6 +201,10 @@ export default function ConversionsView({
   // Process MIR Action (Converts single or multiple 835 files into a SINGLE combined MIR file)
   const handleProcessMIR = async () => {
     if (selectedFilesList.length === 0 && !ediText.trim()) return;
+    if (isClientUser && !(await showAppConfirm(
+      "Processing this file may transmit the generated MIR to the configured outbound SFTP. Continue?",
+      { title: "Confirm MIR Delivery", confirmLabel: "Process MIR" }
+    ))) return;
 
     setProcessing(true);
     setValidationError(null);
@@ -217,7 +223,7 @@ export default function ConversionsView({
 
       const res = await fetch("/api/convert/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify(payload),
       });
 
@@ -248,11 +254,15 @@ export default function ConversionsView({
   // Convert file to MIR on clicking PROCESSING status in table
   const handleConvertStatusClick = async (fileId) => {
     if (!fileId || convertingId) return;
+    if (isClientUser && !(await showAppConfirm(
+      "Reprocessing this 835 may resend its generated MIR to the configured outbound SFTP. Continue?",
+      { title: "Confirm Reprocessing", confirmLabel: "Reprocess" }
+    ))) return;
     setConvertingId(fileId);
     try {
       const res = await fetch("/api/convert/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify({ file_id: fileId, client_id: selectedClientId || undefined }),
       });
       const data = await res.json();
@@ -287,10 +297,14 @@ export default function ConversionsView({
       return;
     }
 
+    if (isClientUser && !(await showAppConfirm(
+      "This will transmit the MIR output to the configured SFTP destination. Continue?",
+      { title: "Confirm SFTP Delivery", confirmLabel: "Send MIR" }
+    ))) return;
     setPushingSftpId(file.id);
     setBatchAlert(null);
     try {
-      const data = await pushEdiFileToSftp(file.id);
+      const data = await pushEdiFileToSftp(file.id, { confirmedByClientUser: isClientUser });
       setBatchAlert({
         type: "success",
         title: "SFTP Push Complete",
@@ -368,14 +382,18 @@ export default function ConversionsView({
 
   // Start Automated SFTP Inbound Batch Pipeline
   const handleStartBatchConversion = async () => {
+    if (isClientUser && !(await showAppConfirm(
+      "The inbound 835 SFTP batch will validate, convert and send generated MIR files. Source files may be removed from inbound after delivery. Continue?",
+      { title: "Confirm Inbound 835 Batch", confirmLabel: "Start Batch" }
+    ))) return;
     setStartingBatch(true);
     setBatchAlert(null);
     try {
       const res = await fetch("/api/start-batch-conversion/", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ client_id: selectedClientId || undefined }),
+        headers: { "Content-Type": "application/json", "Accept": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
+        body: JSON.stringify({ client_id: selectedClientId || undefined, ...(isClientUser ? { automation_type: "835" } : {}) }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -618,7 +636,7 @@ export default function ConversionsView({
               >
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              <span>{startingBatch ? "Testing..." : "Test"}</span>
+              <span>{startingBatch ? "Processing..." : (isClientUser ? "Run 835 SFTP" : "Test")}</span>
             </button>
           </div>
         </div>
