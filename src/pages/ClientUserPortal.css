@@ -153,3 +153,97 @@
 .cu-sidebar-settings { color: #b4c5d6; text-align: left; padding: 12px; border-radius: 6px; margin-top: auto; }
 .cu-sidebar-settings:hover { background: #284055; color: white; }
 .cu-sidebar-foot { margin-top: 0; }
+
+
+/* Sidebar and header parity with the internal FileX administrator portal.
+   Keep this scoped to Client User to avoid changing existing Client Admin UI. */
+.cu-shell { display: block; position: relative; min-height: calc(100vh - 56px); }
+.cu-shell .cu-main { max-width: 100%; margin: 0; padding: 26px 30px 60px; }
+.cu-sidebar-backdrop {
+  position: fixed; inset: 56px 0 0; z-index: 90; width: 100%;
+  background: rgba(13,23,36,.28); backdrop-filter: blur(2px);
+  cursor: default;
+}
+.cu-shell .cu-sidebar {
+  position: fixed; top: 56px; left: 0; bottom: 0; width: 206px; height: calc(100vh - 56px);
+  z-index: 100; display: block; flex: none; min-height: 0; padding: 18px 0;
+  overflow-y: auto; overflow-x: hidden; background: #1D2938; color: #B9C6D4;
+  transform: translateX(-100%); opacity: 0; pointer-events: none;
+  box-shadow: 4px 0 20px rgba(0,0,0,.24);
+  transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .25s ease;
+  font-family: var(--body); border: none;
+}
+.cu-shell .cu-sidebar.cu-sidebar-open {
+  transform: translateX(0); opacity: 1; pointer-events: auto;
+}
+.cu-shell .cu-sidebar::-webkit-scrollbar { width: 4px; }
+.cu-shell .cu-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.15); border-radius: 2px;
+}
+.cu-sidebar .grp.eyebrow {
+  display: block; margin: 0; padding: 0 16px 8px;
+  color: #6C7F94; font: 10px/1.5 var(--display);
+  letter-spacing: .18em; text-transform: uppercase;
+}
+.cu-sidebar .grp.cu-nav-section { padding-top: 18px; }
+.cu-shell .cu-sidebar .cu-navitem {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; border: 0; border-left: 2px solid transparent;
+  background: transparent; border-radius: 0; color: #B9C6D4;
+  font: 14px/1.55 var(--body); text-align: left; padding: 9px 16px;
+  cursor: pointer; transition: background .15s ease, color .15s ease;
+}
+.cu-shell .cu-sidebar .cu-navitem:hover { background: #243244; color: #fff; }
+.cu-shell .cu-sidebar .cu-navitem.on {
+  background: #243244; color: #fff; font-weight: 600;
+  border-left-color: var(--ochre);
+}
+.cu-shell .cu-sidebar .cu-navitem:focus-visible, .cu-header-menu:focus-visible {
+  outline: 2px solid #E9C879; outline-offset: -2px;
+}
+.cu-shell .cu-sidebar .cu-count {
+  background: var(--ochre); color: #fff; border-radius: 9999px;
+  padding: 1px 6px; margin-left: auto;
+  font: 10px var(--display);
+}
+.cu-portal-header .cu-topbar-brand {
+  display: flex; align-items: center; gap: 14px; min-width: 0;
+}
+.cu-portal-header .cu-header-menu {
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  padding: 4px 6px; border-radius: 4px; color: #B9C6D4; flex: none;
+  background: transparent; border: none;
+}
+.cu-portal-header .cu-header-menu:hover { background: #243244; color: #fff; }
+.cu-portal-header .wordmark { font: 600 13px var(--display); letter-spacing: .22em; }
+.cu-portal-header .cu-header-divider {
+  font: 11px var(--display); letter-spacing: .16em; color: #7A8AA0;
+}
+.cu-portal-header .cu-user-profile {
+  display: flex; gap: 9px; align-items: center; font-size: 12.5px; min-width: 0;
+}
+.cu-portal-header .cu-header-avatar {
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; background: #2E4459; font: 10.5px var(--display); flex: none;
+}
+.cu-portal-header .cu-header-name { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cu-portal-header .cu-header-role {
+  color: var(--ink-3); font: 10px var(--display);
+  letter-spacing: .12em;
+}
+.cu-shell .cu-main .cu-card { border-radius: 3px; border-color: var(--line); }
+.cu-shell .cu-main .cu-kpi { border-radius: 3px; }
+.cu-shell .cu-main .cu-btn { border-radius: 3px; }
+.cu-shell .cu-main .cu-navitem { border-radius: 0; }
+@media (max-width: 1024px) {
+  .cu-shell { display: block; grid-template-columns: none; }
+  .cu-shell .cu-sidebar { width: 206px; }
+  .cu-shell .cu-main { max-width: 100%; }
+}
+@media (max-width: 600px) {
+  .cu-shell .cu-main { padding: 18px 12px 45px; }
+  .cu-portal-header .cu-header-name { max-width: 110px; }
+  .cu-portal-header .cu-header-avatar { display: none; }
+  .cu-portal-header .cu-header-divider { display: none; }
+  .cu-portal-header .cu-user-profile { font-size: 11px; }
+}
