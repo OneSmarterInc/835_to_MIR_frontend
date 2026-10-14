@@ -19,7 +19,6 @@ import FeedbackModal from './components/modals/FeedbackModal';
 import LoginGate from './components/login/LoginGate';
 import MappingApp from './components/MappingTool/MappingApp';
 import ConversionsView from '../pages/ConversionsView';
-import ClaimsDashboard from '../pages/ClaimsDashboard';
 import AdminChecksView from './components/AdminChecksView';
 import CodeDictionaryView from '../pages/CodeDictionaryView';
 import FileViewerModal from '../components/FileViewerModal';
@@ -127,7 +126,7 @@ export default function App({ user, onLogout }) {
   }, [isAuthenticated, activeClientId]);
 
   useEffect(() => {
-    if (activeNav !== 'claims-dashboard' && !canView(activeNav)) {
+    if (!canView(activeNav)) {
       setActiveNav(DEFAULT_ADMIN_SCREENS.find(canView) || 'clients');
     }
   }, [activeNav, currentUser]);
@@ -421,8 +420,6 @@ export default function App({ user, onLogout }) {
           {canView('docs') && <button className={`navitem ${activeNav === 'docs' ? 'on' : ''}`} onClick={() => setActiveNav('docs')}>
             <span>Documents</span>
           </button>}
-          {canView('conversions') && <button className={`navitem ${activeNav === 'claims-dashboard' ? 'on' : ''}`}
-            onClick={() => setActiveNav('claims-dashboard')}><span>Claims Dashboard</span></button>}
           {canView('conversions') && <button className={`navitem ${activeNav === 'conversions' ? 'on' : ''}`} onClick={() => setActiveNav('conversions')}>
             <span>Conversions</span>
           </button>}
@@ -525,10 +522,6 @@ export default function App({ user, onLogout }) {
             />
           )}
 
-          {activeNav === 'claims-dashboard' && (
-            <ClaimsDashboard isAdmin activeClientId={activeClientId}
-              onOpenFileModal={setAdminViewerFileId} />
-          )}
           {activeNav === 'conversions' && (
             <ConversionsView
               trackedFiles={adminTrackedFiles}
