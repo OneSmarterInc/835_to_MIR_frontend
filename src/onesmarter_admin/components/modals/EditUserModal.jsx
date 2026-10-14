@@ -129,7 +129,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
           />
         </div>
         <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
-        {true ? (
+        {(isSuperAdmin || !['Admin', 'Super Admin'].includes(role)) ? (
           <div className="field">
             <label>Role</label>
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
