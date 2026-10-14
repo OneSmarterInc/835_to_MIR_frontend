@@ -15,7 +15,7 @@ function normalizeFinding(item, index) {
       rule: "VALIDATION",
       gate: "835",
       checks: item,
-      source: "OneSmarter validation",
+      source: "FileX validation",
       severity: "HOLD",
     };
   }
@@ -26,7 +26,7 @@ function normalizeFinding(item, index) {
     rule: finding.rule_code || finding.code || finding.rule || "VALIDATION",
     gate: finding.gate || finding.file_type || finding.segment || "835",
     checks: finding.what_found || finding.reason || finding.detail || finding.message || finding.description || finding.rule || "Validation finding",
-    source: finding.source || finding.standard || "OneSmarter validation",
+    source: finding.source || finding.standard || "FileX validation",
     severity: String(finding.severity || finding.action || "HOLD").toUpperCase(),
   };
 }
