@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import TimeDisplay from "../components/TimeDisplay";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 
@@ -9,6 +9,48 @@ export default function FlowView({
   outboundConfig
 }) {
   const todayDateStr = new Date().toISOString().substring(0, 10);
+  const [health, setHealth] = useState({ inbound: { state: "checking" }, outbound: { state: "checking" } });
+  useEffect(() => {
+    let active = true;
+    const check = async direction => {
+      const config = direction === "inbound" ? inboundConfig : outboundConfig;
+      if (!config?.id) return { state: "unconfigured", label: "Not configured" };
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 18000);
+      try {
+        const response = await fetch("/edi835/api/sftp/connect/", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ config_id: config.id, direction }), signal: abort.signal,
+        });
+        const result = await response.json();
+        if (result.success === true) return { state: "connected", label: "Connected — live test passed", checkedAt: new Date() };
+        const type = String(result.error_type || "").toUpperCase();
+        const label = type.includes("AUTH") || /password|authentication|credential/i.test(result.error || "")
+          ? "Authentication failed"
+          : type.includes("TCP") || type.includes("NETWORK") ? "Server unreachable"
+          : type.includes("HOST_KEY") ? "Host key verification failed"
+          : "Connection failed";
+        return { state: "failed", label, detail: String(result.error || "").slice(0, 180), checkedAt: new Date() };
+      } catch (error) {
+        return { state: "failed", label: error.name === "AbortError" ? "Connection timed out" : "Connection check unavailable", checkedAt: new Date() };
+      } finally { clearTimeout(timeout); }
+    };
+    const refresh = async () => {
+      if (!active || document.visibilityState === "hidden") return;
+      setHealth({ inbound: { state: "checking", label: "Checking connection…" },
+        outbound: { state: "checking", label: "Checking connection…" } });
+      const [inbound, outbound] = await Promise.all([check("inbound"), check("outbound")]);
+      if (active) setHealth({ inbound, outbound });
+    };
+    refresh();
+    const interval = setInterval(refresh, 60000);
+    const visible = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", visible);
+    return () => { active = false; clearInterval(interval); document.removeEventListener("visibilitychange", visible); };
+  }, [inboundConfig?.id, outboundConfig?.id]);
+  const inboundHealth = health.inbound;
+  const outboundHealth = health.outbound;
 
   return (
     <section className="view on" id="v-flow">
@@ -113,7 +155,7 @@ export default function FlowView({
             <h3>MIR delivery path</h3>
             <div className="who">Configured outbound SFTP</div>
             <div className="chipstack" id="stage4Chips">
-              {outboundConfig && outboundConfig.status === "CONNECTED" ? (
+              {outboundHealth.state === "connected" ? (
                 <div className="chip ok">
                   <span>MIR folder configured</span>
                   <span className="c">SFTP ready</span>
@@ -191,14 +233,14 @@ export default function FlowView({
               fontWeight: 600,
               fontSize: "13px",
               color:
-                inboundConfig && inboundConfig.status === "CONNECTED"
+                inboundHealth.state === "connected"
                   ? "var(--teal)"
                   : "var(--ink-2)",
               marginBottom: "14px",
             }}
           >
             {inboundConfig && inboundConfig.host
-              ? `${inboundConfig.status === "CONNECTED" ? "Connected" : "Configured"} (${inboundConfig.host})`
+              ? `${inboundHealth.label || "Checking connection…"} (${inboundConfig.host})`
               : "Not configured"}
           </div>
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
@@ -226,15 +268,15 @@ export default function FlowView({
               id="flowInboundConnection"
               style={{
                 color:
-                  inboundConfig && inboundConfig.status === "CONNECTED"
+                  inboundHealth.state === "connected"
                     ? "var(--teal)"
-                    : inboundConfig && inboundConfig.status === "FAILED"
+                    : inboundHealth.state === "failed"
                     ? "var(--brick)"
                     : "var(--ink-3)",
                 fontWeight: 500,
               }}
             >
-              {inboundConfig ? inboundConfig.status || "CONFIGURED" : "Not configured"}
+              {inboundConfig ? inboundHealth.label || "Checking…" : "Not configured"}
             </span>
           </div>
         </div>
@@ -256,14 +298,14 @@ export default function FlowView({
               fontWeight: 600,
               fontSize: "13px",
               color:
-                outboundConfig && outboundConfig.status === "CONNECTED"
+                outboundHealth.state === "connected"
                   ? "var(--teal)"
                   : "var(--ink-2)",
               marginBottom: "14px",
             }}
           >
             {outboundConfig && outboundConfig.host
-              ? `${outboundConfig.status === "CONNECTED" ? "Connected" : "Configured"} (${outboundConfig.host})`
+              ? `${outboundHealth.label || "Checking connection…"} (${outboundConfig.host})`
               : "Not configured"}
           </div>
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
@@ -281,7 +323,7 @@ export default function FlowView({
           <div className="kv" style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
             <span className="k">Last connection test (EST)</span>
             <span className="v" id="flowOutboundLastTest" style={{ color: "var(--ink-3)" }}>
-              {outboundConfig ? <TimeDisplay value={outboundConfig.last_tested_at} easternOnly /> : "–"}
+              {outboundHealth.checkedAt ? <TimeDisplay value={outboundHealth.checkedAt} easternOnly /> : "–"}
             </span>
           </div>
           <div className="kv" style={{ padding: "8px 0" }}>
