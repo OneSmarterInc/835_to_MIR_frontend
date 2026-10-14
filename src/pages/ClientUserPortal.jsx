@@ -263,7 +263,7 @@ export default function ClientUserPortal({ user, onLogout }) {
           ← Back to {tab === "claim" && claimReturnTab === "attention" ? "Needs Attention" : "Home"}
         </button>}
         {tab !== "convert" && <header className="cu-heading">
-          <div>
+          <div className="cu-heading-copy">
             <span className="eyebrow">{dashboard?.client || user.client} · {date}</span>
             <h1>{tab === "home" ? "Claims overview" : tab === "attention" ?
               (issues.length + " things need a decision from you") : tab === "history" ?
@@ -277,11 +277,11 @@ export default function ClientUserPortal({ user, onLogout }) {
               detail?.file_name || ""}</p>
           </div>
           {tab === "home" && <div className="cu-controls">
-            <label>Activity date<input type="date" value={date}
+            <label className="cu-date-filter">Activity date<input type="date" value={date}
               onChange={e => setDate(e.target.value || today())} /></label>
             <button type="button" className="cu-btn" onClick={reload}>Refresh</button>
+            <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
           </div>}
-          {tab === "home" && <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>}
         </header>}
         {error && <div className="cu-error" role="alert">{error}</div>}
         {notice && <div className="cu-success" role="status">{notice}</div>}
