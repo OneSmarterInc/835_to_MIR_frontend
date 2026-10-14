@@ -279,7 +279,7 @@ export default function DefaultConfigsView() {
           </h2>
           <p style={{ fontSize: '12.5px', color: 'var(--ink-2)', marginBottom: '16px' }}>Fallback sender for account credentials, password resets, and validation alerts.</p>
 
-          <div className="field"><label>Sender Name</label><input type="text" value={smtpSenderName} onChange={e => setSmtpSenderName(e.target.value)} placeholder="OneSmarter Inc" /></div>
+          <div className="field"><label>Sender Name</label><input type="text" value={smtpSenderName} onChange={e => setSmtpSenderName(e.target.value)} placeholder="FileX" /></div>
           <div className="field"><label>Sender Email</label><input type="email" value={smtpSenderEmail} onChange={e => setSmtpSenderEmail(e.target.value)} placeholder="support@onesmarter.com" /></div>
           <div className="field"><label>SMTP Host</label><input type="text" value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.sendgrid.net" /></div>
           <div className="field"><label>SMTP Port</label><input type="text" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" /></div>

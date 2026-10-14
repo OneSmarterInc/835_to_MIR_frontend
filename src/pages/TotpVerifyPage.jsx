@@ -48,7 +48,7 @@ export default function TotpVerifyPage({
   return (
     <div className="auth-wrapper">
       <div className="auth-brand">
-        ONESMARTER <span>/ SECURITY</span>
+        FileX <span>/ SECURITY</span>
       </div>
 
       <div className="auth-card">

@@ -66,7 +66,7 @@ export default function TotpSetupPage({ onSetupSuccess, onGoDashboard, onLogout 
   return (
     <div className="auth-wrapper">
       <div className="auth-brand">
-        ONESMARTER <span>/ SECURITY</span>
+        FileX <span>/ SECURITY</span>
       </div>
       <div className="auth-card">
         <h1>Two-Factor Authentication</h1>

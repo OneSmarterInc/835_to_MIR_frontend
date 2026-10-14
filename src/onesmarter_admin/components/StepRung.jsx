@@ -1211,7 +1211,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                       type="text"
                       value={s11SenderName}
                       onChange={e => setS11SenderName(e.target.value)}
-                      placeholder="e.g. OneSmarter Support"
+                      placeholder="e.g. FileX Support"
                     />
                   </div>
                   <div style={{ flex: '1 1 200px' }}>

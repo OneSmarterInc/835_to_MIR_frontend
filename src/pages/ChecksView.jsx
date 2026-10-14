@@ -232,7 +232,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true, clie
       rule: "Validation finding",
       segment: "Unknown",
       what_found: typeof message === "string" ? message : JSON.stringify(message),
-      source: "OneSmarter validation",
+      source: "FileX validation",
       severity: "Hold",
     }));
   }), [validationErrorFiles]);

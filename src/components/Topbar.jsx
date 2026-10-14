@@ -9,7 +9,7 @@ export default function Topbar({ user, onToggleDrawer, onLogout }) {
           <button type="button" className="btn-drawer-toggle" title="Toggle Navigation Menu" aria-label="Toggle navigation menu" onClick={onToggleDrawer}>
             ☰
           </button>
-          <div className="wordmark">MIR Relay <span>/ Project835</span></div>
+          <div className="wordmark">FileX</div>
         </div>
 
         <div className="spacer" />

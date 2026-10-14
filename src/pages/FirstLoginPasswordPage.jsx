@@ -44,7 +44,7 @@ export default function FirstLoginPasswordPage({ onPasswordChangeSuccess, onLogo
   return (
     <div className="auth-wrapper">
       <div className="auth-brand">
-        ONESMARTER <span>/ PASSWORD</span>
+        FileX <span>/ PASSWORD</span>
       </div>
       <div className="auth-card">
         <h1>Reset Password</h1>

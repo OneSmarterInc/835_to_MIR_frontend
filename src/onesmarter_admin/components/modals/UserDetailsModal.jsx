@@ -123,7 +123,7 @@ export default function UserDetailsModal({ isOpen, onClose, user, availableScree
         <div style={{ borderBottom: '1px solid var(--line-soft)', paddingBottom: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Associated Client</span>
           <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ink)' }}>
-            {user.role === 'Admin' ? 'OneSmarter' : (user.client_name || user.clients?.join(', ') || 'None')}
+            {user.role === 'Admin' ? 'FileX' : (user.client_name || user.clients?.join(', ') || 'None')}
           </span>
         </div>
 
