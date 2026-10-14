@@ -15,6 +15,7 @@ import TotpVerifyPage from "./pages/TotpVerifyPage";
 import FirstLoginPasswordPage from "./pages/FirstLoginPasswordPage";
 
 import FlowView from "./pages/FlowView";
+import ClaimsDashboard from "./pages/ClaimsDashboard";
 import ConversionsView from "./pages/ConversionsView";
 import ChecksView from "./pages/ChecksView";
 import CodeDictionaryView from "./pages/CodeDictionaryView";
@@ -688,6 +689,7 @@ export default function App() {
         <main className="main">
 
 
+          {activeTab === "claims-dashboard" && <ClaimsDashboard onOpenFileModal={setViewerFileId} />}
           {
             activeTab==="flow" &&
 
