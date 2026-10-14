@@ -59,11 +59,11 @@ export default function App() {
 
       const saved = localStorage.getItem("activeTab");
 
-      return saved || "flow";
+      return saved || "claims-dashboard";
 
     }catch{
 
-      return "flow";
+      return "claims-dashboard";
 
     }
 
