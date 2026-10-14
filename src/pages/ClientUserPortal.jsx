@@ -126,6 +126,18 @@ export default function ClientUserPortal({ user, onLogout }) {
       .finally(() => { if (!controller.signal.aborted) setExpandedLoading(false); });
     return () => controller.abort();
   }, [expandedFile, expandedPage, refresh, tab]);
+  const openAttentionIssue = issue => {
+    setTab("attention");
+    setExpandedFile(issue.kind === "hold" ? issue.id : null);
+    setExpandedPage(1);
+    setExpandedClaims(null);
+    setDrawer(false);
+    window.setTimeout(() => {
+      document.getElementById("cu-attention-" + issue.id)?.scrollIntoView({
+        behavior: "smooth", block: "start",
+      });
+    }, 0);
+  };
   const toggleHeldFile = id => {
     setExpandedFile(current => current === id ? null : id);
     setExpandedPage(1);
@@ -320,7 +332,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {issues.slice(0,3).map(i => <div className="cu-issue-mini" key={i.id}>
               <div><b>{i.kind==="error"?"File could not be processed":i.count+" claims held"} · {i.filename}</b>
                 <small>{i.reason}</small></div>
-              <button className="cu-btn" onClick={()=>go("attention")}>Review</button></div>)}
+              <button className="cu-btn" onClick={()=>openAttentionIssue(i)}>Review</button></div>)}
             {!issues.length && <p>No outstanding conversion issues in the current queue.</p>}
           </section>
           <section className="cu-card">
@@ -331,7 +343,7 @@ export default function ClientUserPortal({ user, onLogout }) {
 
         {tab==="attention" && <>
           <p className="cu-help">Issues are grouped by source file. You can request corrections, add notes or hide an item. Actual plan-ID and mapping corrections require Client Admin review.</p>
-          {issues.map(i=><section className={"cu-card cu-issue"+(i.kind==="error"?" cu-stopped":"")} key={i.id}>
+          {issues.map(i=><section id={"cu-attention-"+i.id} className={"cu-card cu-issue"+(i.kind==="error"?" cu-stopped":"")} key={i.id}>
             <div className="cu-section-title"><h2>{i.kind==="error"?"1 file could not be read":i.count+" claims are held"}</h2>
               <span className="cu-status">{i.kind==="error"?"Stopped":"Waiting on you"}</span></div>
             <p className="cu-muted">{i.filename} · {i.days===0?"Received today":i.days+" days waiting"}</p>
