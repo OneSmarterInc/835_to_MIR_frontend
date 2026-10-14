@@ -60,7 +60,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
     <div className="auth-container">
       <div className="auth-card">
         <h1>Create Account</h1>
-        <p className="sub">Register for MIR Relay Operations</p>
+        <p className="sub">Register for FileX Operations</p>
 
         {generalError && (
           <div className="error-msg">
