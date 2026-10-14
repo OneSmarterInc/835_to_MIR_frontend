@@ -75,6 +75,11 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [sending, setSending] = useState(false);
   const [conversionFiles, setConversionFiles] = useState([]);
   const [fileViewerId, setFileViewerId] = useState(null);
+  const [expandedFile, setExpandedFile] = useState(null);
+  const [expandedPage, setExpandedPage] = useState(1);
+  const [expandedClaims, setExpandedClaims] = useState(null);
+  const [expandedLoading, setExpandedLoading] = useState(false);
+  const [expandedError, setExpandedError] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyResult, setHistoryResult] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -105,6 +110,27 @@ export default function ClientUserPortal({ user, onLogout }) {
       .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
     return () => controller.abort();
   }, [tab, historyPage, refresh]);
+
+  useEffect(() => {
+    if (!expandedFile || tab !== "attention") return undefined;
+    const controller = new AbortController();
+    setExpandedLoading(true);
+    setExpandedError("");
+    jsonFetch(baseUrl + "holds/" + encodeURIComponent(expandedFile) +
+      "/?page=" + expandedPage + "&page_size=20", { signal: controller.signal })
+      .then(setExpandedClaims)
+      .catch(e => {
+        if (e.name !== "AbortError") setExpandedError(e.message);
+      })
+      .finally(() => { if (!controller.signal.aborted) setExpandedLoading(false); });
+    return () => controller.abort();
+  }, [expandedFile, expandedPage, refresh, tab]);
+  const toggleHeldFile = id => {
+    setExpandedFile(current => current === id ? null : id);
+    setExpandedPage(1);
+    setExpandedClaims(null);
+    setExpandedError("");
+  };
 
   const go = next => {
     if (next === "history") setHistoryPage(1);
@@ -305,6 +331,51 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span className="cu-status">{i.kind==="error"?"Stopped":"Waiting on you"}</span></div>
             <p className="cu-muted">{i.filename} · {i.days===0?"Received today":i.days+" days waiting"}</p>
             <div className="cu-explanation"><b>What this means</b><p>{i.reason}</p></div>
+            {(() => {
+              const related = actions.filter(a => String(a.file_id) === String(i.id) &&
+                (a.kind === "NOTE" || a.kind.startsWith("REQUEST_")));
+              return <section className="cu-file-activity" aria-label="Notes and requests">
+                <div className="cu-section-title"><h3>Notes and requests</h3>
+                  <span>{related.length ? related.length + " recorded" : "No notes yet"}</span></div>
+                {related.slice(0, 8).map(a => <div className="cu-file-activity-row" key={a.id}>
+                  <span className="cu-activity-date">{timestamp(a.at)}</span>
+                  <div><strong>{a.kind === "NOTE" ? "Note" : a.label}</strong>
+                    <span className="cu-activity-author"> · {a.by}</span>
+                    {a.message && <p>{a.message}</p>}</div>
+                  <span className="cu-activity-status">{a.status}</span>
+                </div>)}
+              </section>;
+            })()}
+            {i.kind === "hold" && expandedFile === i.id && <section className="cu-held-panel">
+              <div className="cu-section-title"><h3>Held claims in {i.filename}</h3>
+                <span>{expandedClaims?.held_total ?? i.count} recorded holds</span></div>
+              {expandedLoading && <p>Loading held claims…</p>}
+              {expandedError && <p className="cu-error" role="alert">{expandedError}</p>}
+              <div className="cu-table-scroll"><table className="cu-table">
+                <thead><tr><th>Claim</th><th>Internal</th><th>Billed</th><th>Paid</th><th>Hold reason</th><th>Details</th></tr></thead>
+                <tbody>{(expandedClaims?.claims || []).map((claim, index) =>
+                  <tr key={claim.id || ("finding-" + index)}>
+                    <td>{safe(claim.number)}</td><td>{safe(claim.internal_number)}</td>
+                    <td>{cash(claim.billed)}</td><td>{cash(claim.paid)}</td>
+                    <td>{claim.reason || "Review needed"}</td>
+                    <td>{claim.id ?
+                      <button className="cu-link" onClick={() => showClaim(claim.id)}>Open claim</button> :
+                      <span className="cu-muted">Source finding only</span>}</td>
+                  </tr>)}
+                  {!expandedLoading && !(expandedClaims?.claims || []).length &&
+                    <tr><td colSpan="6">No matched held claims found in the stored 835.</td></tr>}
+                </tbody>
+              </table></div>
+              <div className="cu-history-pagination" aria-label="Held claims pages">
+                <span>Page {expandedClaims?.page || expandedPage} of {expandedClaims?.pages || 1}</span>
+                <button type="button" className="cu-btn"
+                  disabled={expandedLoading || expandedPage <= 1}
+                  onClick={() => setExpandedPage(page => Math.max(1, page - 1))}>Previous</button>
+                <button type="button" className="cu-btn"
+                  disabled={expandedLoading || expandedPage >= (expandedClaims?.pages || 1)}
+                  onClick={() => setExpandedPage(page => page + 1)}>Next</button>
+              </div>
+            </section>}
             <h3>What you can do</h3>
             <div className="cu-actions">
               {i.kind==="hold" && <>
@@ -312,8 +383,9 @@ export default function ClientUserPortal({ user, onLogout }) {
                   isPlanIssue(i)?"Request plan ID from member record":isDictionaryIssue(i)?"Request dictionary entry":"Request claim review")}>
                   {isPlanIssue(i)?"Request plan ID correction":isDictionaryIssue(i)?"Request dictionary correction":"Request review / release"}
                 </button>
-                <button className="cu-btn" onClick={()=>{setSelectedFile(i.id);setTab("home");}}>
-                  See held claims</button>
+                <button className="cu-btn" onClick={() => toggleHeldFile(i.id)}
+                  aria-expanded={expandedFile === i.id}>
+                  {expandedFile === i.id ? "Hide held claims" : "See held claims"}</button>
               </>}
               <button className="cu-btn" onClick={()=>choose("REQUEST_RESEND",i.id,null,"Ask claims system to resend")}>
                 Ask claims system to resend</button>
@@ -336,7 +408,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         </div>}
 
         {tab==="history" && <section className="cu-card">
-          <div className="cu-section-title"><h2>File history</h2><span>Latest 30 MIR outputs · {dashboard?.client}</span></div>
+          <div className="cu-section-title"><h2>File history</h2><span>Paginated MIR outputs · {dashboard?.client}</span></div>
           {historyLoading && <p>Loading conversion history…</p>}
           <History rows={historyResult?.files||dashboard?.history||[]} />
           <div className="cu-history-pagination">
@@ -397,6 +469,17 @@ export default function ClientUserPortal({ user, onLogout }) {
           </section>
           {detail.reason && <section className="cu-card cu-issue">
             <h2>Why it is waiting on you</h2><p>{detail.reason}</p>
+            <section className="cu-file-activity" aria-label="Existing claim notes">
+              <h3>Notes and requests</h3>
+              {actions.filter(a => a.claim_id === detail.id).map(a => (
+                <div className="cu-file-activity-row" key={a.id}>
+                  <span className="cu-activity-date">{timestamp(a.at)}</span>
+                  <div><strong>{a.label}</strong> · {a.by}{a.message && <p>{a.message}</p>}</div>
+                  <span className="cu-activity-status">{a.status}</span>
+                </div>
+              ))}
+              {!actions.some(a => a.claim_id === detail.id) && <p className="cu-help">No notes on this claim yet.</p>}
+            </section>
             <div className="cu-actions">
               <button className="cu-btn cu-primary" onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
                 detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>
