@@ -9,6 +9,7 @@ const cash = v => v === null || v === undefined || v === "" ? "—" :
 const safe = v => v == null || v === "" ? "—" : encodeDemoValue(String(v), true);
 const timestamp = v => v ? new Date(v).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—";
 const today = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
+const filenameText = value => value == null || value === "" ? "—" : String(value);
 const navigation = [["home","Home"],["convert","Convert a file"],["attention","Needs attention"],["history","History"]];
 async function jsonFetch(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
@@ -322,7 +323,7 @@ export default function ClientUserPortal({ user, onLogout }) {
           </form>
           {conversionResult && <div className="cu-explanation">
             <b>{conversionResult.sent?"Converted and sent":"Converted — delivery not confirmed"}</b>
-            <p>{safe(conversionResult.source_file)} → {safe(conversionResult.mir_filename)} · {conversionResult.claims_converted} delivered claims · {conversionResult.claims_held} held</p>
+            <p>{filenameText(conversionResult.source_file)} → {filenameText(conversionResult.mir_filename)} · {conversionResult.claims_converted} delivered claims · {conversionResult.claims_held} held</p>
             <button className="cu-link" onClick={()=>go("history")}>View conversion history</button>
           </div>}
         </section>}
@@ -431,7 +432,7 @@ function History({rows}) {
   return <div className="cu-table-scroll"><table className="cu-table"><thead><tr>
     <th>Date</th><th>835 source</th><th>MIR file</th><th>Claims</th><th>Result</th></tr></thead>
     <tbody>{rows.map(r=><tr key={r.id}><td>{timestamp(r.date)}</td>
-      <td>{safe(r.source_filename)}</td><td>{safe(r.filename)}</td><td>{r.count}</td>
+      <td>{filenameText(r.source_filename)}</td><td>{filenameText(r.filename)}</td><td>{r.count}</td>
       <td><span className={"cu-tag "+(r.status==="PUSHED"?"ok":"work")}>{r.status==="PUSHED"?"Sent to MPL":r.status==="PUSH_FAILED"?"Delivery failed":"Converted; pending delivery"}</span></td>
     </tr>)}{!rows.length&&<tr><td colSpan="5">No conversions recorded for this client.</td></tr>}</tbody>
   </table></div>;
