@@ -221,7 +221,7 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }, query.trim() ? 350 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [activeClientId, query, searchField, claimPage, claimRefresh]);
+  }, [activeClientId, claimPage, claimRefresh]);
 
   const processUpload = async () => {
     if (!activeClientId || !uploads.length) return;
@@ -267,6 +267,8 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
 
   if (show837Files) return <Uploaded837FilesView clients={clients} activeClientId={activeClientId} onSelectClient={onSelectClient} onBack={close837Files} />;
 
+  const visibleRows = rows.filter(row => visibleSearchValues(row, searchField).some(value =>
+    value.includes(query.trim().toLowerCase())) || !query.trim());
   const pageStart = claimMeta.count ? ((claimPage - 1) * CLAIM_PAGE_SIZE) + 1 : 0;
   const pageEnd = claimMeta.count ? Math.min(claimPage * CLAIM_PAGE_SIZE, claimMeta.count) : 0;
   const sourceTypes = ['837', '835', 'mir', 'recon'];
@@ -283,13 +285,13 @@ export default function ClaimSearchView({ clients, activeClientId, onSelectClien
       <div className="claim-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" value={query} onChange={event => { setQuery(event.target.value); setClaimPage(1); }} disabled={!activeClientId} placeholder="Search Highmark claim, internal claim, or source file" autoComplete="off" />{loading && <span>Searching…</span>}</div>
       <label className="claim-search-field"><span>Search in</span><select value={searchField} disabled={!activeClientId} onChange={event => { setSearchField(event.target.value); setClaimPage(1); }}><option value="all">All columns</option><option value="highmark">Highmark claim number</option><option value="internal">Internal claim number</option><option value="patient">Patient</option><option value="837">837 filename</option><option value="835">835 filename</option><option value="mir">MIR filename</option><option value="recon">RECON filename</option></select></label>
       <button type="button" className="btn" disabled={!activeClientId} onClick={open837Files} style={{ background: 'var(--ink)', borderColor: 'var(--ink)', color: '#fff', fontWeight: 700 }}>837 Uploaded Files</button>
-      <div className="claim-search-match-count">{loading ? 'Loading claims' : `${claimMeta.count.toLocaleString()} ${query.trim() ? 'matches' : 'claims'}`}</div>
+      <div className="claim-search-match-count">{loading ? 'Loading claims' : `${query.trim() ? visibleRows.length : claimMeta.count} ${query.trim() ? 'matches on this page' : 'claims'}`}</div>
     </div>
     <div className="claim-search-results"><div className="claim837-table-wrap"><table className="universal-claim-table occurrence-table"><thead>
       <tr><th rowSpan="2" className="identity-header highmark">Highmark claim number</th><th rowSpan="2" className="identity-header internal">Internal claim number</th>{sourceTypes.map(type => <th key={type} colSpan="2" className="source-group-header">{type.toUpperCase()}</th>)}</tr>
       <tr className="source-subheader">{sourceTypes.map(type => <React.Fragment key={type}><th className="source-subheader-date">Date / Time</th><th className="source-subheader-actions">Actions</th></React.Fragment>)}</tr>
     </thead><tbody>
-      {!rows.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading claims…' : query.trim() ? 'No matching claims found in 837, 835, MIR, or RECON.' : 'No claims found for the selected client.'}</td></tr> : rows.map(row => <tr key={row.id} className="universal-claim-row"><td><strong className="universal-claim-number">{row.highmark_claim_number || '—'}</strong></td><td>{row.internal_claim_number || '—'}</td>{sourceTypes.map(type => { const source = row.lifecycle?.[type] || {}; const internalNumber = type === '837' ? '' : row.internal_claim_number; return <React.Fragment key={type}><td className="universal-source-date-cell"><OccurrenceDateTime value={source.exists ? source.arrived_at : null} /></td><td className="universal-source-cell"><SourceActions type={type} source={source} claimNumber={row.highmark_claim_number} internalNumber={internalNumber} onView={selected => setViewer({ claimNumber: row.highmark_claim_number, source: selected })} onDownload={selected => setDownloadTarget({ claimNumber: row.highmark_claim_number, internalNumber, source: selected })} /></td></React.Fragment>; })}</tr>)}
+      {!visibleRows.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading claims…' : query.trim() ? 'No matching claims found in 837, 835, MIR, or RECON.' : 'No claims found for the selected client.'}</td></tr> : visibleRows.map(row => <tr key={row.id} className="universal-claim-row"><td><strong className="universal-claim-number">{row.highmark_claim_number || '—'}</strong></td><td>{row.internal_claim_number || '—'}</td>{sourceTypes.map(type => { const source = row.lifecycle?.[type] || {}; const internalNumber = type === '837' ? '' : row.internal_claim_number; return <React.Fragment key={type}><td className="universal-source-date-cell"><OccurrenceDateTime value={source.exists ? source.arrived_at : null} /></td><td className="universal-source-cell"><SourceActions type={type} source={source} claimNumber={row.highmark_claim_number} internalNumber={internalNumber} onView={selected => setViewer({ claimNumber: row.highmark_claim_number, source: selected })} onDownload={selected => setDownloadTarget({ claimNumber: row.highmark_claim_number, internalNumber, source: selected })} /></td></React.Fragment>; })}</tr>)}
     </tbody></table></div></div>
     <div className="universal-pagination">
       <div className="universal-pagination-summary">{claimMeta.count ? <><strong>{pageStart.toLocaleString()}–{pageEnd.toLocaleString()}</strong><span>of {claimMeta.count.toLocaleString()} claims</span></> : <strong>0 claims</strong>}<span className="universal-pagination-page">Page {claimMeta.pages ? claimPage : 0} of {claimMeta.pages}</span></div>
