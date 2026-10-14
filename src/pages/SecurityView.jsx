@@ -3,7 +3,7 @@ import { safeFetchJson } from '../utils/api';
 import { startRegistration } from '@simplewebauthn/browser';
 import WorkspaceHeader from '../components/WorkspaceHeader';
 
-export default function SecurityView() {
+export default function SecurityView({ embedded = false }) {
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -11,11 +11,15 @@ export default function SecurityView() {
   const [keyName, setKeyName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [keyToRemove, setKeyToRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
 
   const fetchCredentials = async () => {
+    setLoading(true);
+    setError('');
     try {
       const { res, data } = await safeFetchJson('/accounts/api/webauthn/credentials/', { credentials: 'include' });
       if (res.ok) {
+        if (!Array.isArray(data)) throw new Error('Invalid security key response');
         setCredentials(data);
       } else {
         setError('Failed to fetch security keys');
@@ -86,18 +90,23 @@ export default function SecurityView() {
   };
 
   const confirmRemoveKey = async () => {
-    if (!keyToRemove) return;
+    if (!keyToRemove || removing) return;
+    setRemoving(true);
+    setError('');
+    setSuccess('');
     try {
-      await safeFetchJson(`/accounts/api/webauthn/credentials/${keyToRemove.id}/`, {
+      const { res, data } = await safeFetchJson(`/accounts/api/webauthn/credentials/${keyToRemove.id}/`, {
         method: 'DELETE',
         credentials: 'include'
       });
+      if (!res.ok) throw new Error(data?.error || 'Failed to remove security key');
       fetchCredentials();
       setSuccess('Security key removed successfully.');
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       setError('Failed to remove security key');
     } finally {
+      setRemoving(false);
       setKeyToRemove(null);
     }
   };
@@ -106,20 +115,21 @@ export default function SecurityView() {
 
   return (
     <section className="view on table-screen" id="v-security">
-      <WorkspaceHeader 
+      {!embedded && <WorkspaceHeader
         eyebrow="Security workspace" 
         title="Security Keys" 
         description="Manage your hardware keys and passkeys for passwordless authentication." 
-      />
+      />}
 
       {error && (
-        <div className="note" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)', marginBottom: "16px" }}>
+        <div className="note" role="alert" style={{ background: 'var(--brick-bg)', borderColor: 'var(--brick)', color: 'var(--brick)', marginBottom: "16px" }}>
           <b>Error:</b> {error}
+          <button type="button" className="cu-link" onClick={fetchCredentials}> Retry</button>
         </div>
       )}
       
       {success && (
-        <div className="note" style={{ background: '#f0f9ff', borderColor: '#0284c7', color: '#0284c7', marginBottom: "16px" }}>
+        <div className="note" role="status" style={{ background: '#f0f9ff', borderColor: '#0284c7', color: '#0284c7', marginBottom: "16px" }}>
           <b>Success:</b> {success}
         </div>
       )}
@@ -127,6 +137,7 @@ export default function SecurityView() {
       <h2 className="sec">Hardware Keys & Passkeys</h2>
       
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="cu-table-scroll">
         <table className="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
@@ -148,7 +159,7 @@ export default function SecurityView() {
                 <tr key={cred.id}>
                   <td style={{ fontWeight: 600 }}>{cred.name}</td>
                   <td>{new Date(cred.created_at).toLocaleDateString()}</td>
-                  <td>{new Date(cred.last_used).toLocaleDateString()}</td>
+                  <td>{cred.last_used ? new Date(cred.last_used).toLocaleDateString() : "Never used"}</td>
                   <td style={{ textAlign: "right" }}>
                     <button 
                       onClick={() => handleRemoveKey(cred)}
@@ -164,16 +175,18 @@ export default function SecurityView() {
             )}
           </tbody>
         </table>
+        </div>
         
         <div style={{ padding: "16px", borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
             <input 
               type="text" 
+              aria-label="Security key name"
               value={keyName} 
               onChange={e => setKeyName(e.target.value)} 
               placeholder="Name (e.g. Office YubiKey)"
               className="control"
-              style={{ width: "320px", height: "38px", boxSizing: "border-box", padding: "7px" }}
+              style={{ width: "320px", maxWidth: "100%", height: "38px", boxSizing: "border-box", padding: "7px" }}
               disabled={credentials.length >= 5}
             />
             <button 
@@ -213,9 +226,10 @@ export default function SecurityView() {
                 type="button"
                 className="btn danger"
                 onClick={confirmRemoveKey}
+                disabled={removing}
                 style={{ background: 'var(--brick)', color: '#fff', border: 'none' }}
               >
-                Yes, remove key
+                {removing ? 'Removing…' : 'Yes, remove key'}
               </button>
             </div>
           </div>

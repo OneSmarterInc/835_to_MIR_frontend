@@ -129,8 +129,8 @@
 .cu-amounts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; padding: 10px 0 22px; }
 .cu-amount { display: flex; flex-direction: column; gap: 5px; }
 .cu-amount strong { font-size: clamp(19px, 2vw, 28px); color: var(--ink); letter-spacing: -.025em; }
-.cu-amount.good strong { color: var(--teal); }
-.cu-amount.warn strong { color: var(--ochre); }
+.cu-amount-good strong { color: var(--teal); }
+.cu-amount-warn strong { color: var(--ochre); }
 .cu-amount .eyebrow { letter-spacing: .07em; font-size: 10px; }
 .cu-table th { white-space: nowrap; }
 .cu-table td { max-width: 300px; }
@@ -326,4 +326,66 @@
 .cu-dialog-note-history .cu-file-activity-row { grid-template-columns: 125px minmax(0,1fr) auto; }
 @media(max-width: 560px) {
   .cu-dialog-note-history .cu-file-activity-row { grid-template-columns: 1fr; }
+}
+
+/* Applied only outside Conversions; the shared conversion workspace is unchanged. */
+.cu-shell .cu-main.cu-compact { max-width: 1440px; margin: 0 auto; padding: 18px 24px 36px; gap: 14px; }
+.cu-compact .cu-card { padding: 16px; }
+.cu-compact .cu-heading { padding-bottom: 12px; gap: 12px 20px; }
+.cu-compact .cu-kpis { gap: 10px; }
+.cu-compact .cu-kpi { min-height: 0; padding: 14px 16px; gap: 3px; }
+.cu-compact .cu-kpi strong { font-size: 27px; line-height: 1.2; }
+.cu-compact .cu-kpi small { font-size: 11px; }
+.cu-compact .cu-section-title { margin-bottom: 10px; gap: 10px; }
+.cu-compact .cu-card h2 { font-size: 15px; margin-bottom: 10px; }
+.cu-compact .cu-section-title h2 { margin-bottom: 0; }
+.cu-compact .cu-card h3 { margin-top: 12px; }
+.cu-compact .cu-help { margin: 7px 0; }
+.cu-compact .cu-aging-row { margin: 5px 0; gap: 10px; }
+.cu-compact .cu-track { height: 8px; }
+.cu-compact .cu-filters { margin: 12px 0 10px; gap: 6px; }
+.cu-compact .cu-filters button { padding: 5px 10px; }
+.cu-compact .cu-btn { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+.cu-compact .cu-table th, .cu-compact .cu-table td { padding: 9px 8px; }
+.cu-compact .cu-table td { overflow-wrap: anywhere; }
+.cu-compact .cu-explanation { padding: 12px; margin: 10px 0; }
+.cu-compact .cu-file-activity { padding: 12px; margin: 12px 0; }
+.cu-compact .cu-file-activity-row { padding: 8px 0; gap: 10px; }
+.cu-compact .cu-amounts { padding: 6px 0 12px; gap: 12px; }
+.cu-compact .cu-amount strong { font-size: 22px; }
+.cu-compact .cu-tech { margin-bottom: 0; }
+.cu-compact .cu-claims-table { min-width: 1000px; }
+.cu-claims-table td:nth-last-child(1) { min-width: 200px; width: 220px; }
+.cu-claims-table .cu-source-cell { max-width: 180px; }
+.cu-claims-table .cu-reason-cell { min-width: 180px; max-width: 250px; }
+.cu-clickable-row { cursor: pointer; }
+.cu-table .cu-clickable-row:hover { background: var(--teal-bg); }
+.cu-clickable-row:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.cu-claim-status { display: grid; gap: 7px; font-size: 11px; }
+.cu-claim-status .cu-tag { white-space: normal; font-size: 10px; padding: 2px 6px; }
+.cu-claim-status small { display: block; color: var(--ink-2); font-size: 10px; margin-top: 3px; }
+.cu-note-label { font-size: 11px; font-weight: 650; color: var(--teal); }
+.cu-note-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 2px 0; white-space: pre-wrap; }
+.cu-history-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.cu-history-tabs button { padding: 9px 12px; font-size: 12px; color: var(--ink-2); border-bottom: 2px solid transparent; }
+.cu-history-tabs button[aria-selected="true"] { border-color: var(--teal); color: var(--teal); background: var(--teal-bg); font-weight: 650; }
+.cu-history-tabs button:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.cu-history-pagination label { display: flex; align-items: center; gap: 6px; }
+.cu-history-pagination select { font: inherit; padding: 5px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); }
+.cu-file-errors { margin-top: 12px; font-size: 12px; }
+.cu-security-workspace { min-width: 0; }
+.cu-security-workspace #v-security { width: 100%; min-width: 0; }
+.cu-security-workspace .sec { margin: 0 0 10px; font-size: 15px; }
+.cu-security-workspace .datatable { min-width: 480px; }
+.cu-security-workspace .datatable button { white-space: nowrap; }
+@media (max-width: 600px) {
+  .cu-shell .cu-main.cu-compact { padding: 14px 12px 28px; gap: 12px; }
+  .cu-compact .cu-card { padding: 12px; }
+  .cu-compact .cu-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cu-compact .cu-kpi { padding: 12px; }
+  .cu-compact .cu-kpi strong { font-size: 24px; }
+  .cu-compact .cu-timeline { grid-template-columns: 1fr; }
+  .cu-compact .cu-amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cu-compact .cu-heading .cu-btn { min-height: 40px; }
+  .cu-history-tabs button { flex: 1; padding: 8px 6px; }
 }
