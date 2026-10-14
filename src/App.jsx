@@ -15,7 +15,6 @@ import TotpVerifyPage from "./pages/TotpVerifyPage";
 import FirstLoginPasswordPage from "./pages/FirstLoginPasswordPage";
 
 import FlowView from "./pages/FlowView";
-import ClaimsDashboard from "./pages/ClaimsDashboard";
 import ConversionsView from "./pages/ConversionsView";
 import ChecksView from "./pages/ChecksView";
 import CodeDictionaryView from "./pages/CodeDictionaryView";
@@ -59,11 +58,11 @@ export default function App() {
 
       const saved = localStorage.getItem("activeTab");
 
-      return saved || "claims-dashboard";
+      return saved === "claims-dashboard" ? "flow" : (saved || "flow");
 
     }catch{
 
-      return "claims-dashboard";
+      return "flow";
 
     }
 
@@ -72,7 +71,6 @@ export default function App() {
 
 
   const [isDrawerOpen,setIsDrawerOpen] = useState(false);
-  const [dashboardWorkspace, setDashboardWorkspace] = useState("");
 
 
   useEffect(()=>{
@@ -121,7 +119,6 @@ export default function App() {
 
 
     setActiveTab(tab);
-    if (tab !== "claims-dashboard") setDashboardWorkspace("");
 
 
     try{
@@ -691,9 +688,8 @@ export default function App() {
         <main className="main">
 
 
-          {activeTab === "claims-dashboard" && <ClaimsDashboard onOpenFileModal={setViewerFileId} activeWorkspace={dashboardWorkspace} onSelectWorkspace={setDashboardWorkspace} />}
           {
-            (activeTab==="flow" || (activeTab==="claims-dashboard" && dashboardWorkspace==="flow")) &&
+            activeTab==="flow" &&
 
             <FlowView
 
@@ -712,7 +708,7 @@ export default function App() {
 
 
           {
-            (activeTab==="batches" || (activeTab==="claims-dashboard" && dashboardWorkspace==="batches")) &&
+            activeTab==="batches" &&
 
             <ConversionsView
 
@@ -733,24 +729,24 @@ export default function App() {
 
 
           {
-            (activeTab==="checks" || (activeTab==="claims-dashboard" && dashboardWorkspace==="checks")) &&
+            activeTab==="checks" &&
             <ChecksView
               trackedFiles={trackedFiles}
             />
           }
 
           {
-            (activeTab==="search" || (activeTab==="claims-dashboard" && dashboardWorkspace==="search")) &&
+            activeTab==="search" &&
             <ClientClaimSearchView />
           }
 
           {
-            (activeTab==="code-dictionary" || (activeTab==="claims-dashboard" && dashboardWorkspace==="code-dictionary")) &&
+            activeTab==="code-dictionary" &&
             <CodeDictionaryView/>
           }
 
           {
-            (activeTab==="notices" || (activeTab==="claims-dashboard" && dashboardWorkspace==="notices")) &&
+            activeTab==="notices" &&
             <NoticesView/>
           }
 
@@ -758,7 +754,7 @@ export default function App() {
 
 
           {
-            (activeTab==="archive" || (activeTab==="claims-dashboard" && dashboardWorkspace==="archive")) &&
+            activeTab==="archive" &&
 
             <ArchiveView
 
@@ -781,14 +777,14 @@ export default function App() {
           }
 
           {
-            (activeTab==="result" || (activeTab==="claims-dashboard" && dashboardWorkspace==="result")) &&
+            activeTab==="result" &&
             <ResultView />
           }
 
 
 
           {
-            (activeTab==="conn" || (activeTab==="claims-dashboard" && dashboardWorkspace==="conn")) &&
+            activeTab==="conn" &&
 
             <ConnectionsView
 
@@ -812,12 +808,12 @@ export default function App() {
 
 
           {
-            (activeTab==="contacts" || (activeTab==="claims-dashboard" && dashboardWorkspace==="contacts")) &&
+            activeTab==="contacts" &&
             <ContactsView/>
           }
 
           {
-            (activeTab==="security" || (activeTab==="claims-dashboard" && dashboardWorkspace==="security")) &&
+            activeTab==="security" &&
             <SecurityView/>
           }
 
