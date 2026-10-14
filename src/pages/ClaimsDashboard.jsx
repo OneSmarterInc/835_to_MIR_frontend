@@ -4,6 +4,12 @@ import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClaimsDashboard.css";
 
 const TYPES = ["835", "MIR", "837", "RECON"];
+const WORKSPACES = [
+  ["flow", "Flow"], ["batches", "Conversions"], ["checks", "Checks"],
+  ["search", "Claim Search"], ["archive", "Archive"], ["result", "Reconciliation"],
+  ["notices", "MPL Notices"], ["code-dictionary", "Code Dictionary"],
+  ["conn", "Connections"], ["contacts", "Contact Us"], ["security", "Security Keys"],
+];
 const today = () => {
   const date = new Date();
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"),
@@ -14,7 +20,7 @@ const protectReason = value => value ? encodeDemoValue(String(value), false) : "
 const blank = () => ({ "835": { files: [], count: 0 }, MIR: { files: [], count: 0 },
   "837": { files: [], count: 0 }, RECON: { files: [], count: 0 } });
 
-export default function ClaimsDashboard({ isAdmin = false, activeClientId = "", onOpenFileModal }) {
+export default function ClaimsDashboard({ isAdmin = false, activeClientId = "", onOpenFileModal, activeWorkspace = "", onSelectWorkspace }) {
   const [date, setDate] = useState(today);
   const [groups, setGroups] = useState(blank);
   const [loading, setLoading] = useState(false);
@@ -76,21 +82,47 @@ export default function ClaimsDashboard({ isAdmin = false, activeClientId = "", 
     </header>
     {loading && <p>Loading files…</p>}
     {error && <p role="alert" className="claims-error">{error}</p>}
-    <div className="claims-grid">
-      {TYPES.map(kind => <section className="claims-group" key={kind}>
-        <div className="claims-group-title"><h2>{kind} Files</h2><strong>{groups[kind]?.count || 0}</strong></div>
-        <div className="claims-file-list">
-          {(groups[kind]?.files || []).map(file => <button className="claims-file" type="button"
-            key={file.id} onClick={() => openFile(kind, file)}>
-            <span className="claims-filename">{file.name}</span>
-            <small>{file.claim_count} claims · {file.status}</small>
-            {file.held_count > 0 && <small className="claims-held">{file.held_count} held</small>}
-          </button>)}
-          {!loading && !(groups[kind]?.files || []).length && <p>No files on this date.</p>}
-          {groups[kind]?.truncated && <p>Only the first 500 files are shown for this day.</p>}
-        </div>
-      </section>)}
-    </div>
+    <nav className="claims-workspace-nav" aria-label="Client workspaces">
+      <button type="button" className={!activeWorkspace ? "selected" : ""}
+        onClick={() => onSelectWorkspace?.("")}>Overview</button>
+      {WORKSPACES.map(([key, label]) => <button key={key} type="button"
+        className={activeWorkspace === key ? "selected" : ""}
+        onClick={() => onSelectWorkspace?.(key)}>{label}</button>)}
+    </nav>
+    {!activeWorkspace && <>
+      <div className="claims-kpi-grid">
+        {TYPES.map(kind => <button type="button" key={kind} className="claims-kpi"
+          onClick={() => document.getElementById("claims-activity")?.scrollIntoView({ behavior: "smooth" })}>
+          <span>{kind} FILES</span>
+          <strong>{groups[kind]?.count || 0}</strong>
+          <small>{(groups[kind]?.files || []).reduce((sum, file) => sum + Number(file.claim_count || 0), 0).toLocaleString()} claims</small>
+          {(groups[kind]?.files || []).some(file => file.held_count > 0) &&
+            <small className="claims-held">{(groups[kind]?.files || []).reduce((sum, file) => sum + Number(file.held_count || 0), 0)} held</small>}
+        </button>)}
+      </div>
+      <section className="claims-activity" id="claims-activity">
+        <header><h2>File activity</h2><span>Files received or processed on {date}</span></header>
+        <div className="claims-table-wrap"><table>
+          <thead><tr><th>File type</th><th>File</th><th>Claims</th><th>Held</th><th>Status</th><th>Details</th></tr></thead>
+          <tbody>{TYPES.flatMap(kind => (groups[kind]?.files || []).map(file =>
+            <tr key={kind + file.id}>
+              <td><strong>{kind}</strong></td><td className="claims-filename">{file.name}</td>
+              <td>{file.claim_count}</td><td>{file.held_count || "—"}</td><td>{file.status}</td>
+              <td><button type="button" onClick={() => openFile(kind, file)}>View claims</button></td>
+            </tr>))}
+            {!loading && TYPES.every(kind => !(groups[kind]?.files || []).length) &&
+              <tr><td colSpan="6">No files found for this date.</td></tr>}
+          </tbody>
+        </table></div>
+        {TYPES.some(kind => groups[kind]?.truncated) && <p>Some file lists have more than 500 files. Refine the date to review a smaller set.</p>}
+      </section>
+    </>}
+    {activeWorkspace && <section className="claims-embedded-workspace">
+      <div className="claims-embedded-heading">
+        <strong>{WORKSPACES.find(([key]) => key === activeWorkspace)?.[1]}</strong>
+        <button type="button" onClick={() => onSelectWorkspace?.("")}>Back to Overview</button>
+      </div>
+    </section>}
     {selected && <div className="claims-modal-backdrop" onMouseDown={() => setSelected(null)}>
       <section className="claims-modal" role="dialog" aria-modal="true" aria-label={selected.kind + " claims"} onMouseDown={e => e.stopPropagation()}>
         <header className="claims-modal-head"><div><h2>{selected.kind} · {selected.file.name}</h2>
