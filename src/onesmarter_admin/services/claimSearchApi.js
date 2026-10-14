@@ -1,5 +1,3 @@
-import { encodeDemoData } from '../../utils/demoEncoder';
-
 function getAuthHeaders() {
   const token = localStorage.getItem('onesmarter_admin_token');
   const headers = {};
@@ -55,7 +53,7 @@ export async function searchUniversalClaims(clientId, query = '', field = 'all',
     const next = await getClaimsPage(clientId, current, 250, signal);
     all.push(...(next.results || []));
   }
-  const matches = all.filter(row => visibleSearchValues(encodeDemoData(row), field)
+  const matches = all.filter(row => visibleSearchValues(row, field)
     .some(value => value.includes(term)));
   const count = matches.length;
   const pages = Math.ceil(count / pageSize);
