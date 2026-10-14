@@ -46,11 +46,15 @@ export default function AuditLogView({ clients = [] }) {
       }
     }, filters.search ? 250 : 0);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [filters, page, pageSize, sort, direction]);
+  }, [filters.client_id, filters.module, filters.action, filters.performed_by, filters.date_from, filters.date_to, page, pageSize, sort, direction]);
 
+  const visibleLogs = logs.filter(log => !filters.search.trim() ||
+    ['timestamp', 'created_at', 'client_name', 'performed_by', 'module', 'action',
+     'details', 'description', 'summary'].some(key => String(log[key] ?? '')
+       .toLowerCase().includes(filters.search.trim().toLowerCase())));
   const updateFilter = (field, value) => {
     setFilters((current) => ({ ...current, [field]: value }));
-    setPage(1);
+    if (field !== 'search') setPage(1);
   };
 
   const clearFilters = () => {
@@ -101,7 +105,7 @@ export default function AuditLogView({ clients = [] }) {
           {[['timestamp', 'When (EST)'], ['module', 'Module'], ['action', 'Action'], ['client', 'Client']].map(([field, label]) => <th key={field}><button type="button" onClick={() => changeSort(field)}>{label} <span>{sortIcon(field)}</span></button></th>)}
           <th>Details</th><th><button type="button" onClick={() => changeSort('performed_by')}>Performed by <span>{sortIcon('performed_by')}</span></button></th>
         </tr></thead><tbody>
-          {!loading && logs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : logs.map((log) => <tr key={log.id}>
+          {!loading && visibleLogs.length === 0 ? <tr><td colSpan="6" className="audit-empty"><b>No audit events found</b><span>Adjust or clear the filters to view more activity.</span></td></tr> : visibleLogs.map((log) => <tr key={log.id}>
             <td className="audit-when"><TimeDisplay value={log.timestamp} includeSeconds easternOnly /></td>
             <td><button type="button" className="tag audit-filter-tag" onClick={() => updateFilter('module', log.module || 'SYSTEM')}>{log.module || 'SYSTEM'}</button></td>
             <td><button type="button" className="tag ok audit-filter-tag" onClick={() => updateFilter('action', log.action)}>{log.action}</button></td>
