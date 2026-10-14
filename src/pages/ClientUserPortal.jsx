@@ -29,6 +29,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const [category, setCategory] = useState("All");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -67,10 +68,10 @@ export default function ClientUserPortal({ user, onLogout }) {
   const metrics = data?.metrics || {};
   const issues = data?.issues || [];
   const claims = data?.claims || [];
-  const visibleClaims = claims.filter(c => category === "All" ||
+  const visibleClaims = claims.filter(c => (!selectedFile || c.file_id === selectedFile) && (category === "All" ||
     (category === "Denied" ? c.payer_status === "Denied" || c.payer_status === "No payment" :
       category === "Less paid" ? c.payer_status === "Paid less than billed" :
-      c.payer_status === "Paid in full"));
+      c.payer_status === "Paid in full")));
   const aging = [
     ["Today", claims.filter(c => c.days === 0).length],
     ["1 day", claims.filter(c => c.days === 1).length],
@@ -129,6 +130,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span>{label}</span><div className="cu-track"><i style={{ width: (count / maximum * 100) + "%" }} /></div>
               <b>{count}</b></div>)}
             <p className="cu-help">Age breakdown uses the held claims matched to recorded conversion findings (up to 200 rows).</p>
+            {selectedFile && <p className="cu-help">Filtered to selected source file. <button className="cu-link" onClick={() => setSelectedFile(null)}>Show all claims</button></p>}
             <div className="cu-filters">{["All", "Denied", "Less paid", "Paid in full"].map(x =>
               <button key={x} type="button" className={category === x ? "active" : ""}
                 onClick={() => setCategory(x)}>{x}</button>)}</div>
@@ -171,7 +173,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span>{issue.days} days waiting</span></div>
             <p className="cu-muted">{issue.filename}</p>
             <div className="cu-explanation"><b>What this means</b><p>{issue.reason}</p></div>
-            <button className="cu-btn" onClick={() => openTab("home")}>See held claims</button>
+            <button className="cu-btn" onClick={() => { setSelectedFile(issue.id); openTab("home"); }}>See held claims</button>
             <p className="cu-help">Corrections and resend requests must be handled by your Client Admin.</p>
           </section>)}
           {!issues.length && <section className="cu-card">No recent issues require review.</section>}
