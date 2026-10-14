@@ -78,7 +78,6 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       const params = new URLSearchParams();
       if (isAdmin && clientId) params.set("client_id", clientId);
       if (isAdmin && !clientId) params.set("scope", "global");
-      if (requestedSearch) params.set("search", requestedSearch);
       if (requestedStatus) params.set("status", requestedStatus);
       if (requestedSort.key) {
         params.set("sort_by", requestedSort.key);
@@ -103,10 +102,10 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
     const timer = window.setTimeout(() => {
       setActiveSearch(value);
       setPage(1);
-      loadResults(1, value, sortRef.current, statusFilterRef.current);
+      if (!value) loadResults(1, "", sortRef.current, statusFilterRef.current);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [search, loadResults]);
+  }, [search]);
 
   const waitForProcessing = async (fileId) => {
     for (let attempt = 0; attempt < 300; attempt += 1) {
@@ -183,7 +182,6 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       const params = new URLSearchParams();
       if (isAdmin && clientId) params.set("client_id", clientId);
       if (isAdmin && !clientId) params.set("scope", "global");
-      if (activeSearch) params.set("search", activeSearch);
       if (statusFilter) params.set("status", statusFilter);
       if (sort.key) {
         params.set("sort_by", sort.key);
@@ -231,7 +229,7 @@ export default function ResultView({ clients = [], isAdmin = false, initialClien
       URL.revokeObjectURL(url);
     } catch (error) { setMessage({ kind: "error", text: error.message }); }
   };
-  const rows = data.claims;
+  const rows = (data.claims || []).filter(row => !activeSearch || [\n    row.highmark_claim_number, row.internal_claim_number, row.patient_name,\n    row.member_id, row.mir_filename, row.recon_filename, row.status,\n  ].some(value => String(value ?? "").toLowerCase().includes(activeSearch.toLowerCase())));
   const changeSort = (key) => {
     const current = sortRef.current;
     const next = {
