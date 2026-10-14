@@ -10,7 +10,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
   const [mobile, setMobile] = useState('');
   const [countryIso, setCountryIso] = useState('US');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('User');
+  const [role, setRole] = useState('Client Admin');
   const [selectedClientId, setSelectedClientId] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,7 +25,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
       const parsedMobile = splitE164(user.mobile && user.mobile !== '—' ? user.mobile : '');
       setCountryIso(parsedMobile.countryIso);
       setMobile(parsedMobile.nationalNumber);
-      setRole(user.role || 'User');
+      setRole(user.role || 'Client Admin');
       setSelectedClientId(user.client_id || '');
       setNewPassword('');
     }
@@ -46,7 +46,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
       return;
     }
 
-    if (role === 'User' && !selectedClientId) {
+    if (['Client Admin', 'Client User', 'User'].includes(role) && !selectedClientId) {
       setErrorMsg("Please select a client for this user.");
       return;
     }
@@ -73,7 +73,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
         role,
         is_staff: role === 'Admin' || role === 'Super Admin',
         is_superuser: role === 'Super Admin',
-        client_id: role === 'User' ? selectedClientId : null
+        client_id: ['Client Admin', 'Client User', 'User'].includes(role) ? selectedClientId : null
       };
       if (newPassword) {
         payload.password = newPassword;
@@ -129,13 +129,14 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
           />
         </div>
         <PhoneNumberField countryIso={countryIso} onCountryChange={setCountryIso} value={mobile} onChange={setMobile} />
-        {isSuperAdmin ? (
+        {true ? (
           <div className="field">
             <label>Role</label>
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
-              <option value="User">User (Standard Access)</option>
-              <option value="Admin">Admin (Custom Screen Access)</option>
-              <option value="Super Admin">Super Admin (System Owner)</option>
+              <option value="Client Admin">Client Admin (Existing Portal Access)</option>
+              <option value="Client User">Client User (Claims Review Workspace)</option>
+              {isSuperAdmin && <option value="Admin">Admin (Custom Screen Access)</option>}
+              {isSuperAdmin && <option value="Super Admin">Super Admin (System Owner)</option>}
             </select>
           </div>
         ) : (
@@ -145,7 +146,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
           </div>
         )}
         
-        {role === 'User' && (
+        {['Client Admin', 'Client User', 'User'].includes(role) && (
           <div className="field">
             <label>Client *</label>
             <select
