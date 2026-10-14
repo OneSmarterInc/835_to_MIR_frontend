@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import SecurityView from "./SecurityView";
+import ConversionsView from "./ConversionsView";
+import FileViewerModal from "../components/FileViewerModal";
 import { encodeDemoValue, encodeDemoFileContent } from "../utils/demoEncoder";
 import "./ClientUserPortal.css";
 
@@ -71,9 +73,8 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [decision, setDecision] = useState(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
-  const [upload, setUpload] = useState(null);
-  const [confirmSend, setConfirmSend] = useState(false);
-  const [conversionResult, setConversionResult] = useState(null);
+  const [conversionFiles, setConversionFiles] = useState([]);
+  const [fileViewerId, setFileViewerId] = useState(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyResult, setHistoryResult] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -148,21 +149,19 @@ export default function ClientUserPortal({ user, onLogout }) {
     } catch(e) { setError(e.message); }
     finally { setSending(false); }
   };
-  const convertFile = async e => {
-    e.preventDefault();
-    if (!upload || !confirmSend) return;
-    setSending(true); setConversionResult(null); setError(""); setNotice("");
-    const body = new FormData();
-    body.append("edi_file", upload);
-    body.append("confirm_send", "yes");
-    try {
-      const result = await jsonFetch(baseUrl + "convert/", { method:"POST", body });
-      setConversionResult(result);
-      setNotice(result.message);
-      reload();
-    } catch(e) { setError(e.message); }
-    finally { setSending(false); }
-  };
+  const refreshConversionFiles = useCallback(async (signal) => {
+    const results = await jsonFetch("/edi835/api/tracked-files/?include_conversion_findings=0", { signal });
+    setConversionFiles(results.files || []);
+  }, []);
+  useEffect(() => {
+    if (tab !== "convert") return undefined;
+    const controller = new AbortController();
+    refreshConversionFiles(controller.signal).catch(e => {
+      if (e.name !== "AbortError") setError(e.message);
+    });
+    return () => controller.abort();
+  }, [tab, refreshConversionFiles, refresh]);
+
 
   const hidden = useMemo(() => {
     const flags = hiddenFiles(actions);
@@ -326,24 +325,15 @@ export default function ClientUserPortal({ user, onLogout }) {
           {Object.keys(reasonGroup).length>0 && <p className="cu-help">Recorded issue categories: {Object.values(reasonGroup).length}. A recorded request does not transmit a file or change a payer response.</p>}
         </>}
 
-        {tab==="convert" && <section className="cu-card cu-convert">
-          <h2>Convert a file</h2><p>Select an ANSI X12 835 remittance file. The existing FileX conversion pipeline will validate it and create the MIR output for your client.</p>
-          <form onSubmit={convertFile}>
-            <label>835 input file
-              <input type="file" accept=".835,.edi,.x12,.txt" required onChange={e=>setUpload(e.target.files?.[0]||null)} />
-            </label>
-            <label className="cu-confirm"><input type="checkbox" checked={confirmSend} onChange={e=>setConfirmSend(e.target.checked)} />
-              I authorize FileX to convert this 835 and send the MIR to the configured outbound SFTP if connected. Conversion may transmit real financial records.</label>
-            <button className="cu-btn cu-primary" type="submit" disabled={!upload||!confirmSend||sending}>{sending?"Converting…":"Convert and send"}</button>
-          </form>
-          {conversionResult && <div className="cu-explanation">
-            <b>{conversionResult.sent?"Converted and sent":"Converted — delivery not confirmed"}</b>
-            <p>{filenameText(conversionResult.source_file)} → {filenameText(conversionResult.mir_filename)} · {conversionResult.claims_converted} delivered claims · {conversionResult.claims_held} held</p>
-            <button className="cu-link" onClick={()=>go("history")}>View conversion history</button>
-          </div>}
-        </section>}
-
-        {tab==="settings" && <section className="cu-card"><SecurityView /></section>}
+        {tab==="convert" && <div className="cu-conversions-workspace">
+          <ConversionsView
+            trackedFiles={conversionFiles}
+            onRefreshData={async () => { await refreshConversionFiles(); reload(); }}
+            onOpenFileModal={id => setFileViewerId(id)}
+            isClientUser
+            activeClientId={user.client_id || ""}
+          />
+        </div>}
 
         {tab==="history" && <section className="cu-card">
           <div className="cu-section-title"><h2>File history</h2><span>Latest 30 MIR outputs · {dashboard?.client}</span></div>
@@ -440,6 +430,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         </div>}
       </main>
     </div>
+    {fileViewerId && <FileViewerModal fileId={fileViewerId} onClose={() => setFileViewerId(null)} />}
   </>;
 }
 
