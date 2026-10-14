@@ -26,6 +26,7 @@ import AdminView from "./pages/AdminView";
 import ResultView from "./pages/ResultView";
 import ClientClaimSearchView from "./pages/ClientClaimSearchView";
 import SecurityView from "./pages/SecurityView";
+import ClientUserPortal from "./pages/ClientUserPortal";
 
 
 export default function App() {
@@ -289,7 +290,7 @@ export default function App() {
     // Do not compete with the session bootstrap request. On a small Gunicorn
     // deployment these three dashboard calls could queue ahead of /api/user/
     // and leave the entire application on the loading screen.
-    if(!userState?.authenticated || isAdminRoute){
+    if(!userState?.authenticated || isAdminRoute || userState?.user?.client_role === "CLIENT_USER"){
       return undefined;
     }
 
@@ -596,6 +597,12 @@ export default function App() {
 
 
 
+
+
+  // Restricted client accounts use their own scoped, read-only workspace.
+  if (!isAdminRoute && user?.client_role === "CLIENT_USER" && !user?.is_staff) {
+    return <ClientUserPortal user={user} onLogout={handleLogout} />;
+  }
 
 
   // ADMIN PAGE
