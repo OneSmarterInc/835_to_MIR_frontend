@@ -83,7 +83,7 @@ function applyDemoEncodingToJsonResponse(response) {
       return '';
     }
   })();
-  if (/\/api\/file-content\//.test(responsePath)) return response;
+  if (/\/api\/file-content\//.test(responsePath) || /\/api\/claims-dashboard\//.test(responsePath)) return response;
 
   // Archived source viewers fetch the original file with ?view=1 and apply
   // PHI masking themselves at the field/segment level. Do not globally encode
