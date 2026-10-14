@@ -33,17 +33,22 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
       setLoading(true);
       setError('');
       try {
-        const next = await fetch837Files(activeClientId, query.trim(), page, 20);
+        const next = await fetch837Files(activeClientId, '', page, 20);
         setData(next);
       } catch (err) {
         setError(err.message || 'Unable to load 837 files.');
       } finally {
         setLoading(false);
       }
-    }, query ? 250 : 0);
+    }, 0);
     return () => clearTimeout(timer);
-  }, [activeClientId, query, page, refresh]);
+  }, [activeClientId, page, refresh]);
 
+  const visibleFiles = (data.results || []).filter(file => !query.trim() ||
+    ['original_filename', 'filename', 'inbound_filename', 'outbound_filename',
+     'sftp_filename', 'status', 'inbound_status', 'outbound_status', 'inbound_source',
+     'processing_status'].some(key => String(file[key] ?? '').toLowerCase()
+       .includes(query.trim().toLowerCase())));
   const pushAllPending837 = async () => {
     if (!activeClientId || pushingPending) return;
     setPushingPending(true);
@@ -125,12 +130,12 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
 
       <div className="claim-search-input">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />
+        <input type="search" value={query} onChange={event => { setQuery(event.target.value); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />
         {loading && <span>Loading…</span>}
       </div>
 
       <div className="claim-search-results" style={{ marginTop: '12px' }}><div className="claim837-table-wrap"><table className="claim-files-table"><thead><tr><th>Inbound 837 file</th><th>Outbound 837 file</th><th>Processing status</th><th>Inbound</th><th>Inbound status</th><th>Outbound status</th><th>Claims</th><th>Services</th><th>Total charge</th><th>Processed</th></tr></thead><tbody>
-        {!data.results.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : data.results.map(file => <tr key={file.id}>
+        {!visibleFiles.length ? <tr><td colSpan="10" className="empty">{loading ? 'Loading 837 files…' : 'No 837 files found.'}</td></tr> : visibleFiles.map(file => <tr key={file.id}>
           <td className="file-name-cell">{file.original_file_name || file.file_name || '—'}</td>
           <td className="file-name-cell">{file.outbound_file_name || '—'}</td>
           <td><span className={`file-status status-${String(file.status || '').toLowerCase()}`}>{file.status || '—'}</span></td>
