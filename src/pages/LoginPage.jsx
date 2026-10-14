@@ -102,18 +102,18 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
 
   const brandLabel = isAdminRoute ? (
     <div className="auth-brand">
-      ONESMARTER <span>/ ADMIN</span>
+      FileX <span>/ ADMIN</span>
     </div>
   ) : (
     <div className="auth-brand">
-      ONESMARTER <span>/ PORTAL</span>
+      FileX <span>/ PORTAL</span>
     </div>
   );
 
   const title = isAdminRoute ? "Admin Sign In" : "Sign In";
   const subtitle = isAdminRoute
     ? "Administrator access to client onboarding, compliance evidence, and integrations."
-    : "MIR Relay - EDI 835 Conversion Operations";
+    : "FileX - EDI 835 Conversion Operations";
 
   const emailLabel = isAdminRoute ? "Work email" : "Email Address";
 
@@ -172,14 +172,14 @@ export default function LoginPage({ onLoginSuccess, onAccessDenied, isAdminRoute
         <div className="auth-footer" style={{ textAlign: "center" }}>
           {isAdminRoute ? (
             <>
-              Access is restricted to authorized OneSmarter administrative staff.
+              Access is restricted to authorized FileX administrative staff.
               <div style={{ marginTop: "12px" }}>
                 <a href="/" style={{ color: "#475569", textDecoration: "none" }}>← Back to Client Portal</a>
               </div>
             </>
           ) : (
             <>
-              Access is restricted to authorized OneSmarter client users.
+              Access is restricted to authorized FileX client users.
               <div style={{ marginTop: "12px" }}>
                 <a href="/administrator" style={{ color: "#475569", textDecoration: "none" }}>Administrator? Sign in here →</a>
               </div>
