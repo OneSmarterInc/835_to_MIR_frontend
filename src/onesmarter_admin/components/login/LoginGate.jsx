@@ -83,7 +83,7 @@ export default function LoginGate({ onLoginSuccess }) {
     <div className="gate" id="gate">
       <div style={{ width: 'min(400px, 100%)' }}>
         <div className="brand">
-          OneSmarter <em>/ Admin</em>
+          FileX <em>/ Admin</em>
         </div>
         <div className="panel">
           <div className="inner">
@@ -247,7 +247,7 @@ export default function LoginGate({ onLoginSuccess }) {
             )}
           </div>
           <div className="foot">
-            Access is restricted to authorized OneSmarter administrative staff.
+            Access is restricted to authorized FileX administrative staff.
           </div>
         </div>
       </div>
