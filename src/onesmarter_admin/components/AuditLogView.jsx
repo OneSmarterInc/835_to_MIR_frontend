@@ -55,7 +55,7 @@ export default function AuditLogView({ clients = [] }) {
 
   const updateFilter = (field, value) => {
     setFilters((current) => ({ ...current, [field]: value }));
-    setPage(1);
+    if (field !== 'search') setPage(1);
   };
 
   const clearFilters = () => {
