@@ -59,7 +59,7 @@ export default function ClientsTable({ clients = [], onSelectClient, onOpenAddCl
     else if (filterStage === 'production') matchesStage = s === 'production';
     else if (filterStage === 'offboarded') matchesStage = s === 'offboarded';
 
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = searchTerm.trim().toLowerCase();
     const matchesSearch =
       c.name.toLowerCase().includes(searchLower) ||
       (c.id && c.id.toLowerCase().includes(searchLower)) ||

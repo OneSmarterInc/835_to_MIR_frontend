@@ -98,9 +98,9 @@ export async function search837Claims(clientId, query, field = 'all', limit = 10
   return data;
 }
 
-export async function fetch837Files(clientId, query = '', page = 1, pageSize = 20) {
+async function fetch837FilePage(clientId, page, pageSize) {
   const params = new URLSearchParams({
-    client_id: clientId, q: query, page: String(page), page_size: String(pageSize),
+    client_id: clientId, q: '', page: String(page), page_size: String(pageSize),
   });
   const res = await fetch(`/edi835/api/837/files/?${params}`, {
     credentials: 'include', headers: getAuthHeaders(),
@@ -108,6 +108,27 @@ export async function fetch837Files(clientId, query = '', page = 1, pageSize = 2
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load 837 files.');
   return data;
+}
+
+export async function fetch837Files(clientId, query = '', page = 1, pageSize = 20) {
+  const term = String(query || '').trim().toLowerCase();
+  if (!term) return fetch837FilePage(clientId, page, pageSize);
+  const first = await fetch837FilePage(clientId, 1, 250);
+  const files = [...(first.results || [])];
+  for (let nextPage = 2; nextPage <= Number(first.pages || 1); nextPage++) {
+    const next = await fetch837FilePage(clientId, nextPage, 250);
+    files.push(...(next.results || []));
+  }
+  const fields = ['original_filename', 'filename', 'inbound_filename', 'outbound_filename',
+    'sftp_filename', 'status', 'inbound_status', 'outbound_status', 'inbound_source',
+    'processing_status'];
+  const filtered = files.filter(file => fields.some(field =>
+    String(file[field] ?? '').toLowerCase().includes(term)));
+  const count = filtered.length;
+  const pages = Math.ceil(count / pageSize);
+  const current = Math.max(1, Math.min(Number(page) || 1, pages || 1));
+  return { ...first, results: filtered.slice((current - 1) * pageSize, current * pageSize),
+    count, pages, page: current, has_previous: current > 1, has_next: current < pages };
 }
 
 export async function fetch837ClaimDetail(claimId) {
@@ -379,7 +400,7 @@ export async function addEmployeeRole(roleName, description = '') {
   return data;
 }
 
-export async function fetchAuditLogs(filters = {}) {
+async function fetchAuditLogPage(filters) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined) params.set(key, String(value));
@@ -391,6 +412,32 @@ export async function fetchAuditLogs(filters = {}) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to fetch audit logs');
   return data;
+}
+
+export async function fetchAuditLogs(filters = {}) {
+  const term = String(filters.search || '').trim().toLowerCase();
+  if (!term) return fetchAuditLogPage(filters);
+  const { search, page = 1, page_size = 25, ...otherFilters } = filters;
+  const first = await fetchAuditLogPage({ ...otherFilters, page: 1, page_size: 250 });
+  const all = [...(first.logs || [])];
+  const pages = Number(first.pagination?.total_pages || 1);
+  for (let p = 2; p <= pages; p++) {
+    const next = await fetchAuditLogPage({ ...otherFilters, page: p, page_size: 250 });
+    all.push(...(next.logs || []));
+  }
+  const visible = ['timestamp', 'created_at', 'client_name', 'performed_by',
+    'module', 'action', 'details', 'description', 'summary'];
+  const found = all.filter(entry => visible.some(key => {
+    const value = entry[key];
+    return (typeof value === 'string' || typeof value === 'number')
+      && String(value).toLowerCase().includes(term);
+  }));
+  const size = Number(page_size) || 25;
+  const total = found.length;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const current = Math.max(1, Math.min(Number(page) || 1, totalPages));
+  return { ...first, logs: found.slice((current - 1) * size, current * size),
+    pagination: { page: current, page_size: size, total_count: total, total_pages: totalPages } };
 }
 
 // --- 1. Client Documents Service ---
