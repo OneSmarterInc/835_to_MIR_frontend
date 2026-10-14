@@ -13,8 +13,6 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose }) {
       {/* Left-to-Right Drawer Navigation Panel */}
       <nav className={`client-drawer ${isOpen ? "open" : ""}`} id="navDrawer" aria-label="Client navigation" aria-hidden={!isOpen}>
         <div className="grp eyebrow">Operations</div>
-        <button className={`navitem ${activeTab === "claims-dashboard" ? "on" : ""}`}
-          onClick={() => onSelectTab("claims-dashboard")}>Claims Dashboard</button>
         <button
           className={`navitem ${activeTab === "flow" ? "on" : ""}`}
           data-v="flow"
