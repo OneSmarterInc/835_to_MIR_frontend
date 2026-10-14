@@ -173,7 +173,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span>{issue.days} days waiting</span></div>
             <p className="cu-muted">{issue.filename}</p>
             <div className="cu-explanation"><b>What this means</b><p>{issue.reason}</p></div>
-            <button className="cu-btn" onClick={() => { setSelectedFile(issue.id); openTab("home"); }}>See held claims</button>
+            {issue.kind === "hold" && <button className="cu-btn" onClick={() => { setSelectedFile(issue.id); openTab("home"); }}>See held claims</button>}
             <p className="cu-help">Corrections and resend requests must be handled by your Client Admin.</p>
           </section>)}
           {!issues.length && <section className="cu-card">No recent issues require review.</section>}
