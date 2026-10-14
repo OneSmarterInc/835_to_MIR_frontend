@@ -58,6 +58,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [filter, setFilter] = useState("All");
   const [selectedFile, setSelectedFile] = useState("");
   const [detail, setDetail] = useState(null);
+  const [claimReturnTab, setClaimReturnTab] = useState("home");
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSegments, setShowSegments] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -142,6 +143,7 @@ export default function ClientUserPortal({ user, onLogout }) {
     setSelectedFile("");
   };
   const showClaim = async id => {
+    setClaimReturnTab(tab === "attention" ? "attention" : "home");
     setDetailLoading(true);
     setError("");
     setNotice("");
@@ -244,8 +246,11 @@ export default function ClientUserPortal({ user, onLogout }) {
           onClick={() => go("settings")}><span>Settings</span></button>
       </nav>
       <main className="cu-main">
-        {tab !== "home" && <button type="button" className="cu-back-link" onClick={() => go("home")}>← Back to Home</button>}
-        <header className="cu-heading">
+        {tab !== "home" && <button type="button" className="cu-back-link"
+          onClick={() => go(tab === "claim" ? claimReturnTab : "home")}>
+          ← Back to {tab === "claim" && claimReturnTab === "attention" ? "Needs Attention" : "Home"}
+        </button>}
+        {tab !== "convert" && <header className="cu-heading">
           <div>
             <span className="eyebrow">{dashboard?.client || user.client} · {date}</span>
             <h1>{tab === "home" ? "Claims overview" : tab === "attention" ?
@@ -265,7 +270,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             <button type="button" className="cu-btn" onClick={reload}>Refresh</button>
           </div>}
           {tab === "home" && <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>}
-        </header>
+        </header>}
         {error && <div className="cu-error" role="alert">{error}</div>}
         {notice && <div className="cu-success" role="status">{notice}</div>}
         {loading && <p>Loading current client records…</p>}
