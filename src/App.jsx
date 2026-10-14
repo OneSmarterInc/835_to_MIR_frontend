@@ -425,7 +425,7 @@ export default function App() {
         }}
       >
 
-        Loading MIR Relay...
+        Loading FileX...
 
       </div>
 
