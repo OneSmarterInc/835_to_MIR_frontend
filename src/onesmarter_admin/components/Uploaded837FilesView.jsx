@@ -131,7 +131,7 @@ export default function Uploaded837FilesView({ clients, activeClientId, onSelect
 
       <div className="claim-search-input">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />
+        <input type="search" value={query} onChange={event => { setQuery(event.target.value); }} disabled={!activeClientId} placeholder="Search inbound/outbound 837 filename, processing status, inbound source, or outbound status" autoComplete="off" />
         {loading && <span>Loading…</span>}
       </div>
 
