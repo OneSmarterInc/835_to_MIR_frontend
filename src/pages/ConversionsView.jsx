@@ -200,13 +200,16 @@ export default function ConversionsView({
 
   // Process MIR Action (Converts single or multiple 835 files into a SINGLE combined MIR file)
   const handleProcessMIR = async () => {
-    if (selectedFilesList.length === 0 && !ediText.trim()) return;
+    if (processing || (selectedFilesList.length === 0 && !ediText.trim())) return;
+    setProcessing(true);
     if (isClientUser && !(await showAppConfirm(
       "Processing this file may transmit the generated MIR to the configured outbound SFTP. Continue?",
       { title: "Confirm MIR Delivery", confirmLabel: "Process MIR" }
-    ))) return;
+    ))) {
+      setProcessing(false);
+      return;
+    }
 
-    setProcessing(true);
     setValidationError(null);
 
     try {
@@ -254,11 +257,14 @@ export default function ConversionsView({
   // Convert file to MIR on clicking PROCESSING status in table
   const handleConvertStatusClick = async (fileId) => {
     if (!fileId || convertingId) return;
+    setConvertingId(fileId);
     if (isClientUser && !(await showAppConfirm(
       "Reprocessing this 835 may resend its generated MIR to the configured outbound SFTP. Continue?",
       { title: "Confirm Reprocessing", confirmLabel: "Reprocess" }
-    ))) return;
-    setConvertingId(fileId);
+    ))) {
+      setConvertingId(null);
+      return;
+    }
     try {
       const res = await fetch("/api/convert/", {
         method: "POST",
@@ -297,11 +303,14 @@ export default function ConversionsView({
       return;
     }
 
+    setPushingSftpId(file.id);
     if (isClientUser && !(await showAppConfirm(
       "This will transmit the MIR output to the configured SFTP destination. Continue?",
       { title: "Confirm SFTP Delivery", confirmLabel: "Send MIR" }
-    ))) return;
-    setPushingSftpId(file.id);
+    ))) {
+      setPushingSftpId(null);
+      return;
+    }
     setBatchAlert(null);
     try {
       const data = await pushEdiFileToSftp(file.id, { confirmedByClientUser: isClientUser });
@@ -382,11 +391,15 @@ export default function ConversionsView({
 
   // Start Automated SFTP Inbound Batch Pipeline
   const handleStartBatchConversion = async () => {
+    if (startingBatch) return;
+    setStartingBatch(true);
     if (isClientUser && !(await showAppConfirm(
       "The inbound 835 SFTP batch will validate, convert and send generated MIR files. Source files may be removed from inbound after delivery. Continue?",
       { title: "Confirm Inbound 835 Batch", confirmLabel: "Start Batch" }
-    ))) return;
-    setStartingBatch(true);
+    ))) {
+      setStartingBatch(false);
+      return;
+    }
     setBatchAlert(null);
     try {
       const res = await fetch("/api/start-batch-conversion/", {
