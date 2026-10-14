@@ -27,6 +27,7 @@ import ResultView from "./pages/ResultView";
 import ClientClaimSearchView from "./pages/ClientClaimSearchView";
 import SecurityView from "./pages/SecurityView";
 import ClientUserPortal from "./pages/ClientUserPortal";
+import ClientReviewQueue from "./pages/ClientReviewQueue";
 
 
 export default function App() {
@@ -680,6 +681,7 @@ export default function App() {
           isOpen={isDrawerOpen}
 
           activeTab={activeTab}
+          isClientAdmin={user?.client_role === "CLIENT_ADMIN" && !user?.is_staff}
 
           onSelectTab={handleTabChange}
 
@@ -742,6 +744,11 @@ export default function App() {
             />
           }
 
+          {
+            activeTab==="client-requests" &&
+            user?.client_role === "CLIENT_ADMIN" &&
+            <ClientReviewQueue />
+          }
           {
             activeTab==="search" &&
             <ClientClaimSearchView />
