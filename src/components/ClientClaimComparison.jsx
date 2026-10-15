@@ -6,16 +6,14 @@ const COLUMNS = [
   ["waiting_days", "Waiting days"],
   ["claim", "Claim"],
   ["internal_number", "Internal claim"],
-  ["date", "Latest activity"],
   ["billed_835", "Billed 835"],
-  ["billed_mir", "Billed MIR"],
   ["paid_mir", "Paid MIR"],
   ["recon_amount", "Recon"],
   ["mismatch_amount", "Mismatch"],
   ["payer_status", "Payer status"],
   ["hold_reason", "Why waiting"],
   ["latest_note", "Latest note / action"],
-  ["status", "Clear / Mismatch"],
+  ["status", "Status"],
 ];
 const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
@@ -31,13 +29,9 @@ const makeParams = ({periodQuery, payerFilter, sort, direction, page, pageSize})
   if (pageSize != null) params.set("page_size", String(pageSize));
   return params;
 };
-const when = (value, zone) => value ? new Date(value).toLocaleDateString("en-US", {
-  year: "numeric", month: "short", day: "numeric",
-  timeZone: zone || "America/New_York",
-}) : "—";
 
 export default function ClientClaimComparison({ periodQuery, refresh, onOpen, payerFilter = "All", onFinancialTotals }) {
-  const [sort, setSort] = useState("date");
+  const [sort, setSort] = useState("waiting_days");
   const [direction, setDirection] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -74,7 +68,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   const changeSort = key => {
     if (loading || exporting) return;
     if (key === sort) setDirection(previous => previous === "asc" ? "desc" : "asc");
-    else { setSort(key); setDirection(key === "date" ? "desc" : "asc"); }
+    else { setSort(key); setDirection(key === "waiting_days" ? "desc" : "asc"); }
     setPage(1);
   };
   const exportFilteredCsv = async () => {
@@ -120,7 +114,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>
-        <p className="cu-help">One table for claims, age since received, notes and 835 ↔ MIR ↔ Recon differences.
+        <p className="cu-help">One table for claim age, payer amounts, notes and reconciliation status. MIR billed remains in the financial totals and discrepancy calculations.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
       <div className="cu-comparison-header-actions">
@@ -154,7 +148,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
-        <colgroup>{[9, 9, 8, 9, 7, 7, 7, 7, 7, 8, 9, 7, 6].map((width, index) =>
+        <colgroup>{[10, 11, 8, 9, 8, 9, 9, 9, 11, 9, 7].map((width, index) =>
           <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
         )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
@@ -180,9 +174,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           </td>
           <td>{row.record_id ? <button className="cu-link" onClick={() => onOpen(row.record_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
           <td>{safeClaim(row.internal_number)}</td>
-          <td>{when(row.date, data?.period?.timezone)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
-          <td className="cu-num">{dollars(row.billed_mir)}</td>
           <td className="cu-num">{dollars(row.paid_mir)}</td>
           <td className="cu-num">{dollars(row.recon_amount)}</td>
           <td className={"cu-num " + (row.mismatch_amount && Number(row.mismatch_amount) !== 0 ? "cu-variance" : "")}>
