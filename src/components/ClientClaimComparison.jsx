@@ -10,13 +10,29 @@ const COLUMNS = [
   ["paid_mir", "Paid MIR"],
   ["recon_amount", "Recon"],
   ["mismatch_amount", "Mismatch"],
-  ["issue_label", "Issue / reason"],
+  ["issue_label", "835/MIR status"],
   ["latest_note_action", "Latest note / action"],
   ["payer_status", "Payer status"],
 ];
 const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
+const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
-  ? "—" : Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  ? "—" : currency.format(value);
+
+export function ComparisonStatus({ row, recon = false }) {
+  const prefix = recon ? "recon_issue" : "issue";
+  // Older API responses did not compare 835 paid. Never reuse their match label.
+  const available = recon ? Boolean(row.recon_issue_label) : Object.hasOwn(row, "paid_835");
+  const label = available ? row[prefix + "_label"] : "Status unavailable";
+  const detail = available ? row[prefix + "_detail"] : "Updated comparison data is not available yet.";
+  const tone = available ? row[prefix + "_tone"] : "neutral";
+  return <details className="cu-comparison-detail">
+    <summary className={"cu-issue-brief cu-issue-" + (tone || "neutral")} title={detail}>
+      {label || "Status unavailable"}
+    </summary>
+    <span className="cu-comparison-facts">{detail}</span>
+  </details>;
+}
 const categoryKey = filter => ({ All: "all", Denied: "denied",
   "Less paid": "less", "Paid in full": "paid" })[filter] || "all";
 const makeParams = ({periodQuery, payerFilter, sort, direction, page, pageSize}) => {
@@ -113,7 +129,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>
-        <p className="cu-help">Compact claim comparison with clear reasons for missing records and mismatched amounts. MIR billed is retained in the totals.
+        <p className="cu-help">835/MIR status compares billed to billed and paid to paid. Recon separately compares MIR paid to Recon paid. Expand a status for amounts and details.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
       <div className="cu-comparison-header-actions">
@@ -134,12 +150,12 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
       <div className="cu-summary-mismatch">
         <small>Matched-amount mismatch</small>
         <strong>{loading ? "…" : data ? dollars(stats.confirmed_mismatch_amount) : "—"}</strong>
-        <span>Sum of absolute differences where both records exist</span>
+        <span>835/MIR billed + 835/MIR paid + MIR/Recon paid differences; complete, unique records only</span>
       </div>
       <div><small>Mismatch</small><strong>{loading ? "…" : data ? num(stats.mismatch) : "—"}</strong>
         <span>Includes missing-stream claims</span></div>
       <div><small>Clear</small><strong>{loading ? "…" : data ? num(stats.clear) : "—"}</strong>
-        <span>Both comparisons agree</span></div>
+        <span>All three comparisons agree; unique, complete records</span></div>
       <div><small>Missing data</small><strong>{loading ? "…" : data ? num(stats.missing_streams) : "—"}</strong>
         <span>Not treated as $0</span></div>
     </div>
@@ -175,15 +191,15 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           <td>{safeClaim(row.internal_number)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
           <td className="cu-num">{dollars(row.paid_mir)}</td>
-          <td className="cu-num">{dollars(row.recon_amount)}</td>
+          <td className="cu-num cu-recon-cell">
+            {dollars(row.recon_amount)}
+            <ComparisonStatus row={row} recon />
+          </td>
           <td className={"cu-num " + (row.mismatch_amount && Number(row.mismatch_amount) !== 0 ? "cu-variance" : "")}>
             {dollars(row.mismatch_amount)}
           </td>
           <td className="cu-issue-cell">
-            <span className={"cu-issue-brief cu-issue-" + (row.issue_tone || "neutral")}
-              title={row.issue_detail || row.issue_label || ""}>
-              {row.issue_label || "—"}
-            </span>
+            <ComparisonStatus row={row} />
           </td>
           <td className="cu-note-cell">
             {row.latest_note_action ?
@@ -210,7 +226,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
       </table>
     </div>
     <div className="cu-comparison-footer">
-      <p className="cu-help">A missing MIR/Recon record is marked Mismatch, but its unknown financial difference is excluded from the confirmed dollar variance.</p>
+      <p className="cu-help">Missing, incomplete or duplicate sources cannot confirm a match. Their affected comparisons are excluded from the dollar variance. This variance sums comparison differences; it is not an amount owed.</p>
       <div className="cu-comparison-pager">
         <label>Rows <select value={pageSize} disabled={loading} onChange={event => {
           setPageSize(Number(event.target.value)); setPage(1);

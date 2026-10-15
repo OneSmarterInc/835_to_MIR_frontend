@@ -181,6 +181,12 @@
 .cu-issue-warning { color: #8a5b0d; }
 .cu-issue-clear { color: var(--teal); }
 .cu-issue-neutral { color: var(--ink-2); }
+.cu-comparison-detail { text-align: left; white-space: normal; }
+.cu-comparison-detail summary { cursor: pointer; text-decoration: underline dotted; }
+.cu-comparison-detail summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.cu-comparison-detail[open] summary { display: block; }
+.cu-comparison-facts { display: block; margin-top: 5px; color: var(--ink-2); font-size: 11px; font-weight: 400; }
+.cu-recon-cell .cu-comparison-detail { margin-top: 4px; }
 .cu-note-brief { color: var(--ink-2); }
 .cu-note-pending { color: #80570c; font-weight: 650; }
 .cu-payer-brief { color: var(--ink); font-weight: 600; }

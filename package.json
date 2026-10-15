@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test:client-financials": "node scripts/test-client-financials.js",
+    "test:client-comparison": "node scripts/test-client-comparison.js",
     "test:result-sorting": "node scripts/test-result-sorting.js",
     "test:table-layout": "node scripts/test-table-layout.js",
     "test:sftp-automation": "node scripts/test-sftp-automation.js",
