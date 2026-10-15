@@ -153,12 +153,41 @@
   .cu-comparison-table td:first-child { min-width: 126px; }
 }
 
-/* Reduced eleven-column layout: compact table without hidden columns. */
+/* Ten-column layout: stable widths, two-line summaries, no verbose status column. */
+.cu-comparison-table { min-width: 1240px; }
 .cu-comparison-table th:last-child button span:first-child {
-  white-space: nowrap;
+  white-space: normal;
   overflow-wrap: normal;
 }
-.cu-comparison-table td:last-child .cu-compare-badge {
+.cu-comparison-table td.cu-issue-cell,
+.cu-comparison-table td.cu-note-cell,
+.cu-comparison-table td.cu-payer-cell {
+  vertical-align: middle;
+  line-height: 1.4;
+}
+.cu-issue-brief, .cu-note-brief, .cu-payer-brief {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   max-width: 100%;
-  box-sizing: border-box;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.cu-issue-brief { font-weight: 650; }
+.cu-issue-error { color: var(--brick); }
+.cu-issue-warning { color: #8a5b0d; }
+.cu-issue-clear { color: var(--teal); }
+.cu-issue-neutral { color: var(--ink-2); }
+.cu-note-brief { color: var(--ink-2); }
+.cu-payer-brief { color: var(--ink); font-weight: 600; }
+.cu-payer-paid { color: var(--teal); }
+.cu-payer-denied { color: var(--brick); }
+.cu-payer-partial { color: #80570c; }
+.cu-comparison-table td.cu-issue-cell { padding-right: 12px !important; }
+.cu-comparison-table td.cu-payer-cell { padding-left: 9px !important; }
+.cu-comparison-scroll .cu-comparison-table th:nth-last-child(-n + 3) button {
+  min-height: 44px;
 }
