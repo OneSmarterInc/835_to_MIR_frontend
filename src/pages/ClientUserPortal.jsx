@@ -332,7 +332,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         </button>}
         {tab !== "convert" && <header className="cu-heading">
           <div className="cu-heading-copy">
-            <span className="eyebrow">{dashboard?.client || user.client} · {date}</span>
+            <span className="eyebrow">{dashboard?.client || user.client} · {periodMode.toUpperCase()}</span>
             <h1>{tab === "home" ? "Claims overview" : tab === "attention" ?
               "Needs attention" : tab === "history" ?
               "History" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
@@ -345,12 +345,40 @@ export default function ClientUserPortal({ user, onLogout }) {
               detail?.file_name || ""}</p>
           </div>
           {tab === "home" && <div className="cu-controls">
-            <label className="cu-date-filter">Activity date<input type="date" value={date}
-              onChange={e => setDate(e.target.value || today())} /></label>
-            <button type="button" className="cu-btn" onClick={reload}>Refresh</button>
+            <button type="button" className="cu-btn" onClick={reload} disabled={!periodQuery}>Refresh</button>
             <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
           </div>}
         </header>}
+        {["home", "attention", "history"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
+          <div className="cu-period-main">
+            <div className="cu-period-options" role="group" aria-label="Activity period">
+              {PERIODS.map(([key, label]) => <button type="button" key={key}
+                className={periodMode === key ? "active" : ""}
+                aria-pressed={periodMode === key} onClick={() => selectPeriod(key)}>{label}</button>)}
+            </div>
+            {periodMode === "custom" && <div className="cu-period-custom">
+              <label>From <input aria-label="Custom start date" type="date" value={customFrom}
+                max={customTo || undefined} onChange={event => {
+                  setCustomFrom(event.target.value); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                }}/></label>
+              <label>To <input aria-label="Custom end date" type="date" value={customTo}
+                min={customFrom || undefined} onChange={event => {
+                  setCustomTo(event.target.value); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                }}/></label>
+            </div>}
+            <span className="cu-period-caption" role="status">{periodLabel}
+              {activePeriod?.timezone && <small> · {activePeriod.timezone}</small>}</span>
+          </div>
+          <button type="button" className={"cu-btn cu-attention-action" + (tab === "attention" ? " selected" : "")}
+            disabled={!periodQuery} onClick={() => go("attention")}>
+            Needs Attention <span aria-hidden="true">↓</span>
+            <small>Longest waiting first</small>
+          </button>
+        </section>}
+        {periodMode === "custom" && !periodQuery &&
+          <p className="cu-period-hint" role="status">{customFrom && customTo && customFrom > customTo
+            ? "From must be on or before To."
+            : "Select both From and To dates to see activity for that inclusive range."}</p>}
         {error && <div className="cu-error" role="alert">{error}</div>}
         {notice && <div className="cu-success" role="status">{notice}</div>}
         {loading && <p>Loading current client records…</p>}
@@ -368,6 +396,12 @@ export default function ClientUserPortal({ user, onLogout }) {
                 <span className="eyebrow">{title}</span><strong>{Number(value||0).toLocaleString()}</strong>
                 <small>{sub}</small></section>)}
           </div>
+          <section className="cu-money-strip" aria-label="Payment amounts from 835 claims received in selected period">
+            <div><span>Billed from 835</span><strong>{cash(metrics.billed_amount)}</strong></div>
+            <div><span>Paid from 835</span><strong>{cash(metrics.paid_amount)}</strong></div>
+            <div><span>Patient responsibility</span><strong>{cash(metrics.patient_amount)}</strong></div>
+            <small>{Number(metrics.normalized_claims || 0).toLocaleString()} parsed claims from received files</small>
+          </section>
           <section className="cu-card">
             <div className="cu-section-title"><h2>Claims waiting on you, by days waiting</h2>
               <span>{metrics.waiting_claims||0} held claims</span></div>
@@ -401,9 +435,9 @@ export default function ClientUserPortal({ user, onLogout }) {
         </>}
 
         {tab === "attention" && <section className="cu-card">
-          <div className="cu-section-title"><h2>Claims needing attention</h2>
+          <div className="cu-section-title"><h2>Claims needing attention · longest waiting first</h2>
             <span>{attentionResult?.count ?? "—"} records</span></div>
-          <p className="cu-help">Select any row to open its claim. Notes and requests apply only to that claim.</p>
+          <p className="cu-help">Claims from 835 files received in the selected period, sorted by days waiting (highest first). Select a row to review its notes and requests.</p>
           {attentionFile && <p className="cu-help">Filtered to one source file. <button type="button" className="cu-link"
             onClick={() => { setAttentionFile(""); setAttentionPage(1); }}>Show all claims</button></p>}
           {attentionError && <p className="cu-error" role="alert">{attentionError} <button type="button" className="cu-link" onClick={reload}>Retry</button></p>}
@@ -457,7 +491,7 @@ export default function ClientUserPortal({ user, onLogout }) {
                 onPageSize={size => { setHistoryPageSize(size); setHistoryPage(1); }} />
             </>}
             {historySection === "activity" && <>
-              <h2>Recent review activity</h2><p className="cu-help">Latest 200 actions. Earlier file-wide activity is retained here and is not assigned to individual claims.</p>
+              <h2>Recent review activity</h2><p className="cu-help">Latest 200 actions recorded in the selected period. Each claim retains its complete note history on its detail screen.</p>
               <Activity rows={actions} />
             </>}
             {historySection === "ignored" && <>
