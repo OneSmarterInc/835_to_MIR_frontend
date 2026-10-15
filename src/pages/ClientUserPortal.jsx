@@ -73,6 +73,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [periodMode, customFrom, customTo]);
   const selectPeriod = mode => {
     setPeriodMode(mode);
+    setComparisonMoney(null);
     setHomePage(1);
     setAttentionPage(1);
     setHistoryPage(1);
@@ -86,6 +87,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const [filter, setFilter] = useState("All");
+  const [comparisonMoney, setComparisonMoney] = useState(null);
   const [homePage, setHomePage] = useState(1);
   const [selectedFile, setSelectedFile] = useState("");
   const [detail, setDetail] = useState(null);
@@ -398,10 +400,15 @@ export default function ClientUserPortal({ user, onLogout }) {
                 <span className="eyebrow">{title}</span><strong>{Number(value||0).toLocaleString()}</strong>
                 <small>{sub}</small></section>)}
           </div>
-          <ClientFinancialAmounts metrics={metrics} loading={loading} />
+          <ClientFinancialAmounts
+            metrics={filter === "All" ? metrics : (comparisonMoney || {})}
+            loading={loading || (filter !== "All" && !comparisonMoney)}
+          />
           <ClientClaimComparison
             periodQuery={periodQuery}
+            payerFilter={filter}
             refresh={refresh}
+            onFinancialTotals={setComparisonMoney}
             onOpen={showClaim}
           />
           <section className="cu-card">
@@ -413,7 +420,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <b>{count} claims</b></div>)}
             <p className="cu-help">{claims.length} individually matched claims. <button type="button" className="cu-link" onClick={() => go("attention")}>View all claims needing attention</button></p>
             <div className="cu-filters">{["All","Denied","Less paid","Paid in full"].map(x =>
-              <button key={x} className={filter===x?"active":""} onClick={()=>{ setFilter(x); setHomePage(1); }}>
+              <button key={x} className={filter===x?"active":""} onClick={()=>{ setFilter(x); setComparisonMoney(null); setHomePage(1); }}>
                 {x}{x==="All"?" ("+(metrics.waiting_claims||0)+")":""}</button>)}</div>
             {selectedFile && <p className="cu-help">Filtered to a source file. <button className="cu-link" onClick={() => setSelectedFile("")}>Show all</button></p>}
             <ClientClaimTable rows={visible.slice((currentHomePage - 1) * 10, currentHomePage * 10)} recentActions={actions} onOpen={openClaimRow} loading={loading} />
