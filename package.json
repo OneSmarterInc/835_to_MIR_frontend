@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test:client-financials": "node scripts/test-client-financials.js",
     "test:client-comparison": "node scripts/test-client-comparison.js",
+    "test:client-claim-actions": "node scripts/test-client-claim-actions.js",
     "test:result-sorting": "node scripts/test-result-sorting.js",
     "test:table-layout": "node scripts/test-table-layout.js",
     "test:sftp-automation": "node scripts/test-sftp-automation.js",
@@ -32,6 +33,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^30.1.3",
     "oxlint": "^1.75.0",
     "vite": "^8.2.0"
   }

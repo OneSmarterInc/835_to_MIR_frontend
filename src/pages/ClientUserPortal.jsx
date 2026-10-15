@@ -420,6 +420,15 @@ export default function ClientUserPortal({ user, onLogout }) {
           <div className="cu-chip">{detail.reason?"Waiting "+detail.days+" days":"Payer response available"}</div>
           <p className="cu-muted">Received {timestamp(detail.received_at)} in {detail.file_name}
             {detail.payer?" · Payer: "+detail.payer:""} {detail.patient_name?" · Patient: "+safe(detail.patient_name):""}</p>
+          <div className="cu-actions cu-claim-actions" role="group" aria-label="Claim actions">
+            {detail.reason && <button type="button" className="cu-btn cu-primary" disabled={sending}
+              onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
+                detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>}
+            <button type="button" className="cu-btn" disabled={sending}
+              onClick={()=>choose("REQUEST_RESEND",detail.file_id,detail.id,"Request a corrected resend")}>Request resend</button>
+            <button type="button" className="cu-btn cu-subtle" disabled={sending}
+              onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
+          </div>
           <section className="cu-card cu-timeline">
             {timeline.map((t,i)=><div className="cu-step" key={i}>
               <span className={"cu-dot "+(t.complete?"complete":"pending")}></span>
@@ -454,8 +463,8 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div className="cu-table-scroll"><table className="cu-table"><thead><tr><th>Group</th><th>Code</th><th>Amount</th></tr></thead>
                 <tbody>{detail.adjustments.map((a,i)=><tr key={i}><td>{a.group}</td><td>{a.code} · {adjustmentMeaning(a.group,a.code)}</td><td>{cash(a.amount)}</td></tr>)}</tbody></table></div></details>}
           </section>
-          {detail.reason && <section className="cu-card cu-issue">
-            <h2>Why it is waiting on you</h2><p>{detail.reason}</p>
+          <section className={"cu-card" + (detail.reason ? " cu-issue" : "")}>
+            {detail.reason && <><h2>Why it is waiting on you</h2><p>{detail.reason}</p></>}
             <section className="cu-file-activity" aria-label="Existing claim notes">
               <h3>Notes and requests for this claim</h3>
               {claimActivityLoading && <p role="status">Loading claim activity…</p>}
@@ -471,13 +480,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <PortalPagination result={claimActivity} page={claimActivityPage} onPage={setClaimActivityPage}
                 loading={claimActivityLoading} label="Claim activity pages" />
             </section>
-            <div className="cu-actions">
-              <button className="cu-btn cu-primary" onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
-                detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>
-              <button className="cu-btn" onClick={()=>choose("REQUEST_RESEND",detail.file_id,detail.id,"Request a corrected resend")}>Request resend</button>
-              <button className="cu-btn cu-subtle" onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
-            </div>
-          </section>}
+          </section>
           <section className="cu-card">
             <h2>History on this claim</h2>
             {(detail.timeline||[]).map((event,i)=><p className="cu-event" key={i}><time>{timestamp(event.at)}</time>{event.label}</p>)}
