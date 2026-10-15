@@ -384,7 +384,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         {loading && <p>Loading current client records…</p>}
         {detailLoading && <p>Opening claim…</p>}
 
-        {tab === "home" && <>
+        {tab === "home" && periodQuery && <>
           <div className="cu-kpis">
             {[
               ["Received",metrics.received_files,"files · "+(metrics.received_claims||0)+" claims",false],
@@ -434,7 +434,7 @@ export default function ClientUserPortal({ user, onLogout }) {
           </section>
         </>}
 
-        {tab === "attention" && <section className="cu-card">
+        {tab === "attention" && periodQuery && <section className="cu-card">
           <div className="cu-section-title"><h2>Claims needing attention · longest waiting first</h2>
             <span>{attentionResult?.count ?? "—"} records</span></div>
           <p className="cu-help">Claims from 835 files received in the selected period, sorted by days waiting (highest first). Select a row to review its notes and requests.</p>
@@ -466,7 +466,7 @@ export default function ClientUserPortal({ user, onLogout }) {
 
         {tab === "settings" && <div className="cu-security-workspace"><SecurityView embedded /></div>}
 
-        {tab === "history" && <section className="cu-card">
+        {tab === "history" && periodQuery && <section className="cu-card">
           <div className="cu-history-tabs" role="tablist" aria-label="History sections">
             {[["files", "File history"], ["activity", "Review activity"], ["ignored", "Ignored file issues"]].map(([key, label]) =>
               <button type="button" key={key} role="tab" id={"history-tab-" + key}
