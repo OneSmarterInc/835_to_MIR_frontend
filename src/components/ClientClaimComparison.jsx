@@ -5,10 +5,10 @@ import "./ClientClaimComparison.css";
 const COLUMNS = [
   ["claim", "Claim"],
   ["date", "Latest activity"],
-  ["billed_835", "Billed 835"],
+  ["billed_835", "Billed in 835"],
   ["billed_mir", "Billed MIR"],
   ["paid_mir", "Paid MIR"],
-  ["recon_amount", "Paid Recon"],
+  ["recon_amount", "Amount in Recon"],
   ["mismatch_amount", "Mismatch amount"],
   ["status", "Status"],
 ];
@@ -38,7 +38,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
     params.set("direction", direction);
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setData(null);
     fetch("/edi835/api/client-portal/comparison/?" + params, {
       credentials: "include", signal: controller.signal,
     }).then(async response => {
@@ -69,14 +69,14 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
     <div className="cu-comparison-summary" aria-label="Comparison results">
       <div className="cu-summary-mismatch">
         <small>Confirmed mismatch amount</small>
-        <strong>{loading ? "…" : dollars(stats.confirmed_mismatch_amount)}</strong>
+        <strong>{loading ? "…" : data ? dollars(stats.confirmed_mismatch_amount) : "—"}</strong>
         <span>Sum of absolute differences where both records exist</span>
       </div>
-      <div><small>Mismatch</small><strong>{loading ? "…" : num(stats.mismatch)}</strong>
+      <div><small>Mismatch</small><strong>{loading ? "…" : data ? num(stats.mismatch) : "—"}</strong>
         <span>Includes missing-stream claims</span></div>
-      <div><small>Clear</small><strong>{loading ? "…" : num(stats.clear)}</strong>
+      <div><small>Clear</small><strong>{loading ? "…" : data ? num(stats.clear) : "—"}</strong>
         <span>Both comparisons agree</span></div>
-      <div><small>Missing source</small><strong>{loading ? "…" : num(stats.missing_streams)}</strong>
+      <div><small>Missing data</small><strong>{loading ? "…" : data ? num(stats.missing_streams) : "—"}</strong>
         <span>Not treated as $0</span></div>
     </div>
     {error && <p role="alert" className="cu-error">Could not load comparison: {error}</p>}
