@@ -11,7 +11,6 @@ const cash = v => v === null || v === undefined || v === "" || !Number.isFinite(
   Number(v).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const safe = v => v == null || v === "" ? "—" : encodeDemoValue(String(v), true);
 const timestamp = v => v ? new Date(v).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—";
-const today = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
 const filenameText = value => value == null || value === "" ? "—" : String(value);
 const navigation = [["home","Home"],["convert","Conversions"],["attention","Needs attention"],["history","History"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
