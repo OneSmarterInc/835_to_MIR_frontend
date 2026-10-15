@@ -13,8 +13,9 @@ const COLUMNS = [
 ];
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
   ? "—" : Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
-const when = value => value ? new Date(value).toLocaleDateString("en-US", {
+const when = (value, zone) => value ? new Date(value).toLocaleDateString("en-US", {
   year: "numeric", month: "short", day: "numeric",
+  timeZone: zone || "America/New_York",
 }) : "—";
 
 export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) {
@@ -89,7 +90,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
         </th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={row.key} title={row.reason}>
           <td>{row.claim_id ? <button className="cu-link" onClick={() => onOpen(row.claim_id)}>{row.claim}</button> : row.claim}</td>
-          <td>{when(row.date)}</td>
+          <td>{when(row.date, data?.period?.timezone)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
           <td className="cu-num">{dollars(row.billed_mir)}</td>
           <td className="cu-num">{dollars(row.paid_mir)}</td>
