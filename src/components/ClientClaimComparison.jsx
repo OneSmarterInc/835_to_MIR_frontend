@@ -91,7 +91,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
           </button>
         </th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={row.key} title={row.reason}>
-          <td>{row.claim_id ? <button className="cu-link" onClick={() => onOpen(row.claim_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
+          <td>{row.record_id ? <button className="cu-link" onClick={() => onOpen(row.record_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
           <td>{when(row.date, data?.period?.timezone)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
           <td className="cu-num">{dollars(row.billed_mir)}</td>
