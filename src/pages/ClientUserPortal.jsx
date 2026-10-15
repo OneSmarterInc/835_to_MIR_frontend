@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
-import ClientClaimTable, { PortalPagination } from "../components/ClientClaimTable";
+import { PortalPagination } from "../components/ClientClaimTable";
 import ClientClaimComparison from "../components/ClientClaimComparison";
 import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
@@ -14,7 +14,7 @@ const cash = v => v === null || v === undefined || v === "" || !Number.isFinite(
 const safe = v => v == null || v === "" ? "—" : encodeDemoValue(String(v), true);
 const timestamp = v => v ? new Date(v).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—";
 const filenameText = value => value == null || value === "" ? "—" : String(value);
-const navigation = [["home","Home"],["convert","Conversions"],["attention","Needs attention"],["history","History"]];
+const navigation = [["home","Home"],["convert","Conversions"],["history","History"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
 const displayPeriodDate = value => {
   if (!value) return "";
@@ -48,15 +48,6 @@ const adjustmentMeaning = (group, code) => {
 
 const isPlanIssue = issue => /plan.?id|subscriber.?id|member.?id/i.test(issue.reason || "");
 const isDictionaryIssue = issue => /dictionary|remark|code.?mapping|unknown.?code/i.test(issue.reason || "");
-const hiddenFiles = actions => {
-  const byFile = new Map();
-  [...actions].reverse().forEach(a => {
-    if (a.kind === "IGNORE_FILE") byFile.set(a.file_id, true);
-    if (a.kind === "REOPEN_FILE") byFile.set(a.file_id, false);
-  });
-  return byFile;
-};
-
 export default function ClientUserPortal({ user, onLogout }) {
   const [tab, setTab] = useState("home");
   const [periodMode, setPeriodMode] = useState("daily");
@@ -74,11 +65,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const selectPeriod = mode => {
     setPeriodMode(mode);
     setComparisonMoney(null);
-    setHomePage(1);
-    setAttentionPage(1);
     setHistoryPage(1);
-    setAttentionFile("");
-    setSelectedFile("");
   };
   const [dashboard, setDashboard] = useState(null);
   const [actions, setActions] = useState([]);
@@ -88,10 +75,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [refresh, setRefresh] = useState(0);
   const [filter, setFilter] = useState("All");
   const [comparisonMoney, setComparisonMoney] = useState(null);
-  const [homePage, setHomePage] = useState(1);
-  const [selectedFile, setSelectedFile] = useState("");
   const [detail, setDetail] = useState(null);
-  const [claimReturnTab, setClaimReturnTab] = useState("home");
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSegments, setShowSegments] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -110,12 +94,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [sending, setSending] = useState(false);
   const [conversionFiles, setConversionFiles] = useState([]);
   const [fileViewerId, setFileViewerId] = useState(null);
-  const [attentionPage, setAttentionPage] = useState(1);
-  const [attentionPageSize, setAttentionPageSize] = useState(10);
-  const [attentionFile, setAttentionFile] = useState("");
-  const [attentionResult, setAttentionResult] = useState(null);
-  const [attentionLoading, setAttentionLoading] = useState(false);
-  const [attentionError, setAttentionError] = useState("");
   const [claimActivity, setClaimActivity] = useState(null);
   const [claimActivityPage, setClaimActivityPage] = useState(1);
   const [claimActivityLoading, setClaimActivityLoading] = useState(false);
@@ -165,21 +143,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [tab, historySection, historyPage, historyPageSize, periodQuery, refresh]);
 
   useEffect(() => {
-    if (tab !== "attention" || !periodQuery) return undefined;
-    const controller = new AbortController();
-    setAttentionLoading(true);
-    setAttentionError("");
-    setAttentionResult(null);
-    jsonFetch(baseUrl + "attention/?" + periodQuery + "&page=" + attentionPage + "&page_size=" + attentionPageSize +
-      "&payer_status=" + encodeURIComponent(({ All: "all", Denied: "denied", "Less paid": "less", "Paid in full": "paid" })[filter] || "all") +
-      (attentionFile ? "&file_id=" + encodeURIComponent(attentionFile) : ""), { signal: controller.signal })
-      .then(setAttentionResult)
-      .catch(e => { if (e.name !== "AbortError") setAttentionError(e.message); })
-      .finally(() => { if (!controller.signal.aborted) setAttentionLoading(false); });
-    return () => controller.abort();
-  }, [attentionFile, attentionPage, attentionPageSize, periodQuery, filter, refresh, tab]);
-
-  useEffect(() => {
     if (tab !== "claim" || !detail?.id) return undefined;
     const controller = new AbortController();
     setClaimActivityLoading(true);
@@ -193,29 +156,19 @@ export default function ClientUserPortal({ user, onLogout }) {
     return () => controller.abort();
   }, [tab, detail?.id, claimActivityPage, refresh]);
 
-  const openAttentionIssue = issue => {
-    setTab("attention");
-    setAttentionFile(issue.kind === "hold" ? issue.id : "");
-    setAttentionPage(1);
-    setDrawer(false);
-  };
-
   const go = next => {
     if (next === "history") { setHistoryPage(1); setHistorySection("files"); }
-    if (next === "attention" && tab !== "claim") { setAttentionPage(1); setAttentionFile(""); }
     setTab(next);
     setDetail(null);
     setDecision(null);
     setError("");
     setDrawer(false);
     setNotice("");
-    setSelectedFile("");
   };
   const showClaim = async id => {
     if (detailLoading) return;
     setClaimActivityPage(1);
     setClaimActivity(null);
-    setClaimReturnTab(tab === "attention" ? "attention" : "home");
     setDetailLoading(true);
     setError("");
     setNotice("");
@@ -226,13 +179,6 @@ export default function ClientUserPortal({ user, onLogout }) {
       setTab("claim");
     } catch(e) { setError(e.message); }
     finally { setDetailLoading(false); }
-  };
-  const openClaimRow = claim => {
-    if (claim.id != null) { showClaim(claim.id); return; }
-    setClaimReturnTab("attention");
-    setClaimActivity(null);
-    setDetail({ ...claim, sourceOnly: true });
-    setTab("claim");
   };
   const choose = (kind, file_id, claim_id, title) => {
     if ((kind === "NOTE" || kind.startsWith("REQUEST_")) && claim_id == null) return;
@@ -272,20 +218,11 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [tab, refreshConversionFiles, refresh]);
 
 
-  const hidden = useMemo(() => {
-    const flags = hiddenFiles(actions);
-    (dashboard?.ignored_files || []).forEach(id => flags.set(id, true));
-    return flags;
-  }, [actions, dashboard]);
-  const issues = (dashboard?.issues || []).filter(i => !hidden.get(i.id));
   const claims = dashboard?.claims || [];
   const visible = claims.filter(c =>
-    (!selectedFile || c.file_id === selectedFile) &&
     (filter === "All" || (filter === "Denied" ? ["Denied","No payment"].includes(c.payer_status) :
       filter === "Less paid" ? c.payer_status === "Paid less than billed" : c.payer_status === "Paid in full")));
   const metrics = dashboard?.metrics || {};
-  const displayedIssues = filter === "All" ? issues :
-    issues.filter(issue => visible.some(claim => claim.file_id === issue.id));
   const activePeriod = dashboard?.period;
   const periodLabel = activePeriod
     ? activePeriod.from
@@ -294,8 +231,6 @@ export default function ClientUserPortal({ user, onLogout }) {
         : displayPeriodDate(activePeriod.from) + " – " + displayPeriodDate(activePeriod.to)
       : "Entire available history"
     : periodMode === "custom" ? "Choose From and To dates" : "Loading selected period…";
-  const homePages = Math.max(1, Math.ceil(visible.length / 10));
-  const currentHomePage = Math.min(homePage, homePages);
   const age = [["Today",0],["1 day",1],["2 days",2],["3+ days",3]].map(([name,v]) =>
     [name, visible.filter(c => v === 3 ? c.days >= 3 : c.days === v).length]);
   const maxAge = Math.max(1, ...age.map(x => x[1]));
@@ -319,10 +254,8 @@ export default function ClientUserPortal({ user, onLogout }) {
         <div className="grp eyebrow">Operations</div>
         {navigation.filter(([key]) => key !== "history").map(([key,label]) =>
           <button type="button" key={key}
-            className={"cu-navitem" + ((tab === key || (key === claimReturnTab && tab === "claim")) ? " on" : "")}
+            className={"cu-navitem" + ((tab === key || (key === "home" && tab === "claim")) ? " on" : "")}
             onClick={() => go(key)}><span>{label}</span>
-            {key === "attention" && issues.length > 0 &&
-              <span className="cu-count">{issues.length}</span>}
           </button>
         )}
         <div className="grp eyebrow cu-nav-section">Records</div>
@@ -334,19 +267,17 @@ export default function ClientUserPortal({ user, onLogout }) {
       </nav>
       <main className={"cu-main" + (tab === "convert" ? "" : " cu-compact")}>
         {tab !== "home" && <button type="button" className="cu-back-link"
-          onClick={() => go(tab === "claim" ? claimReturnTab : "home")}>
-          ← Back to {tab === "claim" && claimReturnTab === "attention" ? "Needs Attention" : "Home"}
+          onClick={() => go("home")}>
+          ← Back to Home
         </button>}
         {tab !== "convert" && <header className="cu-heading">
           <div className="cu-heading-copy">
             <span className="eyebrow">{dashboard?.client || user.client} · {periodMode.toUpperCase()}</span>
-            <h1>{tab === "home" ? "Claims overview" : tab === "attention" ?
-              "Needs attention" : tab === "history" ?
+            <h1>{tab === "home" ? "Claims overview" : tab === "history" ?
               "History" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
             <p>{tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
-              tab === "attention" ? "Review each held claim and track its notes and requests." :
               tab === "history" ? "Conversions, review activity and previously ignored file issues." :
               tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
               detail?.file_name || ""}</p>
@@ -356,7 +287,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
           </div>}
         </header>}
-        {["home", "attention", "history"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
+        {["home", "history"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
           <div className="cu-period-main">
             <div className="cu-period-options" role="group" aria-label="Activity period">
               {PERIODS.map(([key, label]) => <button type="button" key={key}
@@ -366,21 +297,16 @@ export default function ClientUserPortal({ user, onLogout }) {
             {periodMode === "custom" && <div className="cu-period-custom">
               <label>From <input aria-label="Custom start date" type="date" value={customFrom}
                 max={customTo || undefined} onChange={event => {
-                  setCustomFrom(event.target.value); setComparisonMoney(null); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                  setCustomFrom(event.target.value); setComparisonMoney(null); setHistoryPage(1);
                 }}/></label>
               <label>To <input aria-label="Custom end date" type="date" value={customTo}
                 min={customFrom || undefined} onChange={event => {
-                  setCustomTo(event.target.value); setComparisonMoney(null); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                  setCustomTo(event.target.value); setComparisonMoney(null); setHistoryPage(1);
                 }}/></label>
             </div>}
             <span className="cu-period-caption" role="status">{periodLabel}
               {activePeriod?.timezone && <small> · {activePeriod.timezone}</small>}</span>
           </div>
-          <button type="button" className={"cu-btn cu-attention-action" + (tab === "attention" ? " selected" : "")}
-            disabled={!periodQuery} onClick={() => go("attention")}>
-            Needs Attention <span aria-hidden="true">↓</span>
-            <small>Longest waiting first</small>
-          </button>
         </section>}
         {periodMode === "custom" && !periodQuery &&
           <p className="cu-period-hint" role="status">{customFrom && customTo && customFrom > customTo
@@ -412,7 +338,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             <div className="cu-filters">{["All","Denied","Less paid","Paid in full"].map(x =>
               <button key={x} type="button" aria-pressed={filter === x}
                 className={filter===x?"active":""}
-                onClick={() => { setFilter(x); setComparisonMoney(null); setHomePage(1); }}>
+                onClick={() => { setFilter(x); setComparisonMoney(null); }}>
                 {x}</button>)}</div>
           </div>
           <section className="cu-card cu-aging-summary">
@@ -431,8 +357,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             <p className="cu-help">
               Age distribution of {visible.length} individually matched held claims
               {dashboard?.claims_limited ? " (first 200 preview rows)" : ""}.
-              {" "}<button type="button" className="cu-link" onClick={() => go("attention")}>
-                Open full Needs Attention work queue</button>
+
             </p>
           </section>
           <ClientClaimComparison
@@ -442,43 +367,11 @@ export default function ClientUserPortal({ user, onLogout }) {
             onFinancialTotals={setComparisonMoney}
             onOpen={showClaim}
           />
-          <section className="cu-card cu-notice">
-            <div className="cu-section-title"><h2>Source files needing attention ({displayedIssues.length})</h2>
-              <button className="cu-link" onClick={()=>go("attention")}>See all</button></div>
-            {displayedIssues.slice(0,3).map(i => <div className="cu-issue-mini" key={i.id}>
-              <div><b>{i.kind==="error"?"File could not be processed":i.count+" claims held"} · {i.filename}</b>
-                <small>{i.reason}</small></div>
-              <button className="cu-btn" onClick={()=>openAttentionIssue(i)}>Review</button></div>)}
-            {!displayedIssues.length && <p>No source files match the selected payer category in this period.</p>}
-          </section>
           <section className="cu-card">
             <div className="cu-section-title"><h2>Recent conversions</h2><button className="cu-link" onClick={()=>go("history")}>Full history</button></div>
             <History rows={(dashboard?.history||[]).slice(0,5)} />
           </section>
         </>}
-
-        {tab === "attention" && periodQuery && <section className="cu-card">
-          <div className="cu-section-title"><h2>Claims needing attention · longest waiting first</h2>
-            <span>{attentionResult?.count ?? "—"} records</span></div>
-          <p className="cu-help">Claims from 835 files received in the selected period, sorted by days waiting (highest first).
-            {filter !== "All" && <> Payer category: <strong>{filter}</strong>.
-              <button className="cu-link" type="button" onClick={() => { setFilter("All"); setComparisonMoney(null); setAttentionPage(1); }}>Clear category</button></>}
-            {" "}Select a row to review its notes and requests.</p>
-          {attentionFile && <p className="cu-help">Filtered to one source file. <button type="button" className="cu-link"
-            onClick={() => { setAttentionFile(""); setAttentionPage(1); }}>Show all claims</button></p>}
-          {attentionError && <p className="cu-error" role="alert">{attentionError} <button type="button" className="cu-link" onClick={reload}>Retry</button></p>}
-          {!attentionError && <ClientClaimTable rows={attentionResult?.claims || []} recentActions={actions}
-            onOpen={openClaimRow} showSource loading={attentionLoading} />}
-          <PortalPagination result={attentionResult} page={attentionPage} onPage={setAttentionPage}
-            loading={attentionLoading} label="Attention pages" pageSize={attentionPageSize}
-            onPageSize={size => { setAttentionPageSize(size); setAttentionPage(1); }} />
-          {!!attentionResult?.unmatched_count && <p className="cu-help">{attentionResult.unmatched_count} source findings are not linked to a stored claim yet. Their details are available; claim actions require a matched claim record.</p>}
-          {issues.some(issue => issue.kind === "error") && <details className="cu-file-errors">
-            <summary>Files that could not be read</summary>
-            <p className="cu-help">These files have no claim rows to review. A Client Admin must correct the source file.</p>
-            {issues.filter(issue => issue.kind === "error").map(issue => <p key={issue.id}>{issue.filename} — {issue.reason}</p>)}
-          </details>}
-        </section>}
 
         {tab==="convert" && <div className="cu-conversions-workspace">
           <ConversionsView
@@ -494,16 +387,16 @@ export default function ClientUserPortal({ user, onLogout }) {
 
         {tab === "history" && periodQuery && <section className="cu-card">
           <div className="cu-history-tabs" role="tablist" aria-label="History sections">
-            {[["files", "File history"], ["activity", "Review activity"], ["ignored", "Ignored file issues"]].map(([key, label]) =>
+            {[["files", "File history"], ["activity", "Review activity"]].map(([key, label]) =>
               <button type="button" key={key} role="tab" id={"history-tab-" + key}
                 aria-selected={historySection === key} aria-controls={"history-panel-" + key}
                 tabIndex={historySection === key ? 0 : -1}
                 onKeyDown={event => {
-                  const keys = ["files", "activity", "ignored"];
+                  const keys = ["files", "activity"];
                   const index = keys.indexOf(key);
-                  const next = event.key === "ArrowRight" ? keys[(index + 1) % 3] :
-                    event.key === "ArrowLeft" ? keys[(index + 2) % 3] :
-                    event.key === "Home" ? keys[0] : event.key === "End" ? keys[2] : null;
+                  const next = event.key === "ArrowRight" ? keys[(index + 1) % 2] :
+                    event.key === "ArrowLeft" ? keys[(index + 2) % 2] :
+                    event.key === "Home" ? keys[0] : event.key === "End" ? keys[1] : null;
                   if (next) { event.preventDefault(); setHistorySection(next); document.getElementById("history-tab-" + next)?.focus(); }
                 }} onClick={() => setHistorySection(key)}>{label}</button>)}
           </div>
@@ -520,23 +413,10 @@ export default function ClientUserPortal({ user, onLogout }) {
               <h2>Recent review activity</h2><p className="cu-help">Latest 200 actions recorded in the selected period. Each claim retains its complete note history on its detail screen.</p>
               <Activity rows={actions} />
             </>}
-            {historySection === "ignored" && <>
-              <h2>Ignored file issues</h2>
-              <p className="cu-help">Previous file-level decisions are preserved here. Held claims remain available individually in Needs Attention.</p>
-              {(dashboard?.issues || []).filter(i => (dashboard?.ignored_files || []).includes(i.id)).map(i =>
-                <div className="cu-issue-mini" key={i.id}><span>{i.filename} · {i.reason}</span>
-                  <span className="cu-muted">Legacy file-level decision</span>
-                </div>)}
-              {!(dashboard?.ignored_files || []).length && <p className="cu-help">No ignored file issues.</p>}
-            </>}
           </div>
         </section>}
 
-        {tab === "claim" && detail?.sourceOnly && <section className="cu-card">
-          <h2>Source claim finding</h2><p>{detail.reason}</p><p className="cu-muted">{detail.file_name}</p>
-          <p className="cu-help">This finding is not linked to a stored claim. Ask your Client Admin to reconcile the source before adding claim-specific notes or requests.</p>
-        </section>}
-        {tab==="claim" && detail && !detail.sourceOnly && <>
+        {tab==="claim" && detail && <>
           <div className="cu-chip">{detail.reason?"Waiting "+detail.days+" days":"Payer response available"}</div>
           <p className="cu-muted">Received {timestamp(detail.received_at)} in {detail.file_name}
             {detail.payer?" · Payer: "+detail.payer:""} {detail.patient_name?" · Patient: "+safe(detail.patient_name):""}</p>
@@ -611,8 +491,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             <div className="cu-section-title"><h2>{decision.title}</h2>
               <button aria-label="Close" className="cu-link" onClick={()=>setDecision(null)}>✕</button></div>
             <p className="cu-muted">Claim {safe(detail?.number)}</p>
-            <p>{decision.kind==="IGNORE_FILE"?"This removes the issue from your client's active attention list, but keeps the underlying file and audit record.":
-              decision.kind==="NOTE"?"This note will be visible to your Client Admin.":
+            <p>{decision.kind==="NOTE"?"This note will be visible to your Client Admin.":
               "A review request will be saved for Client Admin action. FileX will not automatically correct the 835 or resend the source."}</p>
             <section className="cu-dialog-note-history" aria-label="Earlier notes and requests">
               <h3>Previous notes and requests</h3>
