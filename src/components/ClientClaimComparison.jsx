@@ -3,14 +3,19 @@ import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClientClaimComparison.css";
 
 const COLUMNS = [
+  ["waiting_days", "Waiting"],
   ["claim", "Claim"],
+  ["internal_number", "Internal claim"],
   ["date", "Latest activity"],
-  ["billed_835", "Billed in 835"],
+  ["billed_835", "Billed 835"],
   ["billed_mir", "Billed MIR"],
   ["paid_mir", "Paid MIR"],
-  ["recon_amount", "Amount in Recon"],
-  ["mismatch_amount", "Mismatch amount"],
-  ["status", "Status"],
+  ["recon_amount", "Recon"],
+  ["mismatch_amount", "Mismatch"],
+  ["payer_status", "Payer status"],
+  ["hold_reason", "Why waiting"],
+  ["latest_note", "Latest note / action"],
+  ["status", "Clear / Mismatch"],
 ];
 const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
@@ -114,15 +119,15 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   const rows = data?.rows || [];
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
-      <div><h2>835 · MIR · Recon comparison</h2>
-        <p className="cu-help">835 billed ↔ MIR billed; MIR paid ↔ Recon paid.
+      <div><h2>Claims, payments and reconciliation</h2>
+        <p className="cu-help">One table for payer claims, waiting reasons, notes and 835 ↔ MIR ↔ Recon differences.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
       <div className="cu-comparison-header-actions">
         <span className="cu-compare-count" role="status">{loading ? "Updating…" : num(data?.count)} claims</span>
         <button type="button" className="cu-btn cu-export-btn"
           onClick={exportFilteredCsv} disabled={!periodQuery || loading || exporting || !data}
-          title="Download every claim matching the active period and payer category, in the selected sort order">
+          title="Download every visible comparison and held claim column for all rows matching the current filters, in the selected sort order">
           {exporting ? "Preparing CSV…" : "Download CSV"}
         </button>
       </div>
@@ -149,7 +154,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
-        <colgroup>{[17, 12, 12, 11, 10, 12, 12, 14].map((width, index) =>
+        <colgroup>{[6, 12, 11, 10, 8, 8, 8, 8, 8, 9, 11, 12, 9].map((width, index) =>
           <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
         )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
@@ -160,8 +165,10 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
             <span className="cu-sort-arrows" aria-hidden="true">{sort === key ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
           </button>
         </th>)}</tr></thead>
-        <tbody>{rows.map(row => <tr key={row.key} title={row.reason}>
+        <tbody>{rows.map(row => <tr key={row.key} title={row.reason} className={row.waiting_days >= 3 ? "cu-overdue" : ""}>
+          <td className="cu-waiting-cell">{row.waiting_days == null ? "—" : row.waiting_days === 0 ? "Today" : row.waiting_days + "d"}</td>
           <td>{row.record_id ? <button className="cu-link" onClick={() => onOpen(row.record_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
+          <td>{safeClaim(row.internal_number)}</td>
           <td>{when(row.date, data?.period?.timezone)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
           <td className="cu-num">{dollars(row.billed_mir)}</td>
@@ -169,6 +176,12 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           <td className="cu-num">{dollars(row.recon_amount)}</td>
           <td className={"cu-num " + (row.mismatch_amount && Number(row.mismatch_amount) !== 0 ? "cu-variance" : "")}>
             {dollars(row.mismatch_amount)}
+          </td>
+          <td>{row.payer_status || "—"}</td>
+          <td className="cu-hold-reason">{row.hold_reason || "—"}</td>
+          <td className="cu-note-cell">
+            {row.action_status ? <span className="cu-note-label">{row.action_status}</span> : null}
+            {row.latest_note ? <span className="cu-note-preview" title={row.latest_note}>{row.latest_note}</span> : (!row.action_status ? "—" : null)}
           </td>
           <td><span className={"cu-compare-badge " + (row.status === "Clear" ? "clear" : "mismatch")}>
             {row.status}</span>{row.status === "Mismatch" && <small className="cu-compare-reason">{row.reason}</small>}</td>
