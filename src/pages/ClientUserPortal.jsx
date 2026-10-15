@@ -415,6 +415,26 @@ export default function ClientUserPortal({ user, onLogout }) {
                 onClick={() => { setFilter(x); setComparisonMoney(null); setHomePage(1); }}>
                 {x}</button>)}</div>
           </div>
+          <section className="cu-card cu-aging-summary">
+            <div className="cu-section-title">
+              <h2>Claims waiting by days</h2>
+              <span>{filter === "All" ? (metrics.waiting_claims || 0) : visible.length} held claims in selected view</span>
+            </div>
+            <div className="cu-aging-grid">
+              {age.map(([label, count], idx) => <div className="cu-aging-row" key={label}>
+                <span className={idx === 3 ? "cu-old" : ""}>{label}</span>
+                <div className="cu-track"><i className={idx === 3 ? "cu-old-bar" : ""}
+                  style={{width: (count / maxAge * 100) + "%"}} /></div>
+                <b>{count} claims</b>
+              </div>)}
+            </div>
+            <p className="cu-help">
+              Age distribution of {visible.length} individually matched held claims
+              {dashboard?.claims_limited ? " (first 200 preview rows)" : ""}.
+              {" "}<button type="button" className="cu-link" onClick={() => go("attention")}>
+                Open full Needs Attention work queue</button>
+            </p>
+          </section>
           <ClientClaimComparison
             periodQuery={periodQuery}
             payerFilter={filter}
@@ -422,21 +442,6 @@ export default function ClientUserPortal({ user, onLogout }) {
             onFinancialTotals={setComparisonMoney}
             onOpen={showClaim}
           />
-          <section className="cu-card">
-            <div className="cu-section-title"><h2>Claims waiting on you, by days waiting</h2>
-              <span>{filter === "All" ? (metrics.waiting_claims||0) : visible.length} {filter === "All" ? "held claims" : "matching held claims"}</span></div>
-            {age.map(([label,count],idx) => <div className="cu-aging-row" key={label}>
-              <span className={idx===3?"cu-old":""}>{label}</span>
-              <div className="cu-track"><i className={idx===3?"cu-old-bar":""} style={{width: (count/maxAge*100)+"%"}} /></div>
-              <b>{count} claims</b></div>)}
-            <p className="cu-help">{visible.length} individually matched claims.  <button type="button" className="cu-link" onClick={() => go("attention")}>View all claims needing attention</button></p>
-
-            {selectedFile && <p className="cu-help">Filtered to a source file. <button className="cu-link" onClick={() => setSelectedFile("")}>Show all</button></p>}
-            <ClientClaimTable rows={visible.slice((currentHomePage - 1) * 10, currentHomePage * 10)} recentActions={actions} onOpen={openClaimRow} loading={loading} />
-            <PortalPagination result={{ page: currentHomePage, pages: homePages, count: visible.length }}
-              page={currentHomePage} onPage={setHomePage} loading={loading} label="Overview claim pages" />
-            {dashboard?.claims_limited && <p className="cu-help">Showing the first 200 matched claims.</p>}
-          </section>
           <section className="cu-card cu-notice">
             <div className="cu-section-title"><h2>Source files needing attention ({displayedIssues.length})</h2>
               <button className="cu-link" onClick={()=>go("attention")}>See all</button></div>
