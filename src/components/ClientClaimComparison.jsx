@@ -20,7 +20,7 @@ const when = (value, zone) => value ? new Date(value).toLocaleDateString("en-US"
   timeZone: zone || "America/New_York",
 }) : "—";
 
-export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) {
+export default function ClientClaimComparison({ periodQuery, refresh, onOpen, payerFilter = "All", onFinancialTotals }) {
   const [sort, setSort] = useState("date");
   const [direction, setDirection] = useState("desc");
   const [page, setPage] = useState(1);
@@ -29,12 +29,17 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { setPage(1); setData(null); }, [periodQuery]);
+  useEffect(() => { setPage(1); setData(null); }, [periodQuery, payerFilter]);
+  useEffect(() => {
+    if (onFinancialTotals) onFinancialTotals(data?.financial_totals || null);
+  }, [data, onFinancialTotals]);
   useEffect(() => {
     if (!periodQuery) { setData(null); setLoading(false); return undefined; }
     const controller = new AbortController();
     const params = new URLSearchParams(periodQuery);
     params.set("sort", sort);
+    params.set("payer_status", ({ All: "all", Denied: "denied", "Less paid": "less",
+      "Paid in full": "paid" })[payerFilter] || "all");
     params.set("direction", direction);
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
@@ -49,7 +54,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
       .catch(reason => { if (reason.name !== "AbortError") setError(reason.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [periodQuery, sort, direction, page, pageSize, refresh]);
+  }, [periodQuery, payerFilter, sort, direction, page, pageSize, refresh]);
 
   const changeSort = key => {
     if (key === sort) setDirection(previous => previous === "asc" ? "desc" : "asc");
@@ -63,7 +68,9 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>835 · MIR · Recon comparison</h2>
-        <p className="cu-help">835 billed ↔ MIR billed; MIR paid ↔ Recon paid. Values use each stream's date in the selected filter.</p></div>
+        <p className="cu-help">835 billed ↔ MIR billed; MIR paid ↔ Recon paid.
+          {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
+          {" "}Each stream uses its own date within the selected period.</p></div>
       <span>{loading ? "Comparing…" : num(data?.count)} claims</span>
     </div>
     <div className="cu-comparison-summary" aria-label="Comparison results">
