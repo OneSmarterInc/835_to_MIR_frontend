@@ -107,3 +107,48 @@
 @media (max-width: 650px) {
   .cu-comparison-header-actions { width: 100%; justify-content: space-between; }
 }
+
+/* Keep Waiting label and sorting icon intact at every viewport width. */
+.cu-comparison-table { min-width: 1510px; table-layout: fixed; }
+.cu-comparison-table th:first-child,
+.cu-comparison-table td:first-child { min-width: 126px; }
+.cu-comparison-table th:first-child button {
+  gap: 3px;
+  white-space: nowrap;
+  padding-left: 9px;
+  padding-right: 7px;
+}
+.cu-comparison-table th:first-child button span:first-child {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  flex: 1 0 auto;
+}
+.cu-comparison-table .cu-waiting-cell {
+  padding: 7px 8px !important;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+}
+.cu-age-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-width: 64px;
+  padding: 5px 7px;
+  font: 700 11px/1.2 var(--body);
+  border-radius: 3px;
+}
+.cu-age-today { color: var(--teal); background: var(--teal-bg); }
+.cu-age-warning { color: #925e0a; background: var(--ochre-bg); }
+.cu-age-critical { color: var(--brick); background: var(--brick-bg); }
+.cu-age-none { color: var(--ink-3); }
+.cu-comparison-table tbody tr.cu-claim-hold-overdue { background: #fbf0ee; }
+.cu-comparison-table tbody tr.cu-claim-hold-recent { background: #fffaf1; }
+.cu-comparison-table tbody tr.cu-claim-hold-overdue:hover { background: #f8e7e4; }
+.cu-comparison-table tbody tr.cu-claim-hold-recent:hover { background: #fbf0d7; }
+@media(max-width:700px) {
+  .cu-comparison-table { min-width: 1510px; }
+  .cu-comparison-table th:first-child,
+  .cu-comparison-table td:first-child { min-width: 126px; }
+}
