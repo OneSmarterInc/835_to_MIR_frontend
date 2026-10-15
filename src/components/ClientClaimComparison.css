@@ -182,6 +182,7 @@
 .cu-issue-clear { color: var(--teal); }
 .cu-issue-neutral { color: var(--ink-2); }
 .cu-note-brief { color: var(--ink-2); }
+.cu-note-pending { color: #80570c; font-weight: 650; }
 .cu-payer-brief { color: var(--ink); font-weight: 600; }
 .cu-payer-paid { color: var(--teal); }
 .cu-payer-denied { color: var(--brick); }
