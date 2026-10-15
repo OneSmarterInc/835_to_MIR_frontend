@@ -187,7 +187,8 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           </td>
           <td className="cu-note-cell">
             {row.latest_note_action ?
-              <span className="cu-note-brief" title={row.latest_note_action}>
+              <span className={"cu-note-brief" + (row.action_status === "Pending review" ? " cu-note-pending" : "")}
+                title={row.latest_note_action}>
                 {row.latest_note_action}
               </span> : <span className="cu-muted">—</span>}
           </td>
