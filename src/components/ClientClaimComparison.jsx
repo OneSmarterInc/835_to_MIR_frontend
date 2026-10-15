@@ -10,10 +10,9 @@ const COLUMNS = [
   ["paid_mir", "Paid MIR"],
   ["recon_amount", "Recon"],
   ["mismatch_amount", "Mismatch"],
+  ["issue_label", "Issue / reason"],
+  ["latest_note_action", "Latest note / action"],
   ["payer_status", "Payer status"],
-  ["hold_reason", "Why waiting"],
-  ["latest_note", "Latest note / action"],
-  ["status", "Status"],
 ];
 const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
@@ -114,7 +113,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>
-        <p className="cu-help">One table for claim age, payer amounts, notes and reconciliation status. MIR billed remains in the financial totals and discrepancy calculations.
+        <p className="cu-help">Compact claim comparison with clear reasons for missing records and mismatched amounts. MIR billed is retained in the totals.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
       <div className="cu-comparison-header-actions">
@@ -148,7 +147,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
-        <colgroup>{[10, 11, 8, 9, 8, 9, 9, 9, 11, 9, 7].map((width, index) =>
+        <colgroup>{[10, 11, 9, 10, 9, 9, 9, 16, 9, 8].map((width, index) =>
           <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
         )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
@@ -180,14 +179,27 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           <td className={"cu-num " + (row.mismatch_amount && Number(row.mismatch_amount) !== 0 ? "cu-variance" : "")}>
             {dollars(row.mismatch_amount)}
           </td>
-          <td>{row.payer_status || "—"}</td>
-          <td className="cu-hold-reason">{row.hold_reason || "—"}</td>
-          <td className="cu-note-cell">
-            {row.action_status ? <span className="cu-note-label">{row.action_status}</span> : null}
-            {row.latest_note ? <span className="cu-note-preview" title={row.latest_note}>{row.latest_note}</span> : (!row.action_status ? "—" : null)}
+          <td className="cu-issue-cell">
+            <span className={"cu-issue-brief cu-issue-" + (row.issue_tone || "neutral")}
+              title={row.issue_detail || row.issue_label || ""}>
+              {row.issue_label || "—"}
+            </span>
           </td>
-          <td><span className={"cu-compare-badge " + (row.status === "Clear" ? "clear" : "mismatch")}>
-            {row.status}</span>{row.status === "Mismatch" && <small className="cu-compare-reason">{row.reason}</small>}</td>
+          <td className="cu-note-cell">
+            {row.latest_note_action ?
+              <span className="cu-note-brief" title={row.latest_note_action}>
+                {row.latest_note_action}
+              </span> : <span className="cu-muted">—</span>}
+          </td>
+          <td className="cu-payer-cell">
+            <span className={"cu-payer-brief " + (
+              row.payer_status === "Paid in full" ? "cu-payer-paid" :
+              row.payer_status === "Denied" || row.payer_status === "No payment" ? "cu-payer-denied" :
+              row.payer_status === "Paid less than billed" ? "cu-payer-partial" : ""
+            )} title={row.payer_status || "No payer status"}>
+              {row.payer_status || "—"}
+            </span>
+          </td>
         </tr>)}
         {!rows.length && <tr><td colSpan={COLUMNS.length} className="cu-empty-comparison">
           {loading ? "Loading period comparisons…" : error ? "Unable to display records." :
