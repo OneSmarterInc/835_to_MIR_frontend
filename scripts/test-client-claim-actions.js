@@ -102,6 +102,13 @@ try {
   await click(button('Add a note'));
   assert.equal(button('Save decision').disabled, true);
   await fillNote('Please review this unpaid claim.');
+  await act(async () => {
+    const backdrop = container.querySelector('.cu-backdrop');
+    backdrop.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }));
+    backdrop.click();
+  });
+  assert.ok(container.querySelector('[role="dialog"]'), 'Outside clicks must not discard a claim note');
+  assert.equal(container.querySelector('textarea').value, 'Please review this unpaid claim.');
   assert.equal(button('Save decision').disabled, false);
   failNextPost = true;
   await click(button('Save decision'));

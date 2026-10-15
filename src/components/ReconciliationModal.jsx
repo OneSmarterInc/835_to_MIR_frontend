@@ -118,7 +118,7 @@ export default function ReconciliationModal({ clientId = "", isAdmin = false, on
     }
   };
 
-  return <div className="recon-popup-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  return <div className="recon-popup-backdrop" role="presentation">
     <section className="recon-popup" role="dialog" aria-modal="true" aria-labelledby="recon-popup-title">
       <header className="recon-popup-header">
         <div><div className="recon-eyebrow">Database reconciliation</div><h2 id="recon-popup-title">Reconciliation</h2></div>

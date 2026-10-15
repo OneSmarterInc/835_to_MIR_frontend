@@ -413,7 +413,7 @@ export default function ChecksView({ trackedFiles = [], showHeading = true, clie
       )}
 
       {selectedGroup && activeChecksTab === "validations" && (
-        <div role="dialog" aria-modal="true" aria-label={`${selectedGroup.title} details`} onClick={() => setSelectedGroup(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,35,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+        <div role="dialog" aria-modal="true" aria-label={`${selectedGroup.title} details`} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,35,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div className="card" onClick={(event) => event.stopPropagation()} style={{ width: "min(980px, 100%)", maxHeight: "80vh", overflow: "auto", padding: 0, boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
             <div style={{ padding: "20px 22px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start" }}>
               <div><div className="eyebrow">{selectedGroup.gate}</div><h2 style={{ margin: "5px 0 3px", fontSize: "20px" }}>{selectedGroup.title}</h2><div style={{ color: "var(--ink-2)", fontSize: "13px" }}>{Number(selectedGroup.count || 0).toLocaleString()} {selectedGroup.unit || ""}</div></div>

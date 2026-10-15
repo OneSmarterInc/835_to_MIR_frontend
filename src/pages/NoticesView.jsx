@@ -314,7 +314,7 @@ function SourceFileViewer({ claimNumber, sources, onClose }) {
     })}</div>;
   };
 
-  return createPortal(<div className="mpl-file-viewer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return createPortal(<div className="mpl-file-viewer-backdrop">
     <section className="mpl-file-viewer" role="dialog" aria-modal="true" aria-labelledby="mpl-file-viewer-title">
       <header>
         <div><span>MATCHED SOURCE EVIDENCE</span><h3 id="mpl-file-viewer-title">{selected.type} file for Highmark claim {claimNumber}</h3></div>

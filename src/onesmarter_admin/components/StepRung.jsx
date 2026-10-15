@@ -1646,7 +1646,7 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
           )}
 
           {uploadDialogOpen && (
-            <div className="step-upload-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !uploadingDocument && setUploadDialogOpen(false)}>
+            <div className="step-upload-backdrop">
               <section className="step-upload-modal" role="dialog" aria-modal="true" aria-labelledby={`step-upload-title-${step.id}`}>
                 <header>
                   <div><div className="eyebrow">DOCUMENT UPLOAD</div><h2 id={`step-upload-title-${step.id}`}>Upload {step.title}</h2></div>

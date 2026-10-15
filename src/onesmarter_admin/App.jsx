@@ -782,7 +782,7 @@ export default function App({ user, onLogout }) {
 
       {/* Tenant Key Destruction Confirmation Modal */}
       {isOffboardConfirmOpen && (
-        <div className="modal on" onClick={() => setIsOffboardConfirmOpen(false)}>
+        <div className="modal on">
           <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-t" style={{ color: 'var(--brick)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>⚠️ Critical Warning</span> Permanent Tenant Key Destruction

@@ -489,7 +489,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {showSegments&&<pre>{encodeDemoFileContent((detail.technical_segments||[]).join("~\n"),"835",true)}</pre>}</div>
         </>}
 
-        {decision && <div className="cu-backdrop" onMouseDown={()=>setDecision(null)}>
+        {decision && <div className="cu-backdrop">
           <section className="cu-dialog cu-card" role="dialog" aria-modal="true" aria-label={decision.title} onMouseDown={e=>e.stopPropagation()}>
             <div className="cu-section-title"><h2>{decision.title}</h2>
               <button aria-label="Close" className="cu-link" onClick={()=>setDecision(null)}>✕</button></div>

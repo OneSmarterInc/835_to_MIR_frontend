@@ -203,7 +203,7 @@ export default function SecurityView({ embedded = false }) {
       </div>
 
       {keyToRemove && (
-        <div className="modal on" onClick={() => setKeyToRemove(null)}>
+        <div className="modal on">
           <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <div className="modal-t" style={{ color: 'var(--brick)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               Remove Security Key

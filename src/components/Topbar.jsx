@@ -71,7 +71,6 @@ export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = fa
         <div
           className="logout-confirm-backdrop"
           role="presentation"
-          onClick={() => setIsLogoutConfirmOpen(false)}
         >
           <div
             className="logout-confirm-dialog"

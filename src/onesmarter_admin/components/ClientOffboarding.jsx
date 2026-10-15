@@ -274,7 +274,7 @@ function ClientOffboarding({ clients, activeClientId, onSelectClient, offboardin
       )}
 
       {isConfirmOpen && !finalized && (
-        <div className="modal on" onClick={() => !offboarding && setIsConfirmOpen(false)}>
+        <div className="modal on">
           <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="offboard-confirm-title" onClick={(event) => event.stopPropagation()}>
             <h2 id="offboard-confirm-title" style={{ color: 'var(--brick)' }}>⚠️ Confirm Client Offboarding</h2>
             <p style={{ marginTop: '8px' }}>This action will:</p>

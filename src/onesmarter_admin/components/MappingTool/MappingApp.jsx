@@ -388,7 +388,7 @@ export default function MappingApp({ clients = [], activeClientId, currentClient
       </main>
     </div>
 
-    <div className={`scrim ${selectedField ? 'on' : ''}`} onClick={() => setSelectedField(null)}></div>
+    <div className={`scrim ${selectedField ? 'on' : ''}`}></div>
       <aside className={`drawer ${selectedField ? 'on' : ''}`} aria-hidden={!selectedField}>
         {selectedField && (
           <>

@@ -79,7 +79,7 @@ function Rename837Modal({ initialFilename, renaming, onClose, onConfirm }) {
   const [filename, setFilename] = useState(initialFilename);
   const safeFilename = useMemo(() => sanitize837Filename(filename), [filename]);
   const preview = useMemo(() => resolve837FilenameFormat(safeFilename || DEFAULT_837_FILENAME_FORMAT), [safeFilename]);
-  return <div className="claim837-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !renaming && onClose()}>
+  return <div className="claim837-backdrop" role="presentation">
     <div className="claim837-rename-modal" role="dialog" aria-modal="true" aria-label="Rename SFTP 837 files">
       <header><div><div className="eyebrow">837 FILE NAMING</div><h2>Rename SFTP 837 Files</h2></div><button type="button" className="claim837-close" disabled={renaming} onClick={onClose} aria-label="Close">&times;</button></header>
       <div className="claim837-rename-body">
@@ -116,7 +116,7 @@ function SourceDownloadDialog({ source, claimNumber, internalNumber, onClose }) 
     } finally { setBusy(''); }
   };
 
-  return <div className="claim-source-download-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !busy && onClose()}>
+  return <div className="claim-source-download-backdrop" role="presentation">
     <section className="claim-source-download-dialog" role="dialog" aria-modal="true" aria-labelledby="claim-source-download-title">
       <header><div><span>SOURCE FILE DOWNLOAD</span><h3 id="claim-source-download-title">{String(source.type || '').toUpperCase()} file options</h3></div><button type="button" onClick={onClose} disabled={Boolean(busy)} aria-label="Close">×</button></header>
       <div className="claim-source-download-body"><p><strong>{source.filename}</strong></p><small>Highmark claim {claimNumber}</small>{error && <div className="claim837-message error">{error}</div>}</div>

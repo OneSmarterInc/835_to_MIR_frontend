@@ -1062,7 +1062,7 @@ export default function ConversionsView({
       </div>
 
       {partialDetails ? (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setPartialDetails(null)}>
+        <div className="modal-backdrop" role="presentation">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="partial-title" onMouseDown={(event) => event.stopPropagation()} style={{ maxWidth: "760px", width: "calc(100% - 32px)" }}>
             <div className="modal-header">
               <div>

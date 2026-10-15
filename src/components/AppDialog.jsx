@@ -64,20 +64,9 @@ export function AppDialogProvider({ children }) {
     window.setTimeout(showNext, 0);
   }, [dialog, showNext]);
 
-  useEffect(() => {
-    if (!dialog) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') close(dialog.kind === 'confirm' ? false : true);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dialog, close]);
-
   return <DialogContext.Provider value={{ alert: showAppAlert, confirm: showAppConfirm }}>
     {children}
-    {dialog && <div className="app-dialog-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) close(dialog.kind === 'confirm' ? false : true);
-    }}>
+    {dialog && <div className="app-dialog-backdrop" role="presentation">
       <section className={`app-dialog app-dialog-${dialog.tone}`} role="dialog" aria-modal="true" aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message">
         <div className="app-dialog-accent" />
         <div className="app-dialog-body">
