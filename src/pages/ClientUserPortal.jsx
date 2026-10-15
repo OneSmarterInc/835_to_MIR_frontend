@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import ClientClaimTable, { PortalPagination } from "../components/ClientClaimTable";
+import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
@@ -139,6 +140,7 @@ export default function ClientUserPortal({ user, onLogout }) {
       jsonFetch(baseUrl + "overview/?" + periodQuery, { signal: controller.signal }),
       jsonFetch(baseUrl + "actions/?" + periodQuery, { signal: controller.signal }),
     ]).then(([d,a]) => {
+      if (controller.signal.aborted) return;
       setDashboard(d);
       setActions((a.actions || []).map(linkedAction));
     }).catch(e => { if (e.name !== "AbortError") setError(e.message); })
@@ -395,12 +397,7 @@ export default function ClientUserPortal({ user, onLogout }) {
                 <span className="eyebrow">{title}</span><strong>{Number(value||0).toLocaleString()}</strong>
                 <small>{sub}</small></section>)}
           </div>
-          <section className="cu-money-strip" aria-label="Payment amounts from 835 claims received in selected period">
-            <div><span>Billed from 835</span><strong>{cash(metrics.billed_amount)}</strong></div>
-            <div><span>Paid from 835</span><strong>{cash(metrics.paid_amount)}</strong></div>
-            <div><span>Patient responsibility</span><strong>{cash(metrics.patient_amount)}</strong></div>
-            <small>{Number(metrics.normalized_claims || 0).toLocaleString()} parsed claims from received files</small>
-          </section>
+          <ClientFinancialAmounts metrics={metrics} loading={loading} />
           <section className="cu-card">
             <div className="cu-section-title"><h2>Claims waiting on you, by days waiting</h2>
               <span>{metrics.waiting_claims||0} held claims</span></div>

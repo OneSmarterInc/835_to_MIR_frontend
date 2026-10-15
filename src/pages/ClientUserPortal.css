@@ -457,12 +457,13 @@
 .cu-period-toolbar .cu-attention-action:disabled { opacity: .55; cursor: not-allowed; }
 .cu-money-strip {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  align-items: center; gap: 2px; min-width: 0;
+  align-items: stretch; gap: 2px; min-width: 0;
   background: var(--line); border: 1px solid var(--line); border-radius: 3px;
 }
 .cu-money-strip > div { display: flex; flex-direction: column; gap: 2px; background: var(--surface); padding: 10px 13px; min-width: 0; }
 .cu-money-strip span { color: var(--ink-2); font-size: 10.5px; }
-.cu-money-strip strong { font: 700 17px/1.25 var(--body); font-variant-numeric: tabular-nums; }
+.cu-money-strip strong { font: 700 17px/1.25 var(--body); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cu-money-strip > div > small { color: var(--ink-3); font-size: 10px; line-height: 1.4; }
 .cu-money-strip > small {
   background: var(--surface); color: var(--ink-3); font-size: 10px;
   padding: 10px 13px; min-height: 58px; display: flex; align-items: center;
@@ -482,7 +483,7 @@
   .cu-period-custom input { flex: 1; min-width: 0; }
   .cu-period-caption { width: 100%; white-space: normal; }
   .cu-period-toolbar .cu-attention-action { justify-content: center; }
-  .cu-money-strip { grid-template-columns: 1fr 1fr; }
+  .cu-money-strip { grid-template-columns: 1fr; }
   .cu-money-strip > small { grid-column: 1 / -1; }
   .cu-main.cu-compact .cu-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
