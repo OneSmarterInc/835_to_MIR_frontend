@@ -278,7 +278,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               "Claim " + safe(detail?.number)}</h1>
             <p>{tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
-              tab === "history" ? "Conversions, review activity and previously ignored file issues." :
+              tab === "history" ? "Conversions and review activity for your selected period." :
               tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
               detail?.file_name || ""}</p>
           </div>
@@ -395,7 +395,7 @@ export default function ClientUserPortal({ user, onLogout }) {
                   const keys = ["files", "activity"];
                   const index = keys.indexOf(key);
                   const next = event.key === "ArrowRight" ? keys[(index + 1) % 2] :
-                    event.key === "ArrowLeft" ? keys[(index + 2) % 2] :
+                    event.key === "ArrowLeft" ? keys[(index + keys.length - 1) % keys.length] :
                     event.key === "Home" ? keys[0] : event.key === "End" ? keys[1] : null;
                   if (next) { event.preventDefault(); setHistorySection(next); document.getElementById("history-tab-" + next)?.focus(); }
                 }} onClick={() => setHistorySection(key)}>{label}</button>)}
