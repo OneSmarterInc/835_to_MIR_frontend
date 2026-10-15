@@ -75,7 +75,12 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     </div>
     <div className="cu-comparison-summary" aria-label="Comparison results">
       <div className="cu-summary-mismatch">
-        <small>Confirmed mismatch amount</small>
+        <small>Billed gap · 835 vs MIR</small>
+        <strong>{loading ? "…" : data ? dollars(stats.billed_gap_amount) : "—"}</strong>
+        <span>Absolute difference between billed totals in the selected filters</span>
+      </div>
+      <div className="cu-summary-mismatch">
+        <small>Matched-amount mismatch</small>
         <strong>{loading ? "…" : data ? dollars(stats.confirmed_mismatch_amount) : "—"}</strong>
         <span>Sum of absolute differences where both records exist</span>
       </div>
