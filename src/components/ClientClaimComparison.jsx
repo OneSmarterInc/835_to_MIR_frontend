@@ -154,7 +154,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
-        <colgroup>{[6, 12, 11, 10, 8, 8, 8, 8, 8, 9, 11, 12, 9].map((width, index) =>
+        <colgroup>{[6, 10, 8, 9, 7, 7, 7, 7, 7, 8, 10, 8, 6].map((width, index) =>
           <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
         )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
