@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClientClaimComparison.css";
 
 const COLUMNS = [
@@ -11,6 +12,7 @@ const COLUMNS = [
   ["mismatch_amount", "Mismatch amount"],
   ["status", "Status"],
 ];
+const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
   ? "—" : Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const when = (value, zone) => value ? new Date(value).toLocaleDateString("en-US", {
@@ -89,7 +91,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen }) 
           </button>
         </th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={row.key} title={row.reason}>
-          <td>{row.claim_id ? <button className="cu-link" onClick={() => onOpen(row.claim_id)}>{row.claim}</button> : row.claim}</td>
+          <td>{row.claim_id ? <button className="cu-link" onClick={() => onOpen(row.claim_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
           <td>{when(row.date, data?.period?.timezone)}</td>
           <td className="cu-num">{dollars(row.billed_835)}</td>
           <td className="cu-num">{dollars(row.billed_mir)}</td>
