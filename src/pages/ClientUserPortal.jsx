@@ -14,6 +14,14 @@ const timestamp = v => v ? new Date(v).toLocaleString("en-US", { dateStyle: "med
 const today = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); };
 const filenameText = value => value == null || value === "" ? "—" : String(value);
 const navigation = [["home","Home"],["convert","Conversions"],["attention","Needs attention"],["history","History"]];
+const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
+const displayPeriodDate = value => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+};
 async function jsonFetch(url, options = {}) {
   const res = await fetch(url, { credentials: "include", ...options });
   const body = await res.json().catch(() => ({}));
@@ -50,7 +58,26 @@ const hiddenFiles = actions => {
 
 export default function ClientUserPortal({ user, onLogout }) {
   const [tab, setTab] = useState("home");
-  const [date, setDate] = useState(today);
+  const [periodMode, setPeriodMode] = useState("daily");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const periodQuery = useMemo(() => {
+    if (periodMode === "custom" && (!customFrom || !customTo || customFrom > customTo)) return null;
+    const params = new URLSearchParams({ period: periodMode });
+    if (periodMode === "custom") {
+      params.set("from", customFrom);
+      params.set("to", customTo);
+    }
+    return params.toString();
+  }, [periodMode, customFrom, customTo]);
+  const selectPeriod = mode => {
+    setPeriodMode(mode);
+    setHomePage(1);
+    setAttentionPage(1);
+    setHistoryPage(1);
+    setAttentionFile("");
+    setSelectedFile("");
+  };
   const [dashboard, setDashboard] = useState(null);
   const [actions, setActions] = useState([]);
   const [error, setError] = useState("");
@@ -99,46 +126,53 @@ export default function ClientUserPortal({ user, onLogout }) {
 
   const reload = useCallback(() => setRefresh(v => v + 1), []);
   useEffect(() => {
+    if (!periodQuery) {
+      setDashboard(null);
+      setActions([]);
+      setLoading(false);
+      return undefined;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError("");
+    setDashboard(null);
     Promise.all([
-      jsonFetch(baseUrl + "overview/?date=" + encodeURIComponent(date), { signal: controller.signal }),
-      jsonFetch(baseUrl + "actions/", { signal: controller.signal }),
+      jsonFetch(baseUrl + "overview/?" + periodQuery, { signal: controller.signal }),
+      jsonFetch(baseUrl + "actions/?" + periodQuery, { signal: controller.signal }),
     ]).then(([d,a]) => {
       setDashboard(d);
       setActions((a.actions || []).map(linkedAction));
     }).catch(e => { if (e.name !== "AbortError") setError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [date, refresh]);
+  }, [periodQuery, refresh]);
 
   useEffect(() => {
-    if (tab !== "history" || historySection !== "files") return undefined;
+    if (tab !== "history" || historySection !== "files" || !periodQuery) return undefined;
     const controller = new AbortController();
     setHistoryLoading(true);
     setHistoryError("");
     setHistoryResult(null);
-    jsonFetch(baseUrl + "history/?page=" + historyPage + "&page_size=" + historyPageSize, { signal: controller.signal })
+    jsonFetch(baseUrl + "history/?" + periodQuery + "&page=" + historyPage + "&page_size=" + historyPageSize, { signal: controller.signal })
       .then(setHistoryResult)
       .catch(e => { if (e.name !== "AbortError") setHistoryError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
     return () => controller.abort();
-  }, [tab, historySection, historyPage, historyPageSize, refresh]);
+  }, [tab, historySection, historyPage, historyPageSize, periodQuery, refresh]);
 
   useEffect(() => {
-    if (tab !== "attention") return undefined;
+    if (tab !== "attention" || !periodQuery) return undefined;
     const controller = new AbortController();
     setAttentionLoading(true);
     setAttentionError("");
     setAttentionResult(null);
-    jsonFetch(baseUrl + "attention/?page=" + attentionPage + "&page_size=" + attentionPageSize +
+    jsonFetch(baseUrl + "attention/?" + periodQuery + "&page=" + attentionPage + "&page_size=" + attentionPageSize +
       (attentionFile ? "&file_id=" + encodeURIComponent(attentionFile) : ""), { signal: controller.signal })
       .then(setAttentionResult)
       .catch(e => { if (e.name !== "AbortError") setAttentionError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setAttentionLoading(false); });
     return () => controller.abort();
-  }, [attentionFile, attentionPage, attentionPageSize, refresh, tab]);
+  }, [attentionFile, attentionPage, attentionPageSize, periodQuery, refresh, tab]);
 
   useEffect(() => {
     if (tab !== "claim" || !detail?.id) return undefined;
@@ -245,6 +279,14 @@ export default function ClientUserPortal({ user, onLogout }) {
     (filter === "All" || (filter === "Denied" ? ["Denied","No payment"].includes(c.payer_status) :
       filter === "Less paid" ? c.payer_status === "Paid less than billed" : c.payer_status === "Paid in full")));
   const metrics = dashboard?.metrics || {};
+  const activePeriod = dashboard?.period;
+  const periodLabel = activePeriod
+    ? activePeriod.from
+      ? activePeriod.from === activePeriod.to
+        ? displayPeriodDate(activePeriod.from)
+        : displayPeriodDate(activePeriod.from) + " – " + displayPeriodDate(activePeriod.to)
+      : "Entire available history"
+    : periodMode === "custom" ? "Choose From and To dates" : "Loading selected period…";
   const homePages = Math.max(1, Math.ceil(visible.length / 10));
   const currentHomePage = Math.min(homePage, homePages);
   const age = [["Today",0],["1 day",1],["2 days",2],["3+ days",3]].map(([name,v]) =>
