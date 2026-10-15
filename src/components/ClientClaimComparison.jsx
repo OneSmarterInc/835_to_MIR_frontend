@@ -15,6 +15,17 @@ const COLUMNS = [
 const safeClaim = value => value ? encodeDemoValue(String(value), true) : "—";
 const dollars = value => value == null || value === "" || !Number.isFinite(Number(value))
   ? "—" : Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" });
+const categoryKey = filter => ({ All: "all", Denied: "denied",
+  "Less paid": "less", "Paid in full": "paid" })[filter] || "all";
+const makeParams = ({periodQuery, payerFilter, sort, direction, page, pageSize}) => {
+  const params = new URLSearchParams(periodQuery);
+  params.set("payer_status", categoryKey(payerFilter));
+  params.set("sort", sort);
+  params.set("direction", direction);
+  if (page != null) params.set("page", String(page));
+  if (pageSize != null) params.set("page_size", String(pageSize));
+  return params;
+};
 const when = (value, zone) => value ? new Date(value).toLocaleDateString("en-US", {
   year: "numeric", month: "short", day: "numeric",
   timeZone: zone || "America/New_York",
@@ -28,22 +39,21 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
-  useEffect(() => { setPage(1); setData(null); }, [periodQuery, payerFilter]);
+  useEffect(() => { setPage(1); setData(null); setExportError(""); }, [periodQuery, payerFilter]);
   useEffect(() => {
     if (onFinancialTotals) onFinancialTotals(data?.financial_totals || null);
   }, [data, onFinancialTotals]);
   useEffect(() => {
     if (!periodQuery) { setData(null); setLoading(false); return undefined; }
     const controller = new AbortController();
-    const params = new URLSearchParams(periodQuery);
-    params.set("sort", sort);
-    params.set("payer_status", ({ All: "all", Denied: "denied", "Less paid": "less",
-      "Paid in full": "paid" })[payerFilter] || "all");
-    params.set("direction", direction);
-    params.set("page", String(page));
-    params.set("page_size", String(pageSize));
-    setLoading(true); setError(""); setData(null);
+    const params = makeParams({periodQuery, payerFilter, sort, direction, page, pageSize});
+    // Retain the current page during sorting to prevent column widths, row
+    // height and scroll positions from jumping while the new order loads.
+    // Date/payer filter changes still clear stale records above.
+    setLoading(true); setError("");
     fetch("/edi835/api/client-portal/comparison/?" + params, {
       credentials: "include", signal: controller.signal,
     }).then(async response => {
@@ -57,21 +67,65 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   }, [periodQuery, payerFilter, sort, direction, page, pageSize, refresh]);
 
   const changeSort = key => {
+    if (loading || exporting) return;
     if (key === sort) setDirection(previous => previous === "asc" ? "desc" : "asc");
     else { setSort(key); setDirection(key === "date" ? "desc" : "asc"); }
     setPage(1);
-    setData(null);
+  };
+  const exportFilteredCsv = async () => {
+    if (!periodQuery || exporting || loading || !data) return;
+    setExporting(true);
+    setExportError("");
+    try {
+      const params = makeParams({periodQuery, payerFilter, sort, direction});
+      params.set("format", "csv");
+      const response = await fetch("/edi835/api/client-portal/comparison/?" + params.toString(), {
+        credentials: "include", headers: { Accept: "text/csv" },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "The CSV export failed.");
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("text/csv")) throw new Error("Unexpected export response.");
+      const blob = await response.blob();
+      const fileName = (response.headers.get("Content-Disposition") || "")
+        .match(/filename="([^"]+\.csv)"/i)?.[1] ||
+        ("filex-claim-comparison-" + payerFilter.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".csv");
+      const url = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+    } catch (issue) {
+      setExportError(issue.message || "CSV could not be downloaded.");
+    } finally {
+      setExporting(false);
+    }
   };
   const stats = data?.summary || {};
   const num = n => Number(n || 0).toLocaleString("en-US");
-  const rows = loading ? [] : data?.rows || [];
+  const rows = data?.rows || [];
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>835 · MIR · Recon comparison</h2>
         <p className="cu-help">835 billed ↔ MIR billed; MIR paid ↔ Recon paid.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
-      <span>{loading ? "Comparing…" : num(data?.count)} claims</span>
+      <div className="cu-comparison-header-actions">
+        <span className="cu-compare-count" role="status">{loading ? "Updating…" : num(data?.count)} claims</span>
+        <button type="button" className="cu-btn cu-export-btn"
+          onClick={exportFilteredCsv} disabled={!periodQuery || loading || exporting || !data}
+          title="Download every claim matching the active period and payer category, in the selected sort order">
+          {exporting ? "Preparing CSV…" : "Download CSV"}
+        </button>
+      </div>
     </div>
     <div className="cu-comparison-summary" aria-label="Comparison results">
       <div className="cu-summary-mismatch">
@@ -92,11 +146,15 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
         <span>Not treated as $0</span></div>
     </div>
     {error && <p role="alert" className="cu-error">Could not load comparison: {error}</p>}
-    <div className="cu-table-scroll">
+    {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
+    <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
+        <colgroup>{[17, 12, 12, 11, 10, 12, 12, 14].map((width, index) =>
+          <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
+        )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
           aria-sort={sort === key ? (direction === "asc" ? "ascending" : "descending") : "none"}>
-          <button type="button" onClick={() => changeSort(key)}
+          <button type="button" disabled={loading || exporting} onClick={() => changeSort(key)}
             title={"Sort by " + label + (sort === key ? ", reverse order" : "")}>
             <span>{label}</span>
             <span className="cu-sort-arrows" aria-hidden="true">{sort === key ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
