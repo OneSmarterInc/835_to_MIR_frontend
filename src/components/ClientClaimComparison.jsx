@@ -3,7 +3,7 @@ import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClientClaimComparison.css";
 
 const COLUMNS = [
-  ["waiting_days", "Waiting"],
+  ["waiting_days", "Waiting days"],
   ["claim", "Claim"],
   ["internal_number", "Internal claim"],
   ["date", "Latest activity"],
@@ -120,7 +120,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>
-        <p className="cu-help">One table for payer claims, waiting reasons, notes and 835 ↔ MIR ↔ Recon differences.
+        <p className="cu-help">One table for claims, age since received, notes and 835 ↔ MIR ↔ Recon differences.
           {payerFilter !== "All" && " Payer category: " + payerFilter + "."}
           {" "}Each stream uses its own date within the selected period.</p></div>
       <div className="cu-comparison-header-actions">
@@ -154,7 +154,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
       <table className="cu-table cu-comparison-table">
-        <colgroup>{[6, 10, 8, 9, 7, 7, 7, 7, 7, 8, 10, 8, 6].map((width, index) =>
+        <colgroup>{[9, 9, 8, 9, 7, 7, 7, 7, 7, 8, 9, 7, 6].map((width, index) =>
           <col key={COLUMNS[index][0]} style={{ width: width + "%" }} />
         )}</colgroup>
         <thead><tr>{COLUMNS.map(([key, label]) => <th key={key}
@@ -165,8 +165,19 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
             <span className="cu-sort-arrows" aria-hidden="true">{sort === key ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
           </button>
         </th>)}</tr></thead>
-        <tbody>{rows.map(row => <tr key={row.key} title={row.reason} className={row.waiting_days >= 3 ? "cu-overdue" : ""}>
-          <td className="cu-waiting-cell">{row.waiting_days == null ? "—" : row.waiting_days === 0 ? "Today" : row.waiting_days + "d"}</td>
+        <tbody>{rows.map(row => <tr key={row.key} title={row.reason}
+          className={row.is_held ? (row.waiting_days >= 3 ? "cu-claim-hold-overdue" : "cu-claim-hold-recent") : ""}>
+          <td className="cu-waiting-cell">
+            {row.waiting_days == null ? <span className="cu-age-none" title="No dated source event is available">—</span> :
+              <span className={"cu-age-pill " + (row.waiting_days >= 3 ? "cu-age-critical" :
+                row.waiting_days >= 1 ? "cu-age-warning" : "cu-age-today")}
+                title={(row.is_held ? "Claim held · " : "Claim age · ") +
+                  (row.waiting_basis === "835 received" ? "days since 835 receipt" :
+                    "days since latest available activity")}>
+                {row.waiting_days === 0 ? "Today" :
+                  row.waiting_days + (row.waiting_days === 1 ? " day" : " days")}
+              </span>}
+          </td>
           <td>{row.record_id ? <button className="cu-link" onClick={() => onOpen(row.record_id)}>{safeClaim(row.claim)}</button> : safeClaim(row.claim)}</td>
           <td>{safeClaim(row.internal_number)}</td>
           <td>{when(row.date, data?.period?.timezone)}</td>
