@@ -2,7 +2,7 @@
 .cu-comparison-heading { align-items: flex-start; gap: 15px; }
 .cu-comparison-heading .cu-help { margin: 3px 0 0; max-width: 800px; }
 .cu-comparison-summary {
-  display: grid; grid-template-columns: 1.35fr repeat(3,minmax(0,1fr));
+  display: grid; grid-template-columns: 1.25fr 1.25fr repeat(3,minmax(0,1fr));
   gap: 1px; border: 1px solid var(--line); background: var(--line);
   margin: 10px 0 15px; border-radius: 3px; overflow: hidden;
 }
