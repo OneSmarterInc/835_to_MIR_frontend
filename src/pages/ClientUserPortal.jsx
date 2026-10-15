@@ -363,11 +363,11 @@ export default function ClientUserPortal({ user, onLogout }) {
             {periodMode === "custom" && <div className="cu-period-custom">
               <label>From <input aria-label="Custom start date" type="date" value={customFrom}
                 max={customTo || undefined} onChange={event => {
-                  setCustomFrom(event.target.value); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                  setCustomFrom(event.target.value); setComparisonMoney(null); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
                 }}/></label>
               <label>To <input aria-label="Custom end date" type="date" value={customTo}
                 min={customFrom || undefined} onChange={event => {
-                  setCustomTo(event.target.value); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
+                  setCustomTo(event.target.value); setComparisonMoney(null); setHomePage(1); setAttentionPage(1); setHistoryPage(1);
                 }}/></label>
             </div>}
             <span className="cu-period-caption" role="status">{periodLabel}
@@ -404,6 +404,14 @@ export default function ClientUserPortal({ user, onLogout }) {
             metrics={filter === "All" ? metrics : (comparisonMoney || {})}
             loading={loading || (filter !== "All" && !comparisonMoney)}
           />
+          <div className="cu-comparison-category">
+            <span>Payer category</span>
+            <div className="cu-filters">{["All","Denied","Less paid","Paid in full"].map(x =>
+              <button key={x} type="button" aria-pressed={filter === x}
+                className={filter===x?"active":""}
+                onClick={() => { setFilter(x); setComparisonMoney(null); setHomePage(1); }}>
+                {x}</button>)}</div>
+          </div>
           <ClientClaimComparison
             periodQuery={periodQuery}
             payerFilter={filter}
@@ -419,9 +427,7 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div className="cu-track"><i className={idx===3?"cu-old-bar":""} style={{width: (count/maxAge*100)+"%"}} /></div>
               <b>{count} claims</b></div>)}
             <p className="cu-help">{claims.length} individually matched claims. <button type="button" className="cu-link" onClick={() => go("attention")}>View all claims needing attention</button></p>
-            <div className="cu-filters">{["All","Denied","Less paid","Paid in full"].map(x =>
-              <button key={x} className={filter===x?"active":""} onClick={()=>{ setFilter(x); setComparisonMoney(null); setHomePage(1); }}>
-                {x}{x==="All"?" ("+(metrics.waiting_claims||0)+")":""}</button>)}</div>
+
             {selectedFile && <p className="cu-help">Filtered to a source file. <button className="cu-link" onClick={() => setSelectedFile("")}>Show all</button></p>}
             <ClientClaimTable rows={visible.slice((currentHomePage - 1) * 10, currentHomePage * 10)} recentActions={actions} onOpen={openClaimRow} loading={loading} />
             <PortalPagination result={{ page: currentHomePage, pages: homePages, count: visible.length }}
