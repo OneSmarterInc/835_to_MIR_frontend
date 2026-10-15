@@ -492,3 +492,28 @@
   .cu-period-options button { font-size: 11px; padding: 6px; }
   .cu-money-strip strong { font-size: 15px; }
 }
+
+/* Shared payer category applies to the financial summary and comparison,
+   not just the held-claims rows. */
+.cu-comparison-category {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 9px;
+  background: var(--surface); border: 1px solid var(--line);
+  padding: 8px 12px; border-radius: 3px; min-width: 0;
+}
+.cu-comparison-category > span {
+  font: 700 10px var(--display); color: var(--ink-2);
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.cu-comparison-category .cu-filters {
+  margin: 0 !important; display: flex; flex-wrap: wrap; gap: 5px;
+}
+.cu-comparison-category .cu-filters button {
+  border-radius: 3px; padding: 6px 10px; min-height: 30px;
+  font-size: 11px;
+}
+.cu-comparison-category .cu-filters button.active {
+  background: var(--ink); color: #fff; border-color: var(--ink);
+}
+.cu-comparison-category .cu-filters button:focus-visible {
+  outline: 2px solid var(--teal); outline-offset: 2px;
+}
