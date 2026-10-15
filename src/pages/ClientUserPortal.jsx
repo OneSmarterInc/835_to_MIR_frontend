@@ -171,12 +171,13 @@ export default function ClientUserPortal({ user, onLogout }) {
     setAttentionError("");
     setAttentionResult(null);
     jsonFetch(baseUrl + "attention/?" + periodQuery + "&page=" + attentionPage + "&page_size=" + attentionPageSize +
+      "&payer_status=" + encodeURIComponent(({ All: "all", Denied: "denied", "Less paid": "less", "Paid in full": "paid" })[filter] || "all") +
       (attentionFile ? "&file_id=" + encodeURIComponent(attentionFile) : ""), { signal: controller.signal })
       .then(setAttentionResult)
       .catch(e => { if (e.name !== "AbortError") setAttentionError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setAttentionLoading(false); });
     return () => controller.abort();
-  }, [attentionFile, attentionPage, attentionPageSize, periodQuery, refresh, tab]);
+  }, [attentionFile, attentionPage, attentionPageSize, periodQuery, filter, refresh, tab]);
 
   useEffect(() => {
     if (tab !== "claim" || !detail?.id) return undefined;
@@ -283,6 +284,8 @@ export default function ClientUserPortal({ user, onLogout }) {
     (filter === "All" || (filter === "Denied" ? ["Denied","No payment"].includes(c.payer_status) :
       filter === "Less paid" ? c.payer_status === "Paid less than billed" : c.payer_status === "Paid in full")));
   const metrics = dashboard?.metrics || {};
+  const displayedIssues = filter === "All" ? issues :
+    issues.filter(issue => visible.some(claim => claim.file_id === issue.id));
   const activePeriod = dashboard?.period;
   const periodLabel = activePeriod
     ? activePeriod.from
@@ -294,7 +297,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const homePages = Math.max(1, Math.ceil(visible.length / 10));
   const currentHomePage = Math.min(homePage, homePages);
   const age = [["Today",0],["1 day",1],["2 days",2],["3+ days",3]].map(([name,v]) =>
-    [name, claims.filter(c => v === 3 ? c.days >= 3 : c.days === v).length]);
+    [name, visible.filter(c => v === 3 ? c.days >= 3 : c.days === v).length]);
   const maxAge = Math.max(1, ...age.map(x => x[1]));
   const detailActions = claimActivity?.actions || [];
 
@@ -421,12 +424,12 @@ export default function ClientUserPortal({ user, onLogout }) {
           />
           <section className="cu-card">
             <div className="cu-section-title"><h2>Claims waiting on you, by days waiting</h2>
-              <span>{metrics.waiting_claims||0} held claims</span></div>
+              <span>{filter === "All" ? (metrics.waiting_claims||0) : visible.length} {filter === "All" ? "held claims" : "matching held claims"}</span></div>
             {age.map(([label,count],idx) => <div className="cu-aging-row" key={label}>
               <span className={idx===3?"cu-old":""}>{label}</span>
               <div className="cu-track"><i className={idx===3?"cu-old-bar":""} style={{width: (count/maxAge*100)+"%"}} /></div>
               <b>{count} claims</b></div>)}
-            <p className="cu-help">{claims.length} individually matched claims. <button type="button" className="cu-link" onClick={() => go("attention")}>View all claims needing attention</button></p>
+            <p className="cu-help">{visible.length} individually matched claims.  <button type="button" className="cu-link" onClick={() => go("attention")}>View all claims needing attention</button></p>
 
             {selectedFile && <p className="cu-help">Filtered to a source file. <button className="cu-link" onClick={() => setSelectedFile("")}>Show all</button></p>}
             <ClientClaimTable rows={visible.slice((currentHomePage - 1) * 10, currentHomePage * 10)} recentActions={actions} onOpen={openClaimRow} loading={loading} />
@@ -435,13 +438,13 @@ export default function ClientUserPortal({ user, onLogout }) {
             {dashboard?.claims_limited && <p className="cu-help">Showing the first 200 matched claims.</p>}
           </section>
           <section className="cu-card cu-notice">
-            <div className="cu-section-title"><h2>Source files needing attention ({issues.length})</h2>
+            <div className="cu-section-title"><h2>Source files needing attention ({displayedIssues.length})</h2>
               <button className="cu-link" onClick={()=>go("attention")}>See all</button></div>
-            {issues.slice(0,3).map(i => <div className="cu-issue-mini" key={i.id}>
+            {displayedIssues.slice(0,3).map(i => <div className="cu-issue-mini" key={i.id}>
               <div><b>{i.kind==="error"?"File could not be processed":i.count+" claims held"} · {i.filename}</b>
                 <small>{i.reason}</small></div>
               <button className="cu-btn" onClick={()=>openAttentionIssue(i)}>Review</button></div>)}
-            {!issues.length && <p>No outstanding conversion issues in the current queue.</p>}
+            {!displayedIssues.length && <p>No source files match the selected payer category in this period.</p>}
           </section>
           <section className="cu-card">
             <div className="cu-section-title"><h2>Recent conversions</h2><button className="cu-link" onClick={()=>go("history")}>Full history</button></div>
@@ -452,7 +455,10 @@ export default function ClientUserPortal({ user, onLogout }) {
         {tab === "attention" && periodQuery && <section className="cu-card">
           <div className="cu-section-title"><h2>Claims needing attention · longest waiting first</h2>
             <span>{attentionResult?.count ?? "—"} records</span></div>
-          <p className="cu-help">Claims from 835 files received in the selected period, sorted by days waiting (highest first). Select a row to review its notes and requests.</p>
+          <p className="cu-help">Claims from 835 files received in the selected period, sorted by days waiting (highest first).
+            {filter !== "All" && <> Payer category: <strong>{filter}</strong>.
+              <button className="cu-link" type="button" onClick={() => { setFilter("All"); setComparisonMoney(null); setAttentionPage(1); }}>Clear category</button></>}
+            {" "}Select a row to review its notes and requests.</p>
           {attentionFile && <p className="cu-help">Filtered to one source file. <button type="button" className="cu-link"
             onClick={() => { setAttentionFile(""); setAttentionPage(1); }}>Show all claims</button></p>}
           {attentionError && <p className="cu-error" role="alert">{attentionError} <button type="button" className="cu-link" onClick={reload}>Retry</button></p>}
