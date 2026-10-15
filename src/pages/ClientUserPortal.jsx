@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import ClientClaimTable, { PortalPagination } from "../components/ClientClaimTable";
+import ClientClaimComparison from "../components/ClientClaimComparison";
 import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
@@ -398,6 +399,11 @@ export default function ClientUserPortal({ user, onLogout }) {
                 <small>{sub}</small></section>)}
           </div>
           <ClientFinancialAmounts metrics={metrics} loading={loading} />
+          <ClientClaimComparison
+            periodQuery={periodQuery}
+            refresh={refresh}
+            onOpen={showClaim}
+          />
           <section className="cu-card">
             <div className="cu-section-title"><h2>Claims waiting on you, by days waiting</h2>
               <span>{metrics.waiting_claims||0} held claims</span></div>
