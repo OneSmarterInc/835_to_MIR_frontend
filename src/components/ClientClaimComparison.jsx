@@ -123,7 +123,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
       setExporting(false);
     }
   };
-  const stats = data?.summary || {};
+  // Comparison summary is hidden: const stats = data?.summary || {};
   const num = n => Number(n || 0).toLocaleString("en-US");
   const rows = data?.rows || [];
   return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
@@ -141,6 +141,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
         </button>
       </div>
     </div>
+    {/* Comparison summary cards hidden at the client's request.
     <div className="cu-comparison-summary" aria-label="Comparison results">
       <div className="cu-summary-mismatch">
         <small>Billed gap · 835 vs MIR</small>
@@ -159,6 +160,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
       <div><small>Missing data</small><strong>{loading ? "…" : data ? num(stats.missing_streams) : "—"}</strong>
         <span>Not treated as $0</span></div>
     </div>
+    */}
     {error && <p role="alert" className="cu-error">Could not load comparison: {error}</p>}
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>

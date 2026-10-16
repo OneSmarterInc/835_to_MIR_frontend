@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import { PortalPagination } from "../components/ClientClaimTable";
 import ClientClaimComparison from "../components/ClientClaimComparison";
-import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
+// import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
@@ -74,7 +74,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [periodMode, customFrom, customTo]);
   const selectPeriod = mode => {
     setPeriodMode(mode);
-    setComparisonMoney(null);
     setHistoryPage(1);
   };
   const [dashboard, setDashboard] = useState(null);
@@ -84,7 +83,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const [filter, setFilter] = useState("All");
-  const [comparisonMoney, setComparisonMoney] = useState(null);
+  // Financial summary is hidden: const [comparisonMoney, setComparisonMoney] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showSegments, setShowSegments] = useState(false);
@@ -333,11 +332,11 @@ export default function ClientUserPortal({ user, onLogout }) {
             {periodMode === "custom" && <div className="cu-period-custom">
               <label>From <input aria-label="Custom start date" type="date" value={customFrom}
                 max={customTo || undefined} onChange={event => {
-                  setCustomFrom(event.target.value); setComparisonMoney(null); setHistoryPage(1);
+                  setCustomFrom(event.target.value); setHistoryPage(1);
                 }}/></label>
               <label>To <input aria-label="Custom end date" type="date" value={customTo}
                 min={customFrom || undefined} onChange={event => {
-                  setCustomTo(event.target.value); setComparisonMoney(null); setHistoryPage(1);
+                  setCustomTo(event.target.value); setHistoryPage(1);
                 }}/></label>
             </div>}
             <span className="cu-period-caption" role="status">{periodLabel}
@@ -365,16 +364,18 @@ export default function ClientUserPortal({ user, onLogout }) {
                 <span className="eyebrow">{title}</span><strong>{Number(value||0).toLocaleString()}</strong>
                 <small>{sub}</small></section>)}
           </div>
+          {/* Financial totals strip hidden at the client's request.
           <ClientFinancialAmounts
             metrics={filter === "All" ? metrics : (comparisonMoney || {})}
             loading={loading || (filter !== "All" && !comparisonMoney)}
           />
+          */}
           <div className="cu-comparison-category">
             <span>Payer category</span>
             <div className="cu-filters">{["All","Denied","Less paid","Paid in full"].map(x =>
               <button key={x} type="button" aria-pressed={filter === x}
                 className={filter===x?"active":""}
-                onClick={() => { setFilter(x); setComparisonMoney(null); }}>
+                onClick={() => setFilter(x)}>
                 {x}</button>)}</div>
           </div>
           <section className="cu-card cu-aging-summary">
@@ -400,7 +401,6 @@ export default function ClientUserPortal({ user, onLogout }) {
             periodQuery={periodQuery}
             payerFilter={filter}
             refresh={refresh}
-            onFinancialTotals={setComparisonMoney}
             onOpen={showClaim}
           />
           <section className="cu-card">
