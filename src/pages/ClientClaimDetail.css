@@ -110,6 +110,24 @@
 .cu-claim-page .cu-event { grid-template-columns: 145px minmax(0, 1fr); gap: 10px; margin: 8px 0; }
 .cu-main.cu-claim-page .cu-claim-history h2 { margin: 0 0 10px; font-size: 13px; }
 .cu-claim-page .cu-tech { font-size: 12px; }
+.cu-claim-page .cu-source-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.cu-main .cu-claim-sources .cu-source-button { background: #000; color: #fff; border: 1px solid #000; border-radius: 4px; min-height: 44px; min-width: 88px; padding: 10px 18px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.cu-main .cu-claim-sources .cu-source-button:hover { background: #252525; }
+.cu-main .cu-claim-sources .cu-source-button[aria-expanded="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--teal); }
+.cu-main .cu-claim-sources .cu-source-button:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.cu-main .cu-claim-sources .cu-source-button:disabled { opacity: .45; cursor: not-allowed; }
+.cu-claim-sources { min-width: 0; }
+.cu-source-viewer { margin-top: 12px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 4px; background: #fff; min-width: 0; text-align: left; }
+.cu-source-viewer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cu-main .cu-source-viewer-heading h2 { margin: 0; font-size: 15px; }
+.cu-source-viewer-heading p { margin: 4px 0 0; color: var(--ink-2); }
+.cu-source-viewer-heading .cu-source-button { flex-shrink: 0; }
+.cu-source-choice { margin: 12px 0; }
+.cu-source-choice label { display: block; font-weight: 700; margin-bottom: 6px; }
+.cu-source-choice select { width: 100%; min-height: 44px; padding: 8px; color: var(--ink); background: #fff; border: 1px solid var(--line-soft); border-radius: 4px; }
+.cu-source-filename { overflow-wrap: anywhere; font-weight: 600; margin-bottom: 4px; }
+.cu-claim-page .cu-source-viewer pre { margin: 10px 0 0; max-height: 480px; overflow: auto; white-space: pre; text-align: left; }
+.cu-source-error { margin-top: 12px; }
 @media (max-width: 1100px) {
   .cu-main.cu-claim-page .cu-claim-heading { grid-template-columns: minmax(0, 1fr); }
   .cu-claim-page .cu-claim-actions { justify-content: flex-start; }

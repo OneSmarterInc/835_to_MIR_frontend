@@ -6,7 +6,8 @@ import ClientClaimComparison, { AGE_OPTIONS, claimAgeBand } from "../components/
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
-import { encodeDemoValue, encodeDemoFileContent } from "../utils/demoEncoder";
+import ClientClaimSources from "../components/ClientClaimSources";
+import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClientUserPortal.css";
 import "./ClientClaimDetail.css";
 
@@ -86,7 +87,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   // Financial summary is hidden: const [comparisonMoney, setComparisonMoney] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [showSegments, setShowSegments] = useState(false);
   const [drawer, setDrawer] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, [tab]);
   useEffect(() => {
@@ -101,7 +101,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [decision, setDecision] = useState(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
-  const [downloadingClaim, setDownloadingClaim] = useState(false);
   const [conversionFiles, setConversionFiles] = useState([]);
   const [fileViewerId, setFileViewerId] = useState(null);
   const [claimActivity, setClaimActivity] = useState(null);
@@ -182,38 +181,12 @@ export default function ClientUserPortal({ user, onLogout }) {
     setDetailLoading(true);
     setError("");
     setNotice("");
-    setShowSegments(false);
     try {
       const response = await jsonFetch(baseUrl + "claim/" + encodeURIComponent(id) + "/");
       setDetail(response.claim);
       setTab("claim");
     } catch(e) { setError(e.message); }
     finally { setDetailLoading(false); }
-  };
-  const downloadClaim = async () => {
-    if (!detail?.id || downloadingClaim) return;
-    setDownloadingClaim(true); setError("");
-    try {
-      const response = await fetch(baseUrl + "claim/" + encodeURIComponent(detail.id) + "/download/", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error || "The claim 835 could not be downloaded.");
-      }
-      if (!(response.headers.get("content-type") || "").toLowerCase().includes("application/edi-x12")) {
-        throw new Error("The server did not return an 835 file.");
-      }
-      const url = URL.createObjectURL(await response.blob());
-      const link = document.createElement("a");
-      try {
-        link.href = url; link.download = "claim-" + detail.id + ".835";
-        document.body.appendChild(link); link.click();
-      } finally {
-        link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      }
-    } catch (issue) { setError(issue.message || "The claim 835 could not be downloaded."); }
-    finally { setDownloadingClaim(false); }
   };
   const choose = (kind, file_id, claim_id, title) => {
     if ((kind === "NOTE" || kind.startsWith("REQUEST_")) && claim_id == null) return;
@@ -325,8 +298,6 @@ export default function ClientUserPortal({ user, onLogout }) {
               {detail.reason && <button type="button" className="cu-btn cu-primary" disabled={sending}
                 onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
                   detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>}
-              <button type="button" className="cu-btn" disabled={downloadingClaim}
-                onClick={downloadClaim}>{downloadingClaim ? "Preparing 835…" : "Download 835"}</button>
               <button type="button" className="cu-btn cu-subtle" disabled={sending}
                 onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
             </div>
@@ -540,11 +511,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {!detail.timeline?.length && <p className="cu-help">No additional claim events recorded.</p>}
           </section>
           </div>
-          <div className="cu-tech"><button className="cu-link" aria-expanded={showSegments} onClick={()=>setShowSegments(v=>!v)}>{showSegments?"Hide":"View"} sliced 835 for this claim</button>
-            {showSegments && (detail.technical_content ? <>
-              <p className="cu-help">Single-claim slice with matching envelope controls, updated counts and claim payment total. Preview identifiers are masked; the download contains the original identifiers.</p>
-              <pre>{encodeDemoFileContent(detail.technical_content,"835",true)}</pre>
-            </> : <p className="cu-error" role="alert">{detail.technical_segments_error || "A complete 835 slice is unavailable for this claim."}</p>)}</div>
+          <ClientClaimSources key={detail.id} claimId={detail.id} sources={detail.sources} />
         </>}
 
         {decision && <div className="cu-backdrop">

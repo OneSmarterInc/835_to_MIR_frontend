@@ -53,6 +53,7 @@ globalThis.fetch = async (input, options = {}) => {
       id: 42, file_id: fileId, number: 'TEST', file_name: sourceFiles, reason,
       billed: '1521.00', paid: '0.00', allowed: '0.00', payer_status: 'No payment',
       payer: 'EXAMPLE HEALTH & WELFARE', patient_name: 'Synthetic Patient',
+      sources: [{ kind: '835', linked: true, records: [{ record_id: 42, file_id: fileId, filename: 'test.835', received_at: '2026-10-01T11:33:00Z', sequence: 1 }] }],
       technical_content: 'ST*835*0001~\nCLP*TEST*1*1521*0*0~\nSE*3*0001~\n',
       received_at: '2026-10-01T11:33:00Z', check_date: '20260806', patient_owes: '0.00', days: 2,
       services: [
@@ -63,15 +64,13 @@ globalThis.fetch = async (input, options = {}) => {
       ], adjustments: [], timeline: [],
     } });
   }
-  if (url.pathname.endsWith('/claim/42/download/')) {
+  if (url.pathname.endsWith('/claim/42/source/835/')) {
     downloads += 1;
     if (failNextDownload) {
       failNextDownload = false;
       return response({ success: false, error: 'Complete envelope unavailable.' }, 422);
     }
-    return new Response('ST*835*0001~CLP*TEST*1*1521*0*0~SE*3*0001~', {
-      headers: { 'Content-Type': 'application/EDI-X12' },
-    });
+    return response({ success: true, content: 'ST*835*0001~\nCLP*TEST*1*1521*0*0~\nSE*3*0001~\n', download_name: 'TEST.835', source: { filename: 'test.835' } });
   }
   if (url.pathname.endsWith('/actions/')) {
     if (options.method === 'POST') {
@@ -125,7 +124,7 @@ try {
     assert.ok(toolbar);
     assert.ok(toolbar.compareDocumentPosition(container.querySelector('.cu-timeline')) &
       window.Node.DOCUMENT_POSITION_FOLLOWING, 'Actions must precede the timeline and service lines');
-    assert.equal(button('Download 835', toolbar).disabled, false);
+    assert.ok(!toolbar.textContent.includes('Download'), 'Downloads belong in the source viewer');
     assert.equal(button('Add a note', toolbar).disabled, false);
     assert.ok(container.querySelector('[aria-label="Existing claim notes"]'));
   };
@@ -176,15 +175,16 @@ try {
     .includes('Please review this unpaid claim.'));
   const postCount = posts.length;
   failNextDownload = true;
-  await click(button('Download 835'));
+  await click(button('835'));
   assert.ok(container.textContent.includes('Complete envelope unavailable.'));
   assert.equal(clickedDownloads.length, 0);
-  await click(button('Download 835'));
-  assert.deepEqual(clickedDownloads, ['claim-42.835']);
+  await click(button('Try again'));
+  await click(button('Download .835'));
+  assert.deepEqual(clickedDownloads, ['TEST.835']);
   assert.equal(downloads, 2);
   assert.equal(posts.length, postCount, 'Downloading must not create a resend request');
   assert.equal(container.querySelector('[role="dialog"]'), null);
-  await click(button('View sliced 835 for this claim'));
+  assert.ok(container.querySelector('.cu-source-viewer-heading').contains(button('Download .835')));
   assert.ok(container.querySelector('.cu-tech pre').textContent.endsWith('SE*3*0001~\n'));
 
   for (const [holdReason, kind] of [
