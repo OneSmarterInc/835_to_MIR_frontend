@@ -139,15 +139,15 @@
   font: 700 11px/1.2 var(--body);
   border-radius: 3px;
 }
-.cu-comparison-table .cu-age-pill { color: var(--ink); background: rgba(255, 255, 255, .65); border: 1px solid rgba(30, 41, 59, .12); }
+.cu-comparison-table .cu-age-pill { color: var(--cu-age-ink, var(--ink)); background: var(--cu-age-row, #fff); border: 1px solid rgba(30, 41, 59, .12); }
 .cu-age-none { color: var(--ink-3); }
-.cu-row-age-0-10 { --cu-age-row: #fff; --cu-age-hover: #f5f7fa; }
-.cu-row-age-10-20 { --cu-age-row: #fff3cd; --cu-age-hover: #ffecb3; }
-.cu-row-age-20-30 { --cu-age-row: #fbe0dc; --cu-age-hover: #f8d2cc; }
-.cu-row-age-30-plus { --cu-age-row: #f6a3a3; --cu-age-hover: #f28e8e; }
-.cu-row-age-unknown { --cu-age-row: #fff; --cu-age-hover: #f5f7fa; }
-.cu-comparison-table tbody tr[class*="cu-row-age-"] { background: var(--cu-age-row); }
-.cu-comparison-table tbody tr[class*="cu-row-age-"]:hover { background: var(--cu-age-hover); }
+.cu-row-age-0-10 { --cu-age-row: #c9eac3; }
+.cu-row-age-10-20 { --cu-age-row: #ffe79a; }
+.cu-row-age-20-30 { --cu-age-row: #f6b26b; }
+.cu-row-age-30-plus { --cu-age-row: #d92d20; --cu-age-ink: #fff; }
+.cu-row-age-unknown { --cu-age-row: #fff; }
+.cu-comparison-table tbody tr[class*="cu-row-age-"],
+.cu-comparison-table tbody tr[class*="cu-row-age-"]:hover { background: #fff; }
 .cu-age-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 12px 0; }
 .cu-age-filter { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 12px; font-weight: 650; }
 .cu-age-filter select { min-height: 36px; padding: 7px 30px 7px 10px; background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 3px; font: inherit; }
@@ -155,6 +155,7 @@
 .cu-age-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 11px; color: var(--ink-2); }
 .cu-age-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .cu-age-swatch { width: 12px; height: 12px; border: 1px solid rgba(30, 41, 59, .2); border-radius: 2px; background: var(--cu-age-row); }
+.cu-aging-summary .cu-track i { background: var(--cu-age-row); }
 .cu-age-toolbar > small { flex-basis: 100%; color: var(--ink-2); font-size: 11px; }
 @media(max-width:700px) {
   .cu-comparison-table { min-width: 1320px; }

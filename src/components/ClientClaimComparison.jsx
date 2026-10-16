@@ -37,7 +37,7 @@ const categoryKey = filter => ({ All: "all", Denied: "denied",
   "Less paid": "less", "Paid in full": "paid" })[filter] || "all";
 export const claimAgeBand = days => days == null || days === "" || !Number.isFinite(Number(days)) || Number(days) < 0
   ? "unknown" : Number(days) < 10 ? "0-10" : Number(days) < 20 ? "10-20" : Number(days) < 30 ? "20-30" : "30-plus";
-const AGE_OPTIONS = [["all", "All"], ["0-10", "0–10 days"], ["10-20", "10–20 days"],
+export const AGE_OPTIONS = [["all", "All"], ["0-10", "0–10 days"], ["10-20", "10–20 days"],
   ["20-30", "20–30 days"], ["30-plus", "30+ days"]];
 const makeParams = ({periodQuery, payerFilter, ageFilter, sort, direction, page, pageSize}) => {
   const params = new URLSearchParams(periodQuery);
@@ -175,7 +175,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           {AGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
       </label>
-      <div className="cu-age-legend" aria-label="Row age colors">
+      <div className="cu-age-legend" aria-label="Days badge colors">
         {AGE_OPTIONS.slice(1).map(([value, label]) => <span key={value}>
           <i className={"cu-age-swatch cu-row-age-" + value} aria-hidden="true" />{label}
         </span>)}

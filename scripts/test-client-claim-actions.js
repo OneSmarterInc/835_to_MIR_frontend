@@ -39,7 +39,8 @@ globalThis.fetch = async (input, options = {}) => {
     status, headers: { 'Content-Type': 'application/json' },
   });
   if (url.pathname.endsWith('/overview/')) {
-    return response({ success: true, client: 'Test client', metrics: {}, claims: [], history: [] });
+    return response({ success: true, client: 'Test client', metrics: {},
+      claims: [0, 9, 10, 19, 20, 29, 30, 90, null].map(days => ({ days })), history: [] });
   }
   if (url.pathname.endsWith('/comparison/')) {
     return response({ success: true, page: 1, pages: 1, count: 1, summary: {}, rows: [{
@@ -115,6 +116,10 @@ try {
     await act(async () => {
       root.render(React.createElement(Portal, { key: holdReason, user: { name: 'Test user' } }));
     });
+    const ageRows = [...container.querySelectorAll('.cu-aging-row')];
+    assert.deepEqual(ageRows.map(row => row.querySelector('span').textContent),
+      ['0–10 days', '10–20 days', '20–30 days', '30+ days']);
+    assert.deepEqual(ageRows.map(row => row.querySelector('b').textContent), Array(4).fill('2 claims'));
     await click(container.querySelector('.cu-comparison-table .cu-link'));
     const toolbar = container.querySelector('[aria-label="Claim actions"]');
     assert.ok(toolbar);

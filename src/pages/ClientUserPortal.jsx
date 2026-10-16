@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import { PortalPagination } from "../components/ClientClaimTable";
-import ClientClaimComparison from "../components/ClientClaimComparison";
+import ClientClaimComparison, { AGE_OPTIONS, claimAgeBand } from "../components/ClientClaimComparison";
 // import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
@@ -266,8 +266,8 @@ export default function ClientUserPortal({ user, onLogout }) {
         : displayPeriodDate(activePeriod.from) + " – " + displayPeriodDate(activePeriod.to)
       : "Entire available history"
     : periodMode === "custom" ? "Choose From and To dates" : "Loading selected period…";
-  const age = [["Today",0],["1 day",1],["2 days",2],["3+ days",3]].map(([name,v]) =>
-    [name, visible.filter(c => v === 3 ? c.days >= 3 : c.days === v).length]);
+  const age = AGE_OPTIONS.slice(1).map(([band, label]) =>
+    [label, visible.filter(c => claimAgeBand(c.days) === band).length, band]);
   const maxAge = Math.max(1, ...age.map(x => x[1]));
   const detailActions = claimActivity?.actions || [];
 
@@ -410,9 +410,9 @@ export default function ClientUserPortal({ user, onLogout }) {
               <span>{filter === "All" ? (metrics.waiting_claims || 0) : visible.length} held claims in selected view</span>
             </div>
             <div className="cu-aging-grid">
-              {age.map(([label, count], idx) => <div className="cu-aging-row" key={label}>
-                <span className={idx === 3 ? "cu-old" : ""}>{label}</span>
-                <div className="cu-track"><i className={idx === 3 ? "cu-old-bar" : ""}
+              {age.map(([label, count, band]) => <div className={"cu-aging-row cu-row-age-" + band} key={band}>
+                <span className={band === "30-plus" ? "cu-old" : ""}>{label}</span>
+                <div className="cu-track"><i
                   style={{width: (count / maxAge * 100) + "%"}} /></div>
                 <b>{count} claims</b>
               </div>)}
