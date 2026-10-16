@@ -313,7 +313,7 @@ export default function ClientUserPortal({ user, onLogout }) {
                   <p>{filenameText(detail.file_name)}</p>
                 </details> : "—"}</dd></div>
               <div><dt>Received</dt><dd>{timestamp(detail.received_at)}</dd></div>
-              <div><dt>Payer</dt><dd>{detail.payer || "—"}</dd></div>
+              <div><dt>Payer</dt><dd>OneSmarter Health</dd></div>
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
             </dl>
           </>}
