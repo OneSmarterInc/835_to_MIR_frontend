@@ -39,8 +39,8 @@ export default function ClientClaimSources({ claimId, sources = [] }: { claimId:
     setPreview(null); setError(""); setLoading(false);
     if (kind === item.kind) { setKind(null); setRecordId(""); return; }
     setKind(item.kind);
-    // Unlinked sources always require an explicit file choice, even if only one matches.
-    setRecordId(item.linked && item.records.length === 1 ? String(item.records[0].record_id) : "");
+    // Use the first listed occurrence; the selector keeps alternatives accessible.
+    setRecordId(item.records.length ? String(item.records[0].record_id) : "");
   };
   const download = () => {
     if (!preview || !kind) return;
@@ -68,7 +68,7 @@ export default function ClientClaimSources({ claimId, sources = [] }: { claimId:
     {source && <div id="claim-source-viewer" className="cu-source-viewer" aria-busy={loading}>
       <div className="cu-source-viewer-heading">
         <div><h2>{labels[source.kind]} claim slice</h2>
-          <p>{source.linked ? "Source for this 835 occurrence" : "Matching claim records — choose the source file"}</p>
+          <p>{source.linked ? "Source for this 835 occurrence" : "Matching claim records — source file selected below"}</p>
         </div>
         <button type="button" className="cu-source-button" onClick={download} disabled={!preview || loading}>
           Download .{source.kind}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Topbar from "../components/Topbar";
 import { PortalPagination } from "../components/ClientClaimTable";
-import ClientClaimComparison, { AGE_OPTIONS, claimAgeBand } from "../components/ClientClaimComparison";
+import ClientClaimComparison from "../components/ClientClaimComparison";
 // import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
@@ -226,10 +226,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [tab, refreshConversionFiles, refresh]);
 
 
-  const claims = dashboard?.claims || [];
-  const visible = claims.filter(c =>
-    (filter === "All" || (filter === "Denied" ? ["Denied","No payment"].includes(c.payer_status) :
-      filter === "Less paid" ? c.payer_status === "Paid less than billed" : c.payer_status === "Paid in full")));
   const metrics = dashboard?.metrics || {};
   const activePeriod = dashboard?.period;
   const periodLabel = activePeriod
@@ -239,9 +235,6 @@ export default function ClientUserPortal({ user, onLogout }) {
         : displayPeriodDate(activePeriod.from) + " – " + displayPeriodDate(activePeriod.to)
       : "Entire available history"
     : periodMode === "custom" ? "Choose From and To dates" : "Loading selected period…";
-  const age = AGE_OPTIONS.slice(1).map(([band, label]) =>
-    [label, visible.filter(c => claimAgeBand(c.days) === band).length, band]);
-  const maxAge = Math.max(1, ...age.map(x => x[1]));
   const detailActions = claimActivity?.actions || [];
 
   const timeline = detail ? [
@@ -375,25 +368,6 @@ export default function ClientUserPortal({ user, onLogout }) {
                 onClick={() => setFilter(x)}>
                 {x}</button>)}</div>
           </div>
-          <section className="cu-card cu-aging-summary">
-            <div className="cu-section-title">
-              <h2>Claims waiting by days</h2>
-              <span>{filter === "All" ? (metrics.waiting_claims || 0) : visible.length} held claims in selected view</span>
-            </div>
-            <div className="cu-aging-grid">
-              {age.map(([label, count, band]) => <div className={"cu-aging-row cu-row-age-" + band} key={band}>
-                <span className={band === "30-plus" ? "cu-old" : ""}>{label}</span>
-                <div className="cu-track"><i
-                  style={{width: (count / maxAge * 100) + "%"}} /></div>
-                <b>{count} claims</b>
-              </div>)}
-            </div>
-            <p className="cu-help">
-              Age distribution of {visible.length} individually matched held claims
-              {dashboard?.claims_limited ? " (first 200 preview rows)" : ""}.
-
-            </p>
-          </section>
           <ClientClaimComparison
             periodQuery={periodQuery}
             payerFilter={filter}

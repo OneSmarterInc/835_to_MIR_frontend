@@ -43,8 +43,10 @@ globalThis.fetch = async (input, options = {}) => {
       claims: [0, 9, 10, 19, 20, 29, 30, 90, null].map(days => ({ days })), history: [] });
   }
   if (url.pathname.endsWith('/comparison/')) {
-    return response({ success: true, page: 1, pages: 1, count: 1, summary: {}, rows: [{
+    return response({ success: true, page: 1, pages: 1, count: 1, summary: {},
+      age_summary: { total: 1, unknown: 0, counts: { '0-10': 0, '10-20': 1, '20-30': 0, '30-plus': 0 } }, rows: [{
       key: 'TEST', claim: 'TEST', record_id: 42, file_id: fileId, paid_835: '0.00',
+      waiting_days: 15,
       issue_label: 'MIR record missing', issue_tone: 'error',
     }] });
   }
@@ -118,7 +120,8 @@ try {
     const ageRows = [...container.querySelectorAll('.cu-aging-row')];
     assert.deepEqual(ageRows.map(row => row.querySelector('span').textContent),
       ['0–10 days', '10–20 days', '20–30 days', '30+ days']);
-    assert.deepEqual(ageRows.map(row => row.querySelector('b').textContent), Array(4).fill('2 claims'));
+    assert.deepEqual(ageRows.map(row => row.querySelector('b').textContent), ['0 claims', '1 claims', '0 claims', '0 claims']);
+    assert.ok(!container.querySelector('.cu-aging-summary').textContent.includes('held claims'));
     await click(container.querySelector('.cu-comparison-table .cu-link'));
     const toolbar = container.querySelector('[aria-label="Claim actions"]');
     assert.ok(toolbar);

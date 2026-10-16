@@ -132,7 +132,26 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   // Comparison summary is hidden: const stats = data?.summary || {};
   const num = n => Number(n || 0).toLocaleString("en-US");
   const rows = data?.rows || [];
-  return <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
+  const ageSummary = !loading && !error ? data?.age_summary : null;
+  const maxAgeCount = Math.max(1, ...Object.values(ageSummary?.counts || {}));
+  return <>
+    <section className="cu-card cu-aging-summary" aria-label="Claims waiting by days" aria-busy={loading}>
+      <div className="cu-section-title">
+        <h2>Claims waiting by days</h2>
+        <span>{loading ? "Updating…" : ageSummary ? num(ageSummary.total) + " claims in selected view" : "Age summary unavailable"}</span>
+      </div>
+      <div className="cu-aging-grid">
+        {AGE_OPTIONS.slice(1).map(([band, label]) => <div className={"cu-aging-row cu-row-age-" + band} key={band}>
+          <span className={band === "30-plus" ? "cu-old" : ""}>{label}</span>
+          <div className="cu-track"><i style={{ width: ((ageSummary?.counts[band] || 0) / maxAgeCount * 100) + "%" }} /></div>
+          <b>{ageSummary ? num(ageSummary.counts[band]) + " claims" : "—"}</b>
+        </div>)}
+      </div>
+      <p className="cu-help">Uses the same waiting days and filters as the table below, across all pages.
+        {ageSummary?.unknown > 0 && ` ${num(ageSummary.unknown)} claims have unknown age and are excluded from the bands.`}
+      </p>
+    </section>
+    <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>
         <p className="cu-help">835/MIR status compares billed to billed and paid to paid. Recon separately compares MIR paid to Recon paid. Expand a status for amounts and details.
@@ -260,5 +279,5 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           onClick={() => setPage(p => p + 1)}>Next</button>
       </div>
     </div>
-  </section>;
+  </section></>;
 }

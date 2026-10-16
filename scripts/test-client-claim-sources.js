@@ -72,9 +72,8 @@ try {
 
   await click('837');
   assert.equal(document.querySelector('pre'), null, 'Previous source must disappear immediately');
-  assert.equal(document.querySelector('select').value, '');
-  assert.equal(requests.length, 2, 'Do not automatically choose a matching 837 file');
-  await select(3);
+  assert.equal(document.querySelector('select').value, '3');
+  assert.equal(requests.length, 3, 'The first listed 837 file loads automatically');
   const clearedRequest = requests.at(-1);
   await select('');
   assert.equal(clearedRequest.options.signal.aborted, true);
@@ -99,8 +98,8 @@ try {
   assert.equal(downloads.at(-1), '123456789.mir');
 
   await click('Recon');
-  assert.equal(document.querySelector('select').value, '', 'Even one unlinked match requires explicit selection');
-  await select(5);
+  assert.equal(document.querySelector('select').value, '5', 'The single Recon file is selected by default');
+  assert.ok(requests.at(-1).url.endsWith('source/recon/?record_id=5'));
   await respond('claim_number,paid_amount\r\n123456789,8\r\n', 'recon');
   await click('Download .recon');
   assert.equal(downloads.at(-1), '123456789.recon');
@@ -111,7 +110,7 @@ try {
   assert.deepEqual([...document.querySelectorAll('button')].map(b => b.textContent), ['835']);
   await act(async () => root.render(React.createElement(Viewer, { key: 100, claimId: 100, sources: [] })));
   assert.equal(document.querySelector('section'), null);
-  console.log('Claim source buttons, explicit file selection, stale responses, retries, visibility and exact downloads passed.');
+  console.log('Claim source buttons, default file selection, switching, stale responses, retries and exact downloads passed.');
 } finally {
   await act(async () => root.unmount());
   await server.close();
