@@ -41,7 +41,14 @@ globalThis.fetch = async (input, options = {}) => {
     return response({ success: true, claim: {
       id: 42, file_id: fileId, number: 'TEST', file_name: 'test.835', reason,
       billed: '1521.00', paid: '0.00', allowed: '0.00', payer_status: 'No payment',
-      services: [], adjustments: [], timeline: [],
+      payer: 'EXAMPLE HEALTH & WELFARE', patient_name: 'Synthetic Patient',
+      received_at: '2026-10-01T11:33:00Z', check_date: '20260806', patient_owes: '0.00', days: 2,
+      services: [
+        { code: '09408', billed: '587.00', allowed: '0.00', paid: '0.00', units: 1, date: '20251110',
+          adjustments: [{ group: 'CO', code: '45', amount: '587.00' }] },
+        { code: '09495', billed: '549.00', allowed: null, paid: '0.00', units: 0, date: '20260230', adjustments: [] },
+        { code: '09446', billed: '385.00', allowed: '0.00', paid: '0.00', units: null, date: null, adjustments: [] },
+      ], adjustments: [], timeline: [],
     } });
   }
   if (url.pathname.endsWith('/actions/')) {
@@ -98,6 +105,20 @@ try {
   };
 
   await openClaim('');
+  const serviceRows = container.querySelectorAll('.cu-service-table tbody tr');
+  assert.equal(serviceRows.length, 3);
+  assert.equal(serviceRows[0].cells[5].textContent, 'Nov 10, 2025');
+  assert.equal(serviceRows[1].cells[5].textContent, '20260230', 'Invalid dates must not silently roll into another month');
+  assert.equal(serviceRows[2].cells[5].textContent, '—');
+  assert.equal(serviceRows[1].cells[4].textContent, '0', 'Zero units must remain visible');
+  assert.equal(serviceRows[2].cells[4].textContent, '—');
+  assert.equal(serviceRows[1].cells[2].textContent, '—', 'Missing amounts must not become zero');
+  assert.ok(container.querySelector('.cu-timeline').textContent.includes('Aug 6, 2026'));
+  const adjustment = serviceRows[0].querySelector('details');
+  assert.ok(adjustment.querySelector('summary').textContent.includes('CO-45'));
+  assert.ok(adjustment.querySelector('summary').textContent.includes('$587.00'));
+  assert.ok(adjustment.querySelector('p').textContent.includes('Charge exceeds'));
+  assert.ok(container.querySelector('.cu-payment-explanation p').textContent.includes('$1,521.00'));
   assert.ok(!container.textContent.includes('Request correction / release'));
   await click(button('Add a note'));
   assert.equal(button('Save decision').disabled, true);

@@ -1,0 +1,116 @@
+/* Claim-detail density is scoped so dashboard and conversion layouts stay independent. */
+.cu-shell .cu-main.cu-claim-page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 18px 28px 32px;
+  gap: 12px;
+}
+.cu-claim-page > .cu-back-link { font-size: 12px; line-height: 1.4; }
+.cu-main.cu-claim-page .cu-claim-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 20px;
+  align-items: center;
+  padding-bottom: 14px;
+}
+.cu-claim-heading .cu-heading-copy {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.cu-claim-heading .cu-heading-copy > .eyebrow { flex-basis: 100%; }
+.cu-main.cu-claim-page .cu-heading h1 { margin: 0; font-size: 22px; }
+.cu-claim-badge {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--teal-bg);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 650;
+}
+.cu-claim-badge.is-held { background: var(--ochre-bg); color: #80570c; }
+.cu-claim-page .cu-claim-actions { margin: 0; justify-content: flex-end; }
+.cu-claim-meta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: .8fr 1.1fr 1.8fr 1fr;
+  gap: 8px 22px;
+  margin: 0;
+}
+.cu-claim-meta > div { min-width: 0; }
+.cu-claim-meta dt {
+  color: var(--ink-2);
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.cu-claim-meta dd { margin: 2px 0 0; color: var(--ink); font-size: 12px; overflow-wrap: anywhere; }
+.cu-main.cu-claim-page .cu-card { padding: 14px 16px; box-shadow: none; }
+.cu-main.cu-claim-page .cu-timeline { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 12px 16px; gap: 10px; }
+.cu-claim-page .cu-step { gap: 8px; }
+.cu-claim-page .cu-step + .cu-step { border-left: 1px solid var(--line-soft); padding-left: 14px; }
+.cu-claim-page .cu-dot { width: 8px; height: 8px; margin-top: 5px; }
+.cu-main.cu-claim-page .cu-section-title { margin-bottom: 10px; }
+.cu-claim-page .cu-payment-status {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 2px 8px;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 650;
+}
+.cu-main.cu-claim-page .cu-amounts {
+  padding: 10px 0 12px;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.cu-claim-page .cu-amount { padding: 0 16px; min-width: 0; gap: 3px; }
+.cu-claim-page .cu-amount:first-child { padding-left: 0; }
+.cu-claim-page .cu-amount + .cu-amount { border-left: 1px solid var(--line-soft); }
+.cu-claim-page .cu-amount strong { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cu-claim-page .cu-amount .eyebrow { color: var(--ink-2); letter-spacing: .03em; }
+.cu-payment-explanation { padding: 8px 0; font-size: 12px; color: var(--ink-2); }
+.cu-payment-explanation summary, .cu-adjustment summary { cursor: pointer; }
+.cu-payment-explanation p { margin: 6px 0 0; line-height: 1.6; }
+.cu-service-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 8px; }
+.cu-main.cu-claim-page .cu-service-heading h3 { margin: 0; font-size: 13px; }
+.cu-service-heading > span { font-size: 11px; color: var(--ink-2); }
+.cu-claim-page .cu-service-table { min-width: 780px; border: 1px solid var(--line-soft); }
+.cu-main.cu-claim-page .cu-service-table th { padding: 8px 10px; background: #f5f7fa; color: var(--ink-2); font-size: 10px; letter-spacing: .03em; }
+.cu-main.cu-claim-page .cu-service-table td { padding: 8px 10px; vertical-align: top; font-size: 12px; }
+.cu-claim-page .cu-service-table .cu-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cu-claim-page .cu-service-date { white-space: nowrap; }
+.cu-adjustment + .cu-adjustment { margin-top: 5px; }
+.cu-adjustment summary { white-space: nowrap; font-weight: 600; }
+.cu-adjustment summary > span { margin-left: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.cu-adjustment p { margin-top: 5px; color: var(--ink-2); max-width: 380px; line-height: 1.5; }
+.cu-payment-explanation summary:focus-visible, .cu-adjustment summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.cu-claim-bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; align-items: start; min-width: 0; }
+.cu-claim-page .cu-claim-notes .cu-file-activity { margin: 0; padding: 0; border: 0; background: transparent; }
+.cu-claim-page .cu-claim-notes .cu-file-activity h3 { margin-top: 0; }
+.cu-claim-page .cu-file-activity-row { grid-template-columns: 130px minmax(0, 1fr) auto; }
+.cu-claim-page .cu-event { grid-template-columns: 145px minmax(0, 1fr); gap: 10px; margin: 8px 0; }
+.cu-main.cu-claim-page .cu-claim-history h2 { margin: 0 0 10px; font-size: 13px; }
+.cu-claim-page .cu-tech { font-size: 12px; }
+@media (max-width: 1100px) {
+  .cu-main.cu-claim-page .cu-claim-heading { grid-template-columns: minmax(0, 1fr); }
+  .cu-claim-page .cu-claim-actions { justify-content: flex-start; }
+  .cu-claim-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cu-claim-bottom { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .cu-shell .cu-main.cu-claim-page { padding: 14px 12px 24px; gap: 10px; }
+  .cu-main.cu-claim-page .cu-card { padding: 12px; }
+  .cu-main.cu-claim-page .cu-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .cu-claim-page .cu-step + .cu-step { border-left: 0; padding-left: 0; }
+  .cu-main.cu-claim-page .cu-amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 0; }
+  .cu-claim-page .cu-amount:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .cu-claim-page .cu-claim-actions { width: 100%; }
+  .cu-main.cu-claim-page .cu-claim-actions .cu-btn { flex: 1 1 145px; min-width: 0; min-height: 48px; white-space: normal; }
+  .cu-claim-page .cu-file-activity-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .cu-claim-page .cu-event { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

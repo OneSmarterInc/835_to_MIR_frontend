@@ -8,11 +8,21 @@ import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
 import { encodeDemoValue, encodeDemoFileContent } from "../utils/demoEncoder";
 import "./ClientUserPortal.css";
+import "./ClientClaimDetail.css";
 
 const cash = v => v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? "—" :
   Number(v).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const safe = v => v == null || v === "" ? "—" : encodeDemoValue(String(v), true);
 const timestamp = v => v ? new Date(v).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—";
+const claimDate = value => {
+  if (!value) return "—";
+  value = String(value);
+  if (!/^\d{8}$/.test(value)) return value;
+  const year = Number(value.slice(0, 4)), month = Number(value.slice(4, 6)), day = Number(value.slice(6, 8));
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+    ? date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : value;
+};
 const filenameText = value => value == null || value === "" ? "—" : String(value);
 const navigation = [["home","Home"],["convert","Conversions"],["history","History"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
@@ -238,10 +248,10 @@ export default function ClientUserPortal({ user, onLogout }) {
 
   const timeline = detail ? [
     { label: "835 received", at: detail.received_at, complete: true },
-    { label: "Payer payment dated", at: detail.check_date, complete: !!detail.check_date },
-    { label: "Conversion completed", at: detail.timeline?.find(x => x.label === "Conversion completed")?.at, complete: !!detail.timeline?.find(x => x.label === "Conversion completed") },
-    { label: detail.reason ? "Waiting on review" : "Review not required", at: detail.reason ? "Attention needed" : "", complete: !detail.reason },
-    { label: "Sent to MPL", at: detail.mir_status === "PUSHED" ? "Confirmed" : "Not confirmed", complete: detail.mir_status === "PUSHED" },
+    { label: "Payer payment", at: detail.check_date ? claimDate(detail.check_date) : "Not recorded", complete: !!detail.check_date },
+    { label: "Conversion", at: detail.timeline?.find(x => x.label === "Conversion completed")?.at, complete: !!detail.timeline?.find(x => x.label === "Conversion completed") },
+    { label: "Review", at: detail.reason ? "Attention needed" : "No hold recorded", complete: !detail.reason },
+    { label: "MPL delivery", at: detail.mir_status === "PUSHED" ? "Confirmed" : "Not confirmed", complete: detail.mir_status === "PUSHED" },
   ] : [];
 
   return <>
@@ -265,23 +275,43 @@ export default function ClientUserPortal({ user, onLogout }) {
         <button type="button" className={"cu-navitem" + (tab === "settings" ? " on" : "")}
           onClick={() => go("settings")}><span>Settings</span></button>
       </nav>
-      <main className={"cu-main" + (tab === "convert" ? "" : " cu-compact")}>
+      <main className={"cu-main" + (tab === "convert" ? "" : " cu-compact") + (tab === "claim" ? " cu-claim-page" : "")}>
         {tab !== "home" && <button type="button" className="cu-back-link"
           onClick={() => go("home")}>
           ← Back to Home
         </button>}
-        {tab !== "convert" && <header className="cu-heading">
+        {tab !== "convert" && <header className={"cu-heading" + (tab === "claim" ? " cu-claim-heading" : "")}>
           <div className="cu-heading-copy">
             <span className="eyebrow">{dashboard?.client || user.client} · {periodMode.toUpperCase()}</span>
             <h1>{tab === "home" ? "Claims overview" : tab === "history" ?
               "History" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
-            <p>{tab === "home" ?
+            {tab === "claim" && detail && <span className={"cu-claim-badge" + (detail.reason ? " is-held" : "")}>
+              {detail.reason ? "On hold · " + detail.days + " days" : "Payer response available"}
+            </span>}
+            {tab !== "claim" && <p>{tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "history" ? "Conversions and review activity for your selected period." :
               tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
-              detail?.file_name || ""}</p>
+              detail?.file_name || ""}</p>}
           </div>
+          {tab === "claim" && detail && <>
+            <div className="cu-actions cu-claim-actions" role="group" aria-label="Claim actions">
+              {detail.reason && <button type="button" className="cu-btn cu-primary" disabled={sending}
+                onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
+                  detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>}
+              <button type="button" className="cu-btn" disabled={sending}
+                onClick={()=>choose("REQUEST_RESEND",detail.file_id,detail.id,"Request a corrected resend")}>Request resend</button>
+              <button type="button" className="cu-btn cu-subtle" disabled={sending}
+                onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
+            </div>
+            <dl className="cu-claim-meta">
+              <div><dt>Source file</dt><dd>{filenameText(detail.file_name)}</dd></div>
+              <div><dt>Received</dt><dd>{timestamp(detail.received_at)}</dd></div>
+              <div><dt>Payer</dt><dd>{detail.payer || "—"}</dd></div>
+              <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
+            </dl>
+          </>}
           {tab === "home" && <div className="cu-controls">
             <button type="button" className="cu-btn" onClick={reload} disabled={!periodQuery}>Refresh</button>
             <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
@@ -417,26 +447,15 @@ export default function ClientUserPortal({ user, onLogout }) {
         </section>}
 
         {tab==="claim" && detail && <>
-          <div className="cu-chip">{detail.reason?"Waiting "+detail.days+" days":"Payer response available"}</div>
-          <p className="cu-muted">Received {timestamp(detail.received_at)} in {detail.file_name}
-            {detail.payer?" · Payer: "+detail.payer:""} {detail.patient_name?" · Patient: "+safe(detail.patient_name):""}</p>
-          <div className="cu-actions cu-claim-actions" role="group" aria-label="Claim actions">
-            {detail.reason && <button type="button" className="cu-btn cu-primary" disabled={sending}
-              onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
-                detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>}
-            <button type="button" className="cu-btn" disabled={sending}
-              onClick={()=>choose("REQUEST_RESEND",detail.file_id,detail.id,"Request a corrected resend")}>Request resend</button>
-            <button type="button" className="cu-btn cu-subtle" disabled={sending}
-              onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
-          </div>
-          <section className="cu-card cu-timeline">
+          <section className="cu-card cu-timeline" aria-label="Claim progress">
             {timeline.map((t,i)=><div className="cu-step" key={i}>
               <span className={"cu-dot "+(t.complete?"complete":"pending")}></span>
               <div><strong>{t.label}</strong><small>{t.at&&t.at.includes("T")?timestamp(t.at):t.at||"Not recorded"}</small></div>
             </div>)}
           </section>
-          <section className="cu-card">
-            <h2>What the payer said</h2>
+          <section className="cu-card cu-payment-card">
+            <div className="cu-section-title"><h2>Payment summary</h2>
+              <span className="cu-payment-status">{detail.payer_status || "Status unavailable"}</span></div>
             <div className="cu-amounts">
               {[
                 ["Billed",cash(detail.billed),"normal"],
@@ -446,24 +465,26 @@ export default function ClientUserPortal({ user, onLogout }) {
               ].map(([label,value,tone])=><div className={"cu-amount cu-amount-"+tone} key={label}>
                 <span className="eyebrow">{label}</span><strong>{value}</strong></div>)}
             </div>
-            <div className="cu-explanation"><b>{detail.payer_status}.</b> The 835 reports {cash(detail.paid)} paid against {cash(detail.billed)} billed.
-              {detail.allowed!==null?" Contractual adjustments reduce billed charges to "+cash(detail.allowed)+".":""}
+            <details className="cu-payment-explanation"><summary>Payment explanation</summary><p><b>{detail.payer_status}.</b> The 835 reports {cash(detail.paid)} paid against {cash(detail.billed)} billed.
+              {detail.allowed!=null?" Contractual adjustments reduce billed charges to "+cash(detail.allowed)+".":""}
               {" "}Patient responsibility is {cash(detail.responsibility_amount ?? detail.patient_owes)}.
-              {detail.check_number?" Payment reference "+safe(detail.check_number)+".":""}</div>
-            <h3>Service lines</h3><div className="cu-table-scroll"><table className="cu-table"><thead><tr>
-              <th>Procedure</th><th>Billed</th><th>After CO adjustments</th><th>Paid</th><th>Units / date</th><th>Payer adjustments</th></tr></thead>
+              {detail.check_number?" Payment reference "+safe(detail.check_number)+".":""}</p></details>
+            <div className="cu-service-heading"><h3>Service lines</h3><span>{detail.services?.length || 0} services</span></div>
+            <div className="cu-table-scroll"><table className="cu-table cu-service-table" aria-label="Claim service lines"><thead><tr>
+              <th scope="col">Procedure</th><th scope="col" className="cu-num">Billed</th><th scope="col" className="cu-num">After CO adjustments</th><th scope="col" className="cu-num">Paid</th><th scope="col" className="cu-num">Units</th><th scope="col">Service date</th><th scope="col">Payer adjustments</th></tr></thead>
               <tbody>{(detail.services||[]).map((svc,i)=><tr key={i}>
-                <td><strong>{safe(svc.code)}</strong></td><td>{cash(svc.billed)}</td><td>{cash(svc.allowed)}</td><td>{cash(svc.paid)}</td><td>{svc.units||"—"} {svc.date||""}</td>
-                <td>{(svc.adjustments||[]).map((a,j)=><div key={j}>{cash(a.amount)} — {adjustmentMeaning(a.group,a.code)} ({a.group}-{a.code})</div>)}</td>
+                <td><strong>{safe(svc.code)}</strong></td><td className="cu-num">{cash(svc.billed)}</td><td className="cu-num">{cash(svc.allowed)}</td><td className="cu-num">{cash(svc.paid)}</td><td className="cu-num">{svc.units ?? "—"}</td><td className="cu-service-date">{claimDate(svc.date)}</td>
+                <td>{(svc.adjustments||[]).map((a,j)=><details className="cu-adjustment" key={j}><summary>{a.group}-{a.code}<span>{cash(a.amount)}</span></summary><p>{adjustmentMeaning(a.group,a.code)}</p></details>)}{!svc.adjustments?.length && <span className="cu-muted">—</span>}</td>
               </tr>)}
-              {!detail.services?.length&&<tr><td colSpan="6">No service lines recorded in this 835 claim.</td></tr>}
+              {!detail.services?.length&&<tr><td colSpan="7">No service lines recorded in this 835 claim.</td></tr>}
               </tbody></table></div>
             <p className="cu-help">Amounts after contractual adjustments are calculated from recorded CAS CO adjustments, not an explicit payer allowed field.</p>
             {!!detail.adjustments?.length && <details><summary>All payer adjustment codes ({detail.adjustments.length})</summary>
               <div className="cu-table-scroll"><table className="cu-table"><thead><tr><th>Group</th><th>Code</th><th>Amount</th></tr></thead>
                 <tbody>{detail.adjustments.map((a,i)=><tr key={i}><td>{a.group}</td><td>{a.code} · {adjustmentMeaning(a.group,a.code)}</td><td>{cash(a.amount)}</td></tr>)}</tbody></table></div></details>}
           </section>
-          <section className={"cu-card" + (detail.reason ? " cu-issue" : "")}>
+          <div className="cu-claim-bottom">
+          <section className={"cu-card cu-claim-notes" + (detail.reason ? " cu-issue" : "")}>
             {detail.reason && <><h2>Why it is waiting on you</h2><p>{detail.reason}</p></>}
             <section className="cu-file-activity" aria-label="Existing claim notes">
               <h3>Notes and requests for this claim</h3>
@@ -481,10 +502,12 @@ export default function ClientUserPortal({ user, onLogout }) {
                 loading={claimActivityLoading} label="Claim activity pages" />
             </section>
           </section>
-          <section className="cu-card">
-            <h2>History on this claim</h2>
+          <section className="cu-card cu-claim-history">
+            <h2>Claim history</h2>
             {(detail.timeline||[]).map((event,i)=><p className="cu-event" key={i}><time>{timestamp(event.at)}</time>{event.label}</p>)}
+            {!detail.timeline?.length && <p className="cu-help">No additional claim events recorded.</p>}
           </section>
+          </div>
           <div className="cu-tech"><button className="cu-link" onClick={()=>setShowSegments(v=>!v)}>{showSegments?"Hide":"View"} 835 segments for this claim</button>
             {showSegments&&<pre>{encodeDemoFileContent((detail.technical_segments||[]).join("~\n"),"835",true)}</pre>}</div>
         </>}
