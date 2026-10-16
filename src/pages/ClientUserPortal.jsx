@@ -101,6 +101,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [decision, setDecision] = useState(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
+  const [downloadingClaim, setDownloadingClaim] = useState(false);
   const [conversionFiles, setConversionFiles] = useState([]);
   const [fileViewerId, setFileViewerId] = useState(null);
   const [claimActivity, setClaimActivity] = useState(null);
@@ -188,6 +189,31 @@ export default function ClientUserPortal({ user, onLogout }) {
       setTab("claim");
     } catch(e) { setError(e.message); }
     finally { setDetailLoading(false); }
+  };
+  const downloadClaim = async () => {
+    if (!detail?.id || downloadingClaim) return;
+    setDownloadingClaim(true); setError("");
+    try {
+      const response = await fetch(baseUrl + "claim/" + encodeURIComponent(detail.id) + "/download/", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "The claim 835 could not be downloaded.");
+      }
+      if (!(response.headers.get("content-type") || "").toLowerCase().includes("application/edi-x12")) {
+        throw new Error("The server did not return an 835 file.");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      try {
+        link.href = url; link.download = "claim-" + detail.id + ".835";
+        document.body.appendChild(link); link.click();
+      } finally {
+        link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+    } catch (issue) { setError(issue.message || "The claim 835 could not be downloaded."); }
+    finally { setDownloadingClaim(false); }
   };
   const choose = (kind, file_id, claim_id, title) => {
     if ((kind === "NOTE" || kind.startsWith("REQUEST_")) && claim_id == null) return;
@@ -299,8 +325,8 @@ export default function ClientUserPortal({ user, onLogout }) {
               {detail.reason && <button type="button" className="cu-btn cu-primary" disabled={sending}
                 onClick={()=>choose(isDictionaryIssue({reason:detail.reason})?"REQUEST_DICTIONARY":isPlanIssue({reason:detail.reason})?"REQUEST_PLAN_ID":"REQUEST_RELEASE",
                   detail.file_id,detail.id,"Request correction / release")}>Request correction / release</button>}
-              <button type="button" className="cu-btn" disabled={sending}
-                onClick={()=>choose("REQUEST_RESEND",detail.file_id,detail.id,"Request a corrected resend")}>Request resend</button>
+              <button type="button" className="cu-btn" disabled={downloadingClaim}
+                onClick={downloadClaim}>{downloadingClaim ? "Preparing 835…" : "Download 835"}</button>
               <button type="button" className="cu-btn cu-subtle" disabled={sending}
                 onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
             </div>
@@ -514,8 +540,11 @@ export default function ClientUserPortal({ user, onLogout }) {
             {!detail.timeline?.length && <p className="cu-help">No additional claim events recorded.</p>}
           </section>
           </div>
-          <div className="cu-tech"><button className="cu-link" onClick={()=>setShowSegments(v=>!v)}>{showSegments?"Hide":"View"} 835 segments for this claim</button>
-            {showSegments&&<pre>{encodeDemoFileContent((detail.technical_segments||[]).join("~\n"),"835",true)}</pre>}</div>
+          <div className="cu-tech"><button className="cu-link" aria-expanded={showSegments} onClick={()=>setShowSegments(v=>!v)}>{showSegments?"Hide":"View"} sliced 835 for this claim</button>
+            {showSegments && (detail.technical_content ? <>
+              <p className="cu-help">Single-claim slice with matching envelope controls, updated counts and claim payment total. Preview identifiers are masked; the download contains the original identifiers.</p>
+              <pre>{encodeDemoFileContent(detail.technical_content,"835",true)}</pre>
+            </> : <p className="cu-error" role="alert">{detail.technical_segments_error || "A complete 835 slice is unavailable for this claim."}</p>)}</div>
         </>}
 
         {decision && <div className="cu-backdrop">
