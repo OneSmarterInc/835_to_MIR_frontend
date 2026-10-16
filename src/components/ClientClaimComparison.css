@@ -109,7 +109,7 @@
 }
 
 /* Keep Waiting label and sorting icon intact at every viewport width. */
-.cu-comparison-table { min-width: 1320px; table-layout: fixed; }
+.cu-comparison .cu-comparison-table { min-width: 1320px; table-layout: fixed; }
 .cu-comparison-table th:first-child,
 .cu-comparison-table td:first-child { min-width: 126px; }
 .cu-comparison-table th:first-child button {
@@ -139,14 +139,23 @@
   font: 700 11px/1.2 var(--body);
   border-radius: 3px;
 }
-.cu-age-today { color: var(--teal); background: var(--teal-bg); }
-.cu-age-warning { color: #925e0a; background: var(--ochre-bg); }
-.cu-age-critical { color: var(--brick); background: var(--brick-bg); }
+.cu-comparison-table .cu-age-pill { color: var(--ink); background: rgba(255, 255, 255, .65); border: 1px solid rgba(30, 41, 59, .12); }
 .cu-age-none { color: var(--ink-3); }
-.cu-comparison-table tbody tr.cu-claim-hold-overdue { background: #fbf0ee; }
-.cu-comparison-table tbody tr.cu-claim-hold-recent { background: #fffaf1; }
-.cu-comparison-table tbody tr.cu-claim-hold-overdue:hover { background: #f8e7e4; }
-.cu-comparison-table tbody tr.cu-claim-hold-recent:hover { background: #fbf0d7; }
+.cu-row-age-0-10 { --cu-age-row: #fff; --cu-age-hover: #f5f7fa; }
+.cu-row-age-10-20 { --cu-age-row: #fff3cd; --cu-age-hover: #ffecb3; }
+.cu-row-age-20-30 { --cu-age-row: #fbe0dc; --cu-age-hover: #f8d2cc; }
+.cu-row-age-30-plus { --cu-age-row: #f6a3a3; --cu-age-hover: #f28e8e; }
+.cu-row-age-unknown { --cu-age-row: #fff; --cu-age-hover: #f5f7fa; }
+.cu-comparison-table tbody tr[class*="cu-row-age-"] { background: var(--cu-age-row); }
+.cu-comparison-table tbody tr[class*="cu-row-age-"]:hover { background: var(--cu-age-hover); }
+.cu-age-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 12px 0; }
+.cu-age-filter { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 12px; font-weight: 650; }
+.cu-age-filter select { min-height: 36px; padding: 7px 30px 7px 10px; background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 3px; font: inherit; }
+.cu-age-filter select:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.cu-age-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 11px; color: var(--ink-2); }
+.cu-age-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cu-age-swatch { width: 12px; height: 12px; border: 1px solid rgba(30, 41, 59, .2); border-radius: 2px; background: var(--cu-age-row); }
+.cu-age-toolbar > small { flex-basis: 100%; color: var(--ink-2); font-size: 11px; }
 @media(max-width:700px) {
   .cu-comparison-table { min-width: 1320px; }
   .cu-comparison-table th:first-child,

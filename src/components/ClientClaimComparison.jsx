@@ -35,9 +35,14 @@ export function ComparisonStatus({ row, recon = false }) {
 }
 const categoryKey = filter => ({ All: "all", Denied: "denied",
   "Less paid": "less", "Paid in full": "paid" })[filter] || "all";
-const makeParams = ({periodQuery, payerFilter, sort, direction, page, pageSize}) => {
+export const claimAgeBand = days => days == null || days === "" || !Number.isFinite(Number(days)) || Number(days) < 0
+  ? "unknown" : Number(days) < 10 ? "0-10" : Number(days) < 20 ? "10-20" : Number(days) < 30 ? "20-30" : "30-plus";
+const AGE_OPTIONS = [["all", "All"], ["0-10", "0–10 days"], ["10-20", "10–20 days"],
+  ["20-30", "20–30 days"], ["30-plus", "30+ days"]];
+const makeParams = ({periodQuery, payerFilter, ageFilter, sort, direction, page, pageSize}) => {
   const params = new URLSearchParams(periodQuery);
   params.set("payer_status", categoryKey(payerFilter));
+  params.set("age_band", ageFilter);
   params.set("sort", sort);
   params.set("direction", direction);
   if (page != null) params.set("page", String(page));
@@ -50,6 +55,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   const [direction, setDirection] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [ageFilter, setAgeFilter] = useState("all");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,7 +69,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   useEffect(() => {
     if (!periodQuery) { setData(null); setLoading(false); return undefined; }
     const controller = new AbortController();
-    const params = makeParams({periodQuery, payerFilter, sort, direction, page, pageSize});
+    const params = makeParams({periodQuery, payerFilter, ageFilter, sort, direction, page, pageSize});
     // Retain the current page during sorting to prevent column widths, row
     // height and scroll positions from jumping while the new order loads.
     // Date/payer filter changes still clear stale records above.
@@ -78,7 +84,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
       .catch(reason => { if (reason.name !== "AbortError") setError(reason.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [periodQuery, payerFilter, sort, direction, page, pageSize, refresh]);
+  }, [periodQuery, payerFilter, ageFilter, sort, direction, page, pageSize, refresh]);
 
   const changeSort = key => {
     if (loading || exporting) return;
@@ -91,7 +97,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
     setExporting(true);
     setExportError("");
     try {
-      const params = makeParams({periodQuery, payerFilter, sort, direction});
+      const params = makeParams({periodQuery, payerFilter, ageFilter, sort, direction});
       params.set("format", "csv");
       const response = await fetch("/edi835/api/client-portal/comparison/?" + params.toString(), {
         credentials: "include", headers: { Accept: "text/csv" },
@@ -161,6 +167,21 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
         <span>Not treated as $0</span></div>
     </div>
     */}
+    <div className="cu-age-toolbar">
+      <label className="cu-age-filter">Waiting days
+        <select value={ageFilter} disabled={exporting} onChange={event => {
+          setAgeFilter(event.target.value); setPage(1); setData(null); setExportError("");
+        }}>
+          {AGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
+      <div className="cu-age-legend" aria-label="Row age colors">
+        {AGE_OPTIONS.slice(1).map(([value, label]) => <span key={value}>
+          <i className={"cu-age-swatch cu-row-age-" + value} aria-hidden="true" />{label}
+        </span>)}
+      </div>
+      <small>10, 20 and 30 days start the next band. Unknown age appears in All.</small>
+    </div>
     {error && <p role="alert" className="cu-error">Could not load comparison: {error}</p>}
     {exportError && <p role="alert" className="cu-error">Could not download CSV: {exportError}</p>}
     <div className={"cu-table-scroll cu-comparison-scroll" + (loading ? " cu-comparison-updating" : "")} aria-busy={loading}>
@@ -177,11 +198,10 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
           </button>
         </th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={row.key} title={row.reason}
-          className={row.is_held ? (row.waiting_days >= 3 ? "cu-claim-hold-overdue" : "cu-claim-hold-recent") : ""}>
+          className={"cu-row-age-" + claimAgeBand(row.waiting_days)}>
           <td className="cu-waiting-cell">
             {row.waiting_days == null ? <span className="cu-age-none" title="No dated source event is available">—</span> :
-              <span className={"cu-age-pill " + (row.waiting_days >= 3 ? "cu-age-critical" :
-                row.waiting_days >= 1 ? "cu-age-warning" : "cu-age-today")}
+              <span className="cu-age-pill"
                 title={(row.is_held ? "Claim held · " : "Claim age · ") +
                   (row.waiting_basis === "835 received" ? "days since 835 receipt" :
                     "days since latest available activity")}>
@@ -222,7 +242,7 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
         </tr>)}
         {!rows.length && <tr><td colSpan={COLUMNS.length} className="cu-empty-comparison">
           {loading ? "Loading period comparisons…" : error ? "Unable to display records." :
-           "No 835, MIR or Recon claim records in the selected period."}
+           "No claim records match the selected period and filters."}
         </td></tr>}
         </tbody>
       </table>

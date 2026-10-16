@@ -10,6 +10,7 @@
     "test:client-financials": "node scripts/test-client-financials.js",
     "test:client-comparison": "node scripts/test-client-comparison.js",
     "test:client-claim-actions": "node scripts/test-client-claim-actions.js",
+    "test:client-age-filter": "node scripts/test-client-age-filter.js",
     "test:dialog-dismissal": "node scripts/test-dialog-dismissal.js",
     "test:result-sorting": "node scripts/test-result-sorting.js",
     "test:table-layout": "node scripts/test-table-layout.js",
