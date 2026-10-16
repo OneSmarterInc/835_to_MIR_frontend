@@ -35,9 +35,14 @@
 .cu-claim-meta {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: .8fr 1.1fr 1.8fr 1fr;
-  gap: 8px 22px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 12px 20px;
   margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .6);
+  align-items: start;
 }
 .cu-claim-meta > div { min-width: 0; }
 .cu-claim-meta dt {
@@ -48,6 +53,15 @@
   letter-spacing: .05em;
 }
 .cu-claim-meta dd { margin: 2px 0 0; color: var(--ink); font-size: 12px; overflow-wrap: anywhere; }
+.cu-source-files { min-width: 0; }
+.cu-source-files summary { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; }
+.cu-source-files summary::-webkit-details-marker { display: none; }
+.cu-source-preview { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cu-source-toggle { flex-shrink: 0; color: var(--teal); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.cu-source-files .cu-source-hide, .cu-source-files[open] .cu-source-show { display: none; }
+.cu-source-files[open] .cu-source-hide { display: inline; }
+.cu-source-files summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.cu-main.cu-claim-page .cu-source-files p { margin: 8px 0 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .cu-main.cu-claim-page .cu-card { padding: 14px 16px; box-shadow: none; }
 .cu-main.cu-claim-page .cu-timeline { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 12px 16px; gap: 10px; }
 .cu-claim-page .cu-step { gap: 8px; }

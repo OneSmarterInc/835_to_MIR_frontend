@@ -306,7 +306,13 @@ export default function ClientUserPortal({ user, onLogout }) {
                 onClick={()=>choose("NOTE",detail.file_id,detail.id,"Add a claim note")}>Add a note</button>
             </div>
             <dl className="cu-claim-meta">
-              <div><dt>Source file</dt><dd>{filenameText(detail.file_name)}</dd></div>
+              <div><dt>Source file</dt><dd>{detail.file_name ?
+                <details className="cu-source-files">
+                  <summary><span className="cu-source-preview">{filenameText(detail.file_name)}</span>
+                    <span className="cu-source-toggle"><span className="cu-source-show">View</span><span className="cu-source-hide">Hide</span></span>
+                  </summary>
+                  <p>{filenameText(detail.file_name)}</p>
+                </details> : "—"}</dd></div>
               <div><dt>Received</dt><dd>{timestamp(detail.received_at)}</dd></div>
               <div><dt>Payer</dt><dd>{detail.payer || "—"}</dd></div>
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>

@@ -17,6 +17,7 @@ const container = document.getElementById('root');
 const root = createRoot(container);
 const originalFetch = globalThis.fetch;
 const fileId = '00000000-0000-4000-8000-000000000001';
+const sourceFiles = 'TEST_PAYP_20260812_071456.x12, TEST_PAYP_20260812_071456.x12, TEST_PAYP_20260813_071757.x12, TEST_PAYP_20260813_073257.x12, TEST_PAYP_20260817_071224.x12';
 let reason = '';
 let records = [];
 let posts = [];
@@ -39,7 +40,7 @@ globalThis.fetch = async (input, options = {}) => {
   }
   if (url.pathname.endsWith('/claim/42/')) {
     return response({ success: true, claim: {
-      id: 42, file_id: fileId, number: 'TEST', file_name: 'test.835', reason,
+      id: 42, file_id: fileId, number: 'TEST', file_name: sourceFiles, reason,
       billed: '1521.00', paid: '0.00', allowed: '0.00', payer_status: 'No payment',
       payer: 'EXAMPLE HEALTH & WELFARE', patient_name: 'Synthetic Patient',
       received_at: '2026-10-01T11:33:00Z', check_date: '20260806', patient_owes: '0.00', days: 2,
@@ -105,6 +106,13 @@ try {
   };
 
   await openClaim('');
+  const sourceDisclosure = container.querySelector('.cu-source-files');
+  assert.equal(sourceDisclosure.open, false);
+  await click(sourceDisclosure.querySelector('summary'));
+  assert.equal(sourceDisclosure.open, true);
+  assert.equal(sourceDisclosure.querySelector('p').textContent, sourceFiles, 'Full source names, including repeated names, must remain available');
+  await click(sourceDisclosure.querySelector('summary'));
+  assert.equal(sourceDisclosure.open, false);
   const serviceRows = container.querySelectorAll('.cu-service-table tbody tr');
   assert.equal(serviceRows.length, 3);
   assert.equal(serviceRows[0].cells[5].textContent, 'Nov 10, 2025');
