@@ -38,7 +38,7 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
       return;
     }
 
-    if (['Client Admin', 'Client User', 'User'].includes(role) && !selectedClientId) {
+    if (['Client Admin', 'Client User', 'Demo', 'User'].includes(role) && !selectedClientId) {
       setErrorMsg("Please select a client for this user.");
       return;
     }
@@ -64,7 +64,7 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
         email: email.trim(),
         password,
         role,
-        client_id: ['Client Admin', 'Client User', 'User'].includes(role) ? selectedClientId : null
+        client_id: ['Client Admin', 'Client User', 'Demo', 'User'].includes(role) ? selectedClientId : null
       });
       handleCloseModal();
     } catch (err) {
@@ -133,13 +133,14 @@ export default function CreateUserModal({ isOpen, onClose, onSave, clients, curr
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
               <option value="Client Admin">Client Admin (Existing Portal Access)</option>
               <option value="Client User">Client User (Claims Review Workspace)</option>
+              <option value="Demo">Demo (Analysis only)</option>
               {isSuperAdmin && <option value="Admin">Admin (Custom Screen Access)</option>}
               {isSuperAdmin && <option value="Super Admin">Super Admin (System Owner)</option>}
             </select>
           </div>
         )}
         
-        {['Client Admin', 'Client User', 'User'].includes(role) && (
+        {['Client Admin', 'Client User', 'Demo', 'User'].includes(role) && (
           <div className="field">
             <label>Client *</label>
             <select

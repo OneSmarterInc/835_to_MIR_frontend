@@ -20,7 +20,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
 
   useEffect(() => {
     if (user) {
-      setName(user.name || '');
+      setName(user.name || user.person || '');
       setEmail(user.email || '');
       const parsedMobile = splitE164(user.mobile && user.mobile !== '—' ? user.mobile : '');
       setCountryIso(parsedMobile.countryIso);
@@ -46,7 +46,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
       return;
     }
 
-    if (['Client Admin', 'Client User', 'User'].includes(role) && !selectedClientId) {
+    if (['Client Admin', 'Client User', 'Demo', 'User'].includes(role) && !selectedClientId) {
       setErrorMsg("Please select a client for this user.");
       return;
     }
@@ -73,7 +73,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
         role,
         is_staff: role === 'Admin' || role === 'Super Admin',
         is_superuser: role === 'Super Admin',
-        client_id: ['Client Admin', 'Client User', 'User'].includes(role) ? selectedClientId : null
+        client_id: ['Client Admin', 'Client User', 'Demo', 'User'].includes(role) ? selectedClientId : null
       };
       if (newPassword) {
         payload.password = newPassword;
@@ -135,6 +135,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
             <select value={role} onChange={e => { setRole(e.target.value); setErrorMsg(''); }}>
               <option value="Client Admin">Client Admin (Existing Portal Access)</option>
               <option value="Client User">Client User (Claims Review Workspace)</option>
+              <option value="Demo">Demo (Analysis only)</option>
               {isSuperAdmin && <option value="Admin">Admin (Custom Screen Access)</option>}
               {isSuperAdmin && <option value="Super Admin">Super Admin (System Owner)</option>}
             </select>
@@ -146,7 +147,7 @@ export default function EditUserModal({ isOpen, onClose, onSave, onDelete, clien
           </div>
         )}
         
-        {['Client Admin', 'Client User', 'User'].includes(role) && (
+        {['Client Admin', 'Client User', 'Demo', 'User'].includes(role) && (
           <div className="field">
             <label>Client *</label>
             <select

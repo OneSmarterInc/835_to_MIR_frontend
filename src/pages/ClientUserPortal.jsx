@@ -62,7 +62,8 @@ const adjustmentMeaning = (group, code) => {
 const isPlanIssue = issue => /plan.?id|subscriber.?id|member.?id/i.test(issue.reason || "");
 const isDictionaryIssue = issue => /dictionary|remark|code.?mapping|unknown.?code/i.test(issue.reason || "");
 export default function ClientUserPortal({ user, onLogout }) {
-  const { tab, claimId, analysisClaim, historySection, pathname, navigate } = useClientPortalRoute();
+  const analysisOnly = user?.client_role === "DEMO";
+  const { tab, claimId, analysisClaim, historySection, pathname, navigate } = useClientPortalRoute(analysisOnly);
   const isAnalysis = tab === "analysis";
   const [periodMode, setPeriodMode] = useState("daily");
   const [customFrom, setCustomFrom] = useState("");
@@ -271,19 +272,19 @@ export default function ClientUserPortal({ user, onLogout }) {
         onPointerEnter={openDrawerPreview} onPointerLeave={closeDrawerPreview}
         aria-label="Client navigation" aria-hidden={!drawer} inert={!drawer}>
         <div className="grp eyebrow">Operations</div>
-        {navigation.filter(([key]) => key !== "history").map(([key,label]) =>
+        {navigation.filter(([key]) => analysisOnly ? key === "analysis" : key !== "history").map(([key,label]) =>
           <button type="button" key={key}
             aria-current={tab === key ? "page" : undefined}
             className={"cu-navitem" + ((tab === key || (key === "home" && tab === "claim")) ? " on" : "")}
             onClick={() => go(key)}><span>{label}</span>
           </button>
         )}
-        <div className="grp eyebrow cu-nav-section">Records</div>
+        {!analysisOnly && <><div className="grp eyebrow cu-nav-section">Records</div>
         <button type="button" className={"cu-navitem" + (tab === "history" ? " on" : "")}
           onClick={() => go("history")}><span>History</span></button>
         <div className="grp eyebrow cu-nav-section">Account</div>
         <button type="button" className={"cu-navitem" + (tab === "settings" ? " on" : "")}
-          onClick={() => go("settings")}><span>Settings</span></button>
+          onClick={() => go("settings")}><span>Settings</span></button></>}
       </nav>
       <main className={"cu-main cu-compact" + (tab === "claim" ? " cu-claim-page" : "")}>
         {!["home", "835837", "analysis"].includes(tab) && <button type="button" className="cu-back-link"
@@ -357,7 +358,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         {tab !== "analysis" && loading && <p>Loading current client records…</p>}
         {detailLoading && <p>Opening claim…</p>}
 
-        {tab === "analysis" && <ClientAnalysis claimNumber={analysisClaim}
+        {tab === "analysis" && <ClientAnalysis key={user.client_id} claimNumber={analysisClaim}
           onClaimChange={id => navigate(clientPagePath("analysis", id))} />}
         {tab === "835837" && periodQuery && <Client835837Status periodQuery={periodQuery} refresh={refresh} onOpen={showClaim} />}
         {tab === "home" && periodQuery && <>

@@ -3,6 +3,7 @@ import React, { useState } from "react";
 export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = false,
   drawerOpen = false, drawerPinned = false, onMenuPointerEnter, onMenuPointerLeave }) {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const roleLabel = user?.client_role === "DEMO" ? "DEMO" : "CLIENT USER";
   const displayName = user?.name || user?.email || "Client User";
   const initials = displayName.split(" ").filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "CU";
 
@@ -24,14 +25,14 @@ export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = fa
             <div className="wordmark" style={{textTransform: "none"}}>
               <span style={{color: "#fff", fontWeight: "inherit"}}>F</span>ile<span
                 style={{color: "#fff", fontWeight: "inherit"}}>X</span>
-              <span className="cu-header-divider"> / CLIENT USER</span>
+              <span className="cu-header-divider"> / {roleLabel}</span>
             </div>
           </div>
           <div className="spacer" />
           <div className="cu-user-profile">
             <span className="cu-header-avatar">{initials}</span>
             <div><div className="cu-header-name">{displayName}</div>
-              <div className="cu-header-role">CLIENT USER</div>
+              <div className="cu-header-role">{roleLabel}</div>
             </div>
           </div>
           <button type="button" className="btn-topbar-logout" title="Sign Out"

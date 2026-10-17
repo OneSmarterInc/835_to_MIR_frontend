@@ -291,7 +291,7 @@ export default function App() {
     // Do not compete with the session bootstrap request. On a small Gunicorn
     // deployment these three dashboard calls could queue ahead of /api/user/
     // and leave the entire application on the loading screen.
-    if(!userState?.authenticated || isAdminRoute || userState?.user?.client_role === "CLIENT_USER"){
+    if(!userState?.authenticated || isAdminRoute || ["CLIENT_USER", "DEMO"].includes(userState?.user?.client_role)){
       return undefined;
     }
 
@@ -323,6 +323,7 @@ export default function App() {
     };
   },[
     userState?.authenticated,
+    userState?.user?.client_role,
     isAdminRoute,
     refreshDashboardData,
     refreshOperationalData
@@ -600,8 +601,8 @@ export default function App() {
 
 
 
-  // Restricted client accounts use their own scoped, read-only workspace.
-  if (!isAdminRoute && user?.client_role === "CLIENT_USER" && !user?.is_staff) {
+  // Restricted client accounts use their assigned client workspace.
+  if (!user?.is_staff && (user?.client_role === "DEMO" || (!isAdminRoute && user?.client_role === "CLIENT_USER"))) {
     return <ClientUserPortal user={user} onLogout={handleLogout} />;
   }
 

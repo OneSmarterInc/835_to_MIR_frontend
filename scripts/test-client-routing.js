@@ -178,6 +178,27 @@ try {
   assert.equal(readClientRoute('/analysis/').tab, 'analysis');
   assert.equal(readClientRoute('/claims/%broken').tab, 'home');
   assert.equal(clientPagePath('analysis', 'A/B?#'), '/analysis/claims/A%2FB%3F%23');
+  const demo = { name: 'Demo account', client_role: 'DEMO', client_id: 'client-a', client: 'Client A' };
+  const demoStart = paths.length;
+  for (const destination of ['/', '/history', '/settings', '/conversions', '/835-837-status', '/claims/42', '/administrator']) {
+    window.history.replaceState(null, '', destination);
+    await act(async () => root.render(React.createElement(Portal, { key: ++mount, user: demo })));
+    assert.equal(window.location.pathname, '/analysis', 'Demo direct navigation redirects to Analysis');
+    assert.equal(document.querySelector('h1').textContent, 'Analysis');
+    assert.deepEqual([...document.querySelectorAll('#client-navigation button')].map(button => button.textContent), ['Analysis']);
+    assert.equal(document.querySelector('.cu-header-role').textContent, 'DEMO');
+    assert.equal(document.querySelector('#analysis-837').disabled, false);
+    assert.equal(document.querySelector('#analysis-835').disabled, false);
+  }
+  await act(async () => document.querySelector('[data-analysis-claim]').click());
+  assert.equal(window.location.pathname, '/analysis/claims/TEST%2FCLAIM');
+  await act(async () => root.render(React.createElement(Portal, { key: ++mount, user: demo })));
+  assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'), 'Demo claim detail supports refresh');
+  await click('← Back to Analysis');
+  window.history.pushState(null, '', '/settings');
+  await act(async () => window.dispatchEvent(new window.PopStateEvent('popstate')));
+  assert.equal(window.location.pathname, '/analysis', 'Demo history navigation cannot open another workspace');
+  assert.ok(paths.slice(demoStart).every(path => path.includes('/client-portal/analysis/')), 'Demo never fetches home/history/settings or conversion data');
   console.log('Client routes, reloads, Back/Forward, history sections, claim deep links, stale requests and hover/pinned navigation passed.');
 } finally {
   await act(async () => root.unmount()); await server.close();

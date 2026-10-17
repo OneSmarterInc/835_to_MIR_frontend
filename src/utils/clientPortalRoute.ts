@@ -31,13 +31,15 @@ export function clientPagePath(page: Page | "claim", id?: string | null): string
   return pagePaths[page];
 }
 
-export function useClientPortalRoute() {
+export function useClientPortalRoute(analysisOnly = false) {
   const [pathname, setPathname] = useState(() => window.location.pathname);
   useEffect(() => {
     const update = () => {
       // Retire only the client-user page; shared conversion APIs and other
       // roles' routing continue to be owned by their existing workspaces.
-      if (window.location.pathname.replace(/\/+$/, "") === "/conversions") {
+      if (analysisOnly && readClientRoute(window.location.pathname).tab !== "analysis") {
+        window.history.replaceState(window.history.state, "", "/analysis");
+      } else if (window.location.pathname.replace(/\/+$/, "") === "/conversions") {
         window.history.replaceState(window.history.state, "", "/");
       }
       setPathname(window.location.pathname);
@@ -45,10 +47,12 @@ export function useClientPortalRoute() {
     update();
     window.addEventListener("popstate", update);
     return () => window.removeEventListener("popstate", update);
-  }, []);
+  }, [analysisOnly]);
   const navigate = useCallback((path: string) => {
+    if (analysisOnly && readClientRoute(path).tab !== "analysis") path = "/analysis";
     if (window.location.pathname !== path) window.history.pushState(null, "", path);
     setPathname(path);
-  }, []);
-  return { ...readClientRoute(pathname), pathname, navigate };
+  }, [analysisOnly]);
+  const visiblePath = analysisOnly && readClientRoute(pathname).tab !== "analysis" ? "/analysis" : pathname;
+  return { ...readClientRoute(visiblePath), pathname: visiblePath, navigate };
 }

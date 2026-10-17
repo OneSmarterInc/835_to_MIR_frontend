@@ -27,7 +27,8 @@
     "test:client-claim-sources": "node scripts/test-client-claim-sources.js",
     "test:client-835-837": "node scripts/test-client-835-837.js",
     "test:client-analysis": "node scripts/test-client-analysis.js",
-    "test:client-routing": "node scripts/test-client-routing.js"
+    "test:client-routing": "node scripts/test-client-routing.js",
+    "test:demo-user": "node scripts/test-demo-user.js"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
