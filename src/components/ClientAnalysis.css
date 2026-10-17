@@ -61,3 +61,13 @@
 .cu-analysis-source-table th { text-transform: none; letter-spacing: 0; }
 .cu-analysis-source-table th, .cu-analysis-source-table td { border-right: 1px solid #dce3eb; }
 .cu-analysis-source-table th:nth-child(n+3), .cu-analysis-source-table td:nth-child(n+3) { text-align: right; }
+
+.cu-analysis-file { flex-wrap: wrap; }
+.cu-analysis-file .cu-analysis-upload-notice, .cu-analysis-file .cu-analysis-upload-errors { flex: 1 0 100%; margin: 0; font-size: 11px; }
+
+.cu-analysis-file .cu-analysis-progress { flex: 1 0 100%; border-top: 1px solid #dce3eb; padding-top: 9px; }
+.cu-analysis-progress-counts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; color: #53677f; }
+.cu-analysis-progress-counts b { margin-left: 4px; color: #172231; font-variant-numeric: tabular-nums; }
+.cu-analysis-progress-counts [data-stage="saved"] b { color: #10735b; }
+.cu-analysis-progress-counts .has-failures, .cu-analysis-progress-counts .has-failures b { color: #ad3028; }
+.cu-analysis-processing-file { display: block; margin-top: 6px; overflow-wrap: anywhere; }

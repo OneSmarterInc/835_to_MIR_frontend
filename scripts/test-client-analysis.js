@@ -37,7 +37,9 @@ globalThis.fetch = async (url, options) => {
   if (hold) { hold = false; return new Promise(resolve => { deferred = resolve; }); }
   if (fail) { fail = false; return json({ success: false, error: 'ST/SE segment counts do not agree.' }, 400); }
   const replacement = options.body.get('file').name === 'replacement.837';
-  const saved = replacement ? { ...file('837', [claim('REPLACEMENT', '20.00', 1)]), id: 'another-837', filename: 'replacement.837' } : options.body.get('kind') === '837' ? submission : remittance;
+  const batchName = options.body.get("file").name;
+  const batchKind = options.body.get("kind");
+  const saved = batchName.startsWith("batch-") ? { ...file(batchKind, [claim(batchName.split(".")[0].toUpperCase(), batchKind === "837" ? "100.00" : "90.00", 1, "70.00", "10.00")]), id: batchName, filename: batchName } : replacement ? { ...file('837', [claim('REPLACEMENT', '20.00', 1)]), id: 'another-837', filename: 'replacement.837' } : options.body.get('kind') === '837' ? submission : remittance;
   const reused = savedFiles.has(saved.id);
   savedFiles.set(saved.id, saved);
   return json({ success: true, saved: true, reused, file: saved });
@@ -47,12 +49,15 @@ const button = text => {
   assert.ok(result, 'Missing button ' + text); return result;
 };
 const click = async text => act(async () => button(text).click());
-const upload = async (kind, name = `claims.${kind}`, contents = 'synthetic content') => act(async () => {
+const upload = async (kind, name = `claims.${kind}`, contents = 'synthetic content') => uploadMany(kind, [new File([contents], name)]);
+const uploadMany = async (kind, selected) => act(async () => {
   const input = document.querySelector(`#analysis-${kind}`);
-  Object.defineProperty(input, 'files', { configurable: true, value: [new File([contents], name)] });
-  Object.defineProperty(input, 'value', { configurable: true, writable: true, value: name });
+  Object.defineProperty(input, 'files', { configurable: true, value: selected });
+  Object.defineProperty(input, 'value', { configurable: true, writable: true, value: selected.map(file => file.name).join(', ') });
   input.dispatchEvent(new Event('change', { bubbles: true }));
 });
+const uploadCounts = kind => Object.fromEntries([...document.querySelectorAll(`[aria-label="${kind} upload status"] [data-stage]`)]
+  .map(item => [item.dataset.stage, Number(item.querySelector('b').textContent)]));
 async function capturePreview(path) {
   if (path) {
     const fs = await import('node:fs/promises');
@@ -62,7 +67,7 @@ async function capturePreview(path) {
 }
 try {
   const { default: Analysis } = await server.ssrLoadModule('/src/components/ClientAnalysis.tsx');
-  const { analyzeClaims, analysisCsv, analysisSources } = await server.ssrLoadModule('/src/utils/claimAnalysis.ts');
+  const { analyzeClaims, analysisCsv, analysisSources, isAnalysisMismatch } = await server.ssrLoadModule('/src/utils/claimAnalysis.ts');
   // Exercise the actual response interceptor: display masking must not change
   // identifiers before comparison/grouping (different claims can share a suffix).
   const { readFile } = await import('node:fs/promises');
@@ -133,7 +138,7 @@ try {
 
   await act(async () => root.render(React.createElement(Analysis)));
   assert.equal(calls.length, 1, 'Analysis loads only its isolated staging endpoint');
-  assert.equal(button('Upload 835').disabled, true);
+  assert.equal(button('Upload 835').disabled, false);
   assert.equal(document.querySelectorAll('.cu-aging-row').length, 0);
   await upload('837');
   assert.equal(document.querySelector('#analysis-837').value, '');
@@ -142,24 +147,29 @@ try {
   assert.equal(button('Upload 835').disabled, false);
   assert.ok(document.body.textContent.includes('Awaiting 835 upload'));
   await upload('835');
-  assert.equal(document.querySelectorAll('tbody tr').length, 3, 'one row per claim, including multiple occurrences');
-  assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1, 1]);
+  assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Only mismatches and unresolved comparisons are shown');
+  assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1]);
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
   assert.equal(document.querySelectorAll('thead th').length, 9);
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
-  assert.equal(document.querySelectorAll('tbody button[data-analysis-claim]').length, 3);
+  assert.equal(document.querySelectorAll('tbody button[data-analysis-claim]').length, 2);
   assert.ok(!document.querySelector('table').textContent.includes('submitted-claims.837'));
   assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
   assert.equal(document.querySelectorAll('table time').length, 0);
   assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
     ['837 · CLM02', '835 · CLP03', '835 · CLP04', '835 · CLP05', '835 · CLP04 + CLP05']);
-  const example = document.querySelectorAll('tbody')[1];
-  assert.deepEqual([...example.querySelectorAll('.cu-analysis-result strong')].map(cell => cell.textContent), ['Match', 'Match']);
-  assert.ok(example.textContent.includes('$657.00'));
+  assert.equal(document.querySelector('[data-analysis-claim="SYNTHETIC-1002"]'), null, 'Both-match claim excluded from table');
+  assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
+  assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));
+  for (const [billed, allowed, expected] of [['Match', 'Mismatch', true], ['Mismatch', 'Match', true], ['Match', 'Match', false], ['Match', 'Amount unavailable', true]]) {
+    assert.equal(isAnalysisMismatch({ ...compared[0], billed_status: billed, allowed_status: allowed }), expected);
+  }
+  assert.ok(button('Mismatch amount').textContent.endsWith('2'));
+  assert.ok(button('Missing in 835').textContent.endsWith('1'));
   assert.ok(analysisCsv(compared).includes('Allowed comparison status'));
   assert.ok(analysisCsv(compared).includes('Claim payment (835 CLP04)'));
-  await click('Download CSV'); assert.deepEqual(downloads, ['filex-analysis_both.csv']);
+  await click('Download CSV'); assert.deepEqual(downloads, ['filex-analysis_mismatch-amount.csv']);
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH);
   await act(async () => {
     const input = document.querySelector('input[type="search"]');
@@ -193,7 +203,7 @@ try {
   assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'), 'Native claim button provides keyboard-accessible navigation');
   await click('← Back to Analysis');
   await click('Clear');
-  await click('In 837 only');
+  await click('Missing in 835');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
   assert.ok(document.body.textContent.includes('Not in uploaded 835'));
   await act(async () => document.querySelector('tbody button').click());
@@ -207,14 +217,18 @@ try {
   assert.equal(button('Retry 835').disabled, false);
   await click('Retry 835');
   assert.equal(document.querySelector('#analysis-835').value, '');
-  assert.equal(document.querySelectorAll('tbody tr').length, 3, 'Retry reuses existing file without duplicate rows');
+  assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Retry reuses existing file without duplicate rows');
   assert.ok(document.body.textContent.includes('already saved'));
   hold = true; await upload('835');
-  assert.equal(button('Upload 837').disabled, true, 'Do not interrupt a database write with another upload');
+  assert.equal(button('Upload 837').disabled, false, 'Other source can upload while 835 is saving');
+  assert.equal(button('Upload 835').disabled, true);
+  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 1, saved: 0, failed: 0 });
+  await upload('837', 'replacement.837');
+  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 1, saved: 0, failed: 0 });
   assert.equal(button('Upload 835').disabled, true);
   await act(async () => deferred(json({ success: true, saved: true, file: remittance })));
-  await upload('837', 'replacement.837');
-  await click('In 837 only');
+  await click('Missing in 835');
   assert.equal(document.querySelectorAll('tbody tr').length, 2, 'New uploads accumulate alongside existing staging files');
   const before = calls.length;
   await upload('837', 'empty.837', '');
@@ -223,17 +237,72 @@ try {
   assert.equal(document.querySelectorAll('tbody tr').length, 2);
   assert.equal(document.querySelector('#analysis-837').value, 'empty.837');
   await act(async () => root.render(React.createElement(Analysis, { key: 'reload' })));
-  assert.equal(document.querySelectorAll('tbody tr').length, 3, 'Reload restores saved files through paginated GET');
-  await click('In 837 only');
+  assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Reload restores saved files through paginated GET');
+  await click('Missing in 835');
   assert.equal(document.querySelectorAll('tbody tr').length, 2);
   failLoad = true;
   await act(async () => root.render(React.createElement(Analysis, { key: 'failed-load' })));
   assert.equal(button('Upload 837').disabled, true);
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('Loading failed'));
   await click('Retry loading');
-  assert.equal(document.querySelectorAll('tbody tr').length, 3);
+  assert.equal(document.querySelectorAll('tbody tr').length, 2);
+  savedFiles.clear();
+  await act(async () => root.render(React.createElement(Analysis, { key: '835-first' })));
+  assert.equal(button('Upload 835').disabled, false);
+  assert.equal(button('Upload 837').disabled, false);
+  assert.equal(document.querySelector('#analysis-837').multiple, true);
+  assert.equal(document.querySelector('#analysis-835').multiple, true);
+  assert.ok(!document.querySelector('.cu-analysis-steps').textContent.includes('1 ·'));
+  await upload('835');
+  assert.ok(savedFiles.has('file-835'), '835 saves before any 837');
+  assert.equal(document.querySelector('#analysis-835').value, '');
+  await act(async () => root.render(React.createElement(Analysis, { key: '835-first-reload' })));
+  await upload('837');
+  await click('Mismatch amount');
+  assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Matching works with 835-first upload order after reload');
+
+  const batchStart = calls.length;
+  fail = true;
+  await uploadMany('837', [new File(['synthetic'], 'batch-a.837'), new File(['synthetic'], 'batch-b.837')]);
+  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 1 });
+  assert.ok(!savedFiles.has('batch-a.837'));
+  assert.ok(savedFiles.has('batch-b.837'), 'Later files continue after an earlier validation failure');
+  assert.ok(document.querySelector('[role="alert"]').textContent.includes('batch-a.837'));
+  assert.ok(document.querySelector('#analysis-837').value.length > 0, 'Partial failure keeps selection for retry');
+  assert.equal(document.querySelector('label[for="analysis-837"]').parentElement.querySelector('p').textContent, 'batch-a.837');
+  await click('Retry 837');
+  assert.ok(savedFiles.has('batch-a.837'));
+  assert.equal(document.querySelector('#analysis-837').value, '');
+  assert.deepEqual(calls.slice(batchStart).filter(call => call.method === 'POST').map(call => call.body.get('file').name),
+    ['batch-a.837', 'batch-b.837', 'batch-a.837'], 'Retry sends only failed files');
+  await uploadMany('835', [new File(['synthetic'], 'batch-a.835'), new File(['synthetic'], 'batch-b.835')]);
+  assert.ok(savedFiles.has('batch-a.835') && savedFiles.has('batch-b.835'));
+  assert.equal(document.querySelector('#analysis-835').value, '');
+  assert.equal(document.querySelectorAll('tbody tr').length, 4);
+  assert.ok(!document.querySelector('table').textContent.includes('$657.00'));
+  const liveStart = calls.length;
+  hold = true;
+  await uploadMany('835', ['batch-live-a.835', 'batch-live-b.835', 'batch-live-c.835'].map(name => new File(['synthetic'], name)));
+  assert.deepEqual(uploadCounts('835'), { queued: 2, processing: 1, saved: 0, failed: 0 });
+  assert.ok(document.querySelector('[aria-label="835 upload status"]').textContent.includes('batch-live-a.835'));
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-progress.html'));
+  hold = true;
+  await act(async () => deferred(json({ success: false, error: 'Database write failed' }, 503)));
+  assert.deepEqual(uploadCounts('835'), { queued: 1, processing: 1, saved: 0, failed: 1 });
+  assert.ok(document.querySelector('[role="alert"]').textContent.includes('Database write failed'), 'Failure is visible before the remaining queue finishes');
+  assert.ok(document.querySelector('[aria-label="835 upload status"]').textContent.includes('batch-live-b.835'));
+  const liveSaved = { ...file('835', [claim('BATCH-LIVE-B', '90.00', 1, '70.00', '10.00')]), id: 'batch-live-b.835', filename: 'batch-live-b.835' };
+  savedFiles.set(liveSaved.id, liveSaved);
+  await act(async () => deferred(json({ success: true, saved: true, file: liveSaved })));
+  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 2, failed: 1 });
+  assert.equal(document.querySelector('.cu-analysis-processing-file'), null);
+  await click('Retry 835');
+  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  assert.equal(document.querySelector('#analysis-835').value, '');
+  assert.deepEqual(calls.slice(liveStart).filter(call => call.method === 'POST').map(call => call.body.get('file').name),
+    ['batch-live-a.835', 'batch-live-b.835', 'batch-live-c.835', 'batch-live-a.835']);
   assert.equal(localStorage.length, 0, 'Uploaded data must not enter browser storage');
-  console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, database-confirmed reset, retry, accumulation and reload persistence passed.');
+  console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, independent batch queues, live counts, failure-only retry, accumulation and reload persistence passed.');
 } finally {
   await act(async () => root.unmount()); await server.close();
   globalThis.fetch = originalFetch; URL.createObjectURL = createUrl; URL.revokeObjectURL = revokeUrl;

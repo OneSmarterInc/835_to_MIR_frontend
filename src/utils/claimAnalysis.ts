@@ -124,3 +124,7 @@ export function analysisCsv(rows: AnalysisRow[]): string {
     }),
   ].map(record => record.map(escape).join(",")).join("\r\n");
 }
+
+export function isAnalysisMismatch(row: AnalysisRow): boolean {
+  return row.category === "both" && (row.billed_status !== "Match" || row.allowed_status !== "Match");
+}
