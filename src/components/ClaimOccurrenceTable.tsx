@@ -15,7 +15,7 @@ const columns: [SortKey, string][] = [["claim", "Claim"], ["waiting_days", "Wait
   ["source_type", "Type"], ["filename", "Source file"], ["received_at", "Received"],
   ["internal_number", "Internal claim"], ["billed_837", "Billed 837"], ["billed_835", "Billed 835"],
   ["difference", "Billed difference"], ["status", "835/837 status"]];
-const money = (value: string | null) => {
+export const money = (value: string | null) => {
   if (value == null) return "—";
   const [whole, fraction = ""] = value.replace(/^-/, "").split(".");
   return `${value.startsWith("-") ? "-" : ""}$${BigInt(whole).toLocaleString("en-US")}.${fraction.padEnd(2, "0")}`;

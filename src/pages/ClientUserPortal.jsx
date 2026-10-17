@@ -63,6 +63,7 @@ const isPlanIssue = issue => /plan.?id|subscriber.?id|member.?id/i.test(issue.re
 const isDictionaryIssue = issue => /dictionary|remark|code.?mapping|unknown.?code/i.test(issue.reason || "");
 export default function ClientUserPortal({ user, onLogout }) {
   const [tab, setTab] = useState("home");
+  const isAnalysis = tab === "analysis";
   const [periodMode, setPeriodMode] = useState("daily");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -118,7 +119,7 @@ export default function ClientUserPortal({ user, onLogout }) {
 
   const reload = useCallback(() => setRefresh(v => v + 1), []);
   useEffect(() => {
-    if (!periodQuery) {
+    if (!periodQuery || isAnalysis) {
       setDashboard(null);
       setActions([]);
       setLoading(false);
@@ -138,7 +139,7 @@ export default function ClientUserPortal({ user, onLogout }) {
     }).catch(e => { if (e.name !== "AbortError") setError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [periodQuery, refresh]);
+  }, [periodQuery, refresh, isAnalysis]);
 
   useEffect(() => {
     if (tab !== "history" || historySection !== "files" || !periodQuery) return undefined;

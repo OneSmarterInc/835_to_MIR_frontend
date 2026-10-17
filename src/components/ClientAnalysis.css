@@ -15,9 +15,26 @@
 .cu-analysis-file:focus-within { outline: 2px solid #087f73; outline-offset: 2px; }
 .cu-analysis-search { margin: 14px 0; }
 .cu-analysis-count { display: inline-block; margin-left: 8px; font-size: 11px; opacity: .8; }
-.cu-analysis .cu-comparison .cu-835837-table { min-width: 1080px; table-layout: auto; }
-.cu-analysis .cu-835837-table thead th { width: auto; }
-.cu-analysis .cu-835837-source { min-width: 180px; }
+.cu-analysis .cu-comparison .cu-analysis-table { min-width: 1160px; table-layout: fixed; }
+.cu-analysis-table thead th:nth-child(1) { width: 10%; }
+.cu-analysis-table thead th:nth-child(2) { width: 12%; }
+.cu-analysis-table thead th:nth-child(3) { width: 8%; }
+.cu-analysis-table thead th:nth-child(n+4):nth-child(-n+8) { width: 8.5%; }
+.cu-analysis .cu-analysis-table thead th:nth-child(7) { width: 12.5%; }
+.cu-analysis-table thead th:nth-last-child(-n+2) { width: 11.75%; }
+.cu-analysis-table thead th small { display: block; margin-top: 5px; color: #53677f; font-size: 9px; font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.4; }
+.cu-analysis-table tbody .cu-analysis-claim { padding: 10px 8px !important; text-transform: none; letter-spacing: 0; white-space: normal; vertical-align: top; color: var(--ink); background: #fff; }
+.cu-analysis-table .cu-analysis-source { font-size: 11px; overflow-wrap: anywhere; }
+.cu-analysis-source small { display: block; font-size: 10px; color: #53677f; margin-top: 5px; }
+.cu-analysis-source > div + div { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line-soft); }
+.cu-analysis-file-type { font-weight: 700; }
+.cu-analysis-table .cu-analysis-comparison-cell { vertical-align: middle; }
+.cu-analysis-result strong { display: block; font-size: 11px; font-weight: 650; }
+.cu-analysis-result small { display: block; font-size: 10px; margin-top: 5px; color: #53677f; }
+.cu-analysis-result.is-match strong { color: #10735b; }
+.cu-analysis-result.is-mismatch strong { color: #ad3028; }
+.cu-analysis-result.is-review strong { color: #805b13; }
+.cu-analysis-group + .cu-analysis-group tr:first-child > * { border-top: 2px solid var(--line); }
 @media (max-width: 850px) { .cu-analysis-inputs { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .cu-analysis-file { align-items: stretch; flex-direction: column; } }
 .cu-analysis { min-width: 0; display: grid; gap: 12px; }

@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ClaimOccurrenceTable, { type SortKey } from "./ClaimOccurrenceTable";
-import { analyzeClaims, analysisCsv, type AnalysisFile } from "../utils/claimAnalysis";
+import AnalysisComparisonTable from "./AnalysisComparisonTable";
+import { analyzeClaims, analysisCsv, type AnalysisFile, type AnalysisSortKey } from "../utils/claimAnalysis";
 import "./ClientAnalysis.css";
 
 const endpoint = "/edi835/api/client-portal/analysis/";
 const maxBytes = 10 * 1024 * 1024;
 
 export default function ClientAnalysis() {
-  const [submitted, setSubmitted] = useState<AnalysisFile | null>(null);
-  const [received, setReceived] = useState<AnalysisFile | null>(null);
+  const [files, setFiles] = useState<AnalysisFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadVersion, setLoadVersion] = useState(0);
+  const [pending, setPending] = useState<Partial<Record<"837" | "835", File>>>({});
+  const [notice, setNotice] = useState("");
+  const submitted = useMemo(() => files.filter(file => file.kind === "837"), [files]);
+  const received = useMemo(() => files.filter(file => file.kind === "835"), [files]);
   const [busy, setBusy] = useState<"837" | "835" | null>(null);
   const [error, setError] = useState("");
   const [category, setCategory] = useState("837-only");
@@ -16,34 +22,63 @@ export default function ClientAnalysis() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sort, setSort] = useState<SortKey>("claim");
+  const [sort, setSort] = useState<AnalysisSortKey>("claim");
   const [direction, setDirection] = useState("asc");
   const active = useRef<AbortController | null>(null);
   const file837 = useRef<HTMLInputElement>(null), file835 = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true); setLoadFailed(false); setError("");
+    async function load() {
+      try {
+        const loaded: AnalysisFile[] = [];
+        let cursor: string | null = null;
+        do {
+          const response = await fetch(cursor ? `${endpoint}?after=${encodeURIComponent(cursor)}` : endpoint,
+            { credentials: "include", signal: controller.signal });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.success || !Array.isArray(result.files)) throw new Error(result.error || "Unable to load saved Analysis files.");
+          loaded.push(...result.files); cursor = result.next_cursor;
+        } while (cursor && !controller.signal.aborted);
+        if (!controller.signal.aborted) {
+          setFiles(loaded); setCategory(loaded.some(file => file.kind === "835") ? "both" : "837-only");
+        }
+      } catch (issue) {
+        if (!controller.signal.aborted) {
+          setLoadFailed(true); setError(issue instanceof Error ? issue.message : "Unable to load saved Analysis files.");
+        }
+      } finally { if (!controller.signal.aborted) setLoading(false); }
+    }
+    void load();
+    return () => controller.abort();
+  }, [loadVersion]);
   useEffect(() => () => active.current?.abort(), []);
 
   async function upload(file: File | undefined, kind: "837" | "835") {
-    if (!file || (kind === "835" && !submitted)) return;
-    active.current?.abort();
+    if (!file || busy || loading || loadFailed || (kind === "835" && !submitted.length)) return;
     const controller = new AbortController(); active.current = controller;
-    setError(""); setBusy(kind); setReceived(null); setPage(1);
-    setCategory("837-only");
-    if (kind === "837") { setSubmitted(null); setSearch(""); setSearchInput(""); }
+    setPending(current => ({ ...current, [kind]: file }));
+    setError(""); setNotice(""); setBusy(kind);
     try {
       if (!file.size || file.size > maxBytes) throw new Error("Choose a non-empty file up to 10 MB.");
-      const tokenResponse = await fetch(endpoint, { credentials: "include", signal: controller.signal });
+      const tokenResponse = await fetch(`${endpoint}?csrf_only=1`, { credentials: "include", signal: controller.signal });
       const token = await tokenResponse.json().catch(() => ({}));
       if (!tokenResponse.ok || !token.success) throw new Error(token.error || "Unable to start upload. Please sign in again.");
       const body = new FormData(); body.append("file", file); body.append("kind", kind);
       const response = await fetch(endpoint, { method: "POST", body, credentials: "include",
         headers: { "X-CSRFToken": token.csrf_token }, signal: controller.signal });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.success) throw new Error(result.error || "The file could not be validated. Please try again.");
+      if (!response.ok || !result.success || result.saved !== true) throw new Error(result.error || "The file could not be saved. Please retry.");
       if (controller.signal.aborted) return;
-      if (kind === "837") setSubmitted(result.file);
-      else { setReceived(result.file); setCategory("both"); }
+      setFiles(current => [...current.filter(item => item.id !== result.file.id), result.file]);
+      setPending(current => ({ ...current, [kind]: undefined }));
+      const input = kind === "837" ? file837.current : file835.current;
+      if (input) input.value = "";
+      setNotice(`${file.name} ${result.reused ? "is already saved" : "saved"}. Ready for another upload.`);
+      setCategory(kind === "835" ? "both" : "837-only");
+      setPage(1); setSearch(""); setSearchInput("");
     } catch (issue) {
-      if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : "Upload failed.");
+      if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : "Upload failed. Please retry.");
     } finally { if (!controller.signal.aborted) setBusy(null); }
   }
 
@@ -53,10 +88,11 @@ export default function ClientAnalysis() {
     const result = rows.filter(row => row.category === category && (!term || row.claim.includes(term)
       || row.occurrences.some(item => item.internal_number.toUpperCase().includes(term) || item.filename.toUpperCase().includes(term))));
     const value = (row: typeof result[number]): string | bigint | null => {
-      if (sort === "billed_837" || sort === "billed_835" || sort === "difference") {
+      if (sort === "billed_837" || sort === "billed_835" || sort === "difference" || sort === "allowed_difference"
+          || sort === "payment" || sort === "patient_responsibility" || sort === "allowed") {
         const amount = row[sort]; return amount == null ? null : BigInt(amount.replace(".", ""));
       }
-      if (sort === "source_type" || sort === "filename" || sort === "received_at") return row.occurrences[0][sort];
+      if (sort === "filename") return row.occurrences[0].filename;
       return String(row[sort] ?? "");
     };
     return result.sort((a, b) => {
@@ -81,25 +117,28 @@ export default function ClientAnalysis() {
       <div className="cu-analysis-steps"><h2>Compare claim files</h2><span>1 · Upload 837 <span aria-hidden="true">→</span> 2 · Upload 835</span></div>
       <div className="cu-analysis-inputs">
         {(["837", "835"] as const).map(kind => {
-          const file = kind === "837" ? submitted : received;
+          const saved = kind === "837" ? submitted : received;
+          const selected = pending[kind];
+          const disabled = loading || loadFailed || !!busy || (kind === "835" && !submitted.length);
           const ref = kind === "837" ? file837 : file835;
           return <div key={kind} className="cu-analysis-file">
             <div><label htmlFor={`analysis-${kind}`}>{kind === "837" ? "837 · Submitted claims" : "835 · Payer response"}</label>
-              <p title={file?.filename}>{file?.filename || (kind === "837" ? "Choose an 837 file to begin" : "Upload after the 837 is ready")}</p>
-              <small role="status">{busy === kind ? `Validating ${kind}…` : file ? `${file.claims.length.toLocaleString()} claim occurrences · Validated` : "X12 file · Up to 10 MB"}</small>
+              <p title={selected?.name}>{selected?.name || `Choose an ${kind} file`}</p>
+              <small role="status">{busy === kind ? `Validating and saving ${kind}…` : selected ? "Not confirmed saved · Retry or choose another file" : `${saved.length.toLocaleString()} ${saved.length === 1 ? "file" : "files"} saved · Up to 10 MB per file`}</small>
             </div>
             <input id={`analysis-${kind}`} ref={ref} type="file" accept=".837,.835,.edi,.x12,.txt" className="cu-analysis-file-input"
-              disabled={kind === "835" && (!submitted || !!busy)} onChange={event => {
-                const selected = event.target.files?.[0]; event.target.value = ""; void upload(selected, kind);
-              }} />
+              disabled={disabled} onChange={event => { void upload(event.target.files?.[0], kind); }} />
             <button className="cu-btn cu-analysis-upload-button" type="button"
-              disabled={kind === "835" && (!submitted || !!busy)} onClick={() => ref.current?.click()}>
-              {file ? `Replace ${kind}` : `Upload ${kind}`}</button>
+              disabled={disabled} onClick={() => ref.current?.click()}>Upload {kind}</button>
+            {selected && !busy && <button className="cu-btn" type="button" disabled={disabled} onClick={() => void upload(selected, kind)}>Retry {kind}</button>}
           </div>;
         })}
       </div>
-      <p className="cu-help">Validation checks X12 envelopes, transaction counts and billed amounts. Each new 837 starts a new comparison.</p>
+      <p className="cu-help">Validation checks X12 envelopes, transaction counts and claim amounts. Saved uploads remain available here; each upload adds to this analysis.</p>
+      {loading && <p role="status">Loading saved Analysis files…</p>}
+      {notice && <p role="status">{notice}</p>}
       {error && <p className="cu-error" role="alert">{error}</p>}
+      {loadFailed && <button className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
     </section>
     <div className="cu-comparison-category"><span>Claim presence</span>
       <div className="cu-filters" role="group" aria-label="Claim presence">
@@ -109,8 +148,8 @@ export default function ClientAnalysis() {
       </div>
     </div>
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison">
-      <div className="cu-section-title cu-comparison-heading"><div><h2>835/837 billed comparison</h2>
-        <p className="cu-help">Compare billed charges from the uploaded files. Confirmed exact matches, including the sign, are excluded. Multiple occurrences stay grouped for review.</p></div>
+      <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
+        <p className="cu-help">Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (CLP04 + CLP05). Each comparison shows its own status and absolute difference.</p></div>
         <div className="cu-comparison-header-actions"><span role="status">{filtered.length.toLocaleString()} claims</span>
           <button className="cu-btn" disabled={!filtered.length || !!busy} onClick={download}>Download CSV</button></div>
       </div>
@@ -121,12 +160,12 @@ export default function ClientAnalysis() {
         <button className="cu-btn" type="submit">Search</button>
         {(search || searchInput) && <button className="cu-btn" type="button" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>Clear</button>}
       </form>
-      <ClaimOccurrenceTable rows={filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)} showAge={false} showFileId={false}
-        dateLabel="Uploaded (UTC)" sort={sort} direction={direction} onSort={key => {
+      <AnalysisComparisonTable rows={filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+        sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
-        }} emptyMessage={!submitted ? busy ? "Validating uploaded claims…" : "Upload an 837 file to see its claims." :
-          category === "both" && !received ? "Upload an 835 file to compare billed charges." : "No claims match these filters. Confirmed exact matches are excluded."} />
-      <div className="cu-comparison-footer"><p className="cu-help">Each row shows one file occurrence. Differences are shown only for one-to-one matches.</p>
+        }} emptyMessage={loading ? "Loading saved Analysis files…" : loadFailed ? "Saved Analysis files could not be loaded." : !submitted.length ? busy ? "Validating uploaded claims…" : "Upload an 837 file to see its claims." :
+          category === "both" && !received.length ? "Upload an 835 file to compare claim amounts." : "No claims match these filters."} />
+      <div className="cu-comparison-footer"><p className="cu-help">One row per claim; repeated filenames appear once. Distinct amounts stay visible for review. Missing amounts stay unknown.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>Page {currentPage} of {pages}</span>
           <button className="cu-btn" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>

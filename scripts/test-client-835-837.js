@@ -13,13 +13,16 @@ const server = await createServer({ server: { middlewareMode: true }, appType: '
 const originalFetch = globalThis.fetch, createUrl = URL.createObjectURL, revokeUrl = URL.revokeObjectURL;
 const anchorClick = window.HTMLAnchorElement.prototype.click;
 const requests = [], downloads = [];
+const paths = [];
 let failNext = false, legacy = false;
 URL.createObjectURL = () => 'blob:comparison'; URL.revokeObjectURL = () => {};
 window.HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
 globalThis.fetch = async (input, options) => {
   assert.equal(options.credentials, 'include');
   const url = new URL(input, 'http://localhost');
+  paths.push(url.pathname);
   const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  if (url.pathname.endsWith('/analysis/')) return json({ success: true, files: [], next_cursor: null });
   if (url.pathname.endsWith('/overview/')) return json({ success: true, client: 'Example client', claims: [], metrics: {}, history: [], period: { from: '2026-10-17', to: '2026-10-17', timezone: 'America/Chicago' } });
   if (url.pathname.endsWith('/actions/')) return json({ success: true, actions: [] });
   if (url.pathname.endsWith('/comparison/')) return json({ success: true, count: 0, rows: [] });
@@ -128,12 +131,18 @@ try {
   await click('Home');
   assert.equal(document.querySelector('h1').textContent, 'Claims overview');
   assert.ok(document.querySelector('.cu-kpis'));
+  const beforeAnalysis = paths.length;
   await click(document.querySelector('.cu-controls button:last-child'));
   assert.equal(document.querySelector('h1').textContent, 'Analysis');
   assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Home']);
   assert.equal(document.querySelector('.cu-period-toolbar'), null);
   assert.equal(document.querySelector('.cu-aging-row'), null);
   assert.equal(document.querySelector('.cu-kpis'), null);
+  assert.deepEqual(paths.slice(beforeAnalysis), ['/edi835/api/client-portal/analysis/'], 'Analysis must only request its isolated staging records');
+  assert.equal(document.querySelector('[role="alert"]'), null);
+  await click('Home');
+  assert.equal(document.querySelector('h1').textContent, 'Claims overview');
+  assert.ok(document.querySelector('.cu-kpis'));
   console.log('835/837 portal navigation, compact sections, filters, chart, unknown amounts, CSV and retry passed.');
 } finally {
   await act(async () => root.unmount()); await server.close();
