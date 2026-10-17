@@ -4,7 +4,6 @@ import { PortalPagination } from "../components/ClientClaimTable";
 import ClientClaimComparison from "../components/ClientClaimComparison";
 // import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
 import SecurityView from "./SecurityView";
-import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
 import ClientClaimSources from "../components/ClientClaimSources";
 import Client835837Status from "../components/Client835837Status";
@@ -28,8 +27,7 @@ const claimDate = value => {
     ? date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : value;
 };
 const filenameText = value => value == null || value === "" ? "—" : String(value);
-const navigation = [["home","Home"],["convert","Conversions"],["835837","835/837 status"],["analysis","Analysis"],["history","History"]];
-// const pageNavigation = [["home", "Home"], ["convert", "Convert a file"], ["835837", "835/837 status"], ["analysis", "Analysis"]];
+const navigation = [["home","Home"],["835837","835/837 status"],["analysis","Analysis"],["history","History"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
 const displayPeriodDate = value => {
   if (!value) return "";
@@ -129,7 +127,6 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [decision, setDecision] = useState(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
-  const [conversionFiles, setConversionFiles] = useState([]);
   const [fileViewerId, setFileViewerId] = useState(null);
   const [claimActivity, setClaimActivity] = useState(null);
   const [claimActivityPage, setClaimActivityPage] = useState(1);
@@ -246,20 +243,6 @@ export default function ClientUserPortal({ user, onLogout }) {
     } catch(e) { setError(e.message); }
     finally { setSending(false); }
   };
-  const refreshConversionFiles = useCallback(async (signal) => {
-    const results = await jsonFetch("/edi835/api/tracked-files/?include_conversion_findings=0", { signal });
-    setConversionFiles(results.files || []);
-  }, []);
-  useEffect(() => {
-    if (tab !== "convert") return undefined;
-    const controller = new AbortController();
-    refreshConversionFiles(controller.signal).catch(e => {
-      if (e.name !== "AbortError") setError(e.message);
-    });
-    return () => controller.abort();
-  }, [tab, refreshConversionFiles, refresh]);
-
-
   const metrics = dashboard?.metrics || {};
   const activePeriod = dashboard?.period;
   const periodLabel = activePeriod
@@ -303,15 +286,15 @@ export default function ClientUserPortal({ user, onLogout }) {
           onClick={() => go("settings")}><span>Settings</span></button>
       </nav>
       <main className={"cu-main cu-compact" + (tab === "claim" ? " cu-claim-page" : "")}>
-        {!["home", "convert", "835837", "analysis"].includes(tab) && <button type="button" className="cu-back-link"
+        {!["home", "835837", "analysis"].includes(tab) && <button type="button" className="cu-back-link"
           onClick={() => go("home")}>
           ← Back to Home
         </button>}
         <header className={"cu-heading" + (tab === "claim" ? " cu-claim-heading" : "")}>
           <div className="cu-heading-copy">
-            <span className="eyebrow">{dashboard?.client || user.client}{!["analysis", "convert"].includes(tab) && <> · {periodMode.toUpperCase()}</>}</span>
+            <span className="eyebrow">{dashboard?.client || user.client}{tab !== "analysis" && <> · {periodMode.toUpperCase()}</>}</span>
             <h1>{tab === "analysis" ? "Analysis" : tab === "835837" ? "835/837 status" : tab === "home" ? "Claims overview" : tab === "history" ?
-              "History" : tab === "convert" ? "Conversions" : tab === "settings" ? "Account settings" :
+              "History" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
             {tab === "claim" && detail && <span className={"cu-claim-badge" + (detail.reason ? " is-held" : "")}>
               {detail.reason ? "On hold · " + detail.days + " days" : "Payer response available"}
@@ -319,7 +302,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {tab !== "claim" && tab !== "analysis" && <p>{tab === "835837" ? "Review billed-charge differences and 837 claims awaiting an 835." : tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "history" ? "Conversions and review activity for your selected period." :
-              tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
+              tab === "settings" ? "Manage your FileX security keys." :
               detail?.file_name || ""}</p>}
           </div>
           {tab === "claim" && detail && <>
@@ -343,12 +326,6 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
             </dl>
           </>}
-          {/* Header navigation shortcuts are hidden on every page.
-          {pageNavigation.some(([key]) => key === tab) && <nav className="cu-controls cu-page-navigation" aria-label="Page navigation">
-            {pageNavigation.map(([key, label]) => <button type="button" className="cu-btn" key={key}
-              aria-current={tab === key ? "page" : undefined} onClick={() => go(key)}>{label}</button>)}
-          </nav>}
-          */}
         </header>
         {["home", "history", "835837"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
           <div className="cu-period-main">
@@ -420,16 +397,6 @@ export default function ClientUserPortal({ user, onLogout }) {
             <History rows={(dashboard?.history||[]).slice(0,5)} />
           </section>
         </>}
-
-        {tab==="convert" && <div className="cu-conversions-workspace">
-          <ConversionsView
-            trackedFiles={conversionFiles}
-            onRefreshData={async () => { await refreshConversionFiles(); reload(); }}
-            onOpenFileModal={id => setFileViewerId(id)}
-            isClientUser
-            activeClientId={user.client_id || ""}
-          />
-        </div>}
 
         {tab === "settings" && <div className="cu-security-workspace"><SecurityView embedded /></div>}
 

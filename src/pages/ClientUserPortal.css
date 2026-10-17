@@ -318,13 +318,6 @@ html:has(.cu-shell) { scrollbar-gutter: stable; }
   gap: 11px; padding: 14px 0 2px; font-size: 12px; color: var(--ink-2);
 }
 .cu-history-pagination span { margin-right: auto; }
-.cu-conversions-workspace { min-width: 0; width: 100%; }
-.cu-conversions-workspace .view.on { display: block; min-width: 0; width: 100%; }
-.cu-conversions-workspace .start-conversion-card,
-.cu-conversions-workspace .card { max-width: 100%; }
-.cu-conversions-workspace .conversion-boxes { min-width: 0; }
-.cu-conversions-workspace .conversion-boxes > * { min-width: 0; }
-.cu-conversions-workspace .c-actions { flex-wrap: wrap; }
 @media (max-width: 750px) {
   .cu-file-activity-row { grid-template-columns: 1fr; gap: 4px; }
   .cu-file-activity .cu-activity-status { justify-self: start; }
@@ -344,7 +337,7 @@ html:has(.cu-shell) { scrollbar-gutter: stable; }
   .cu-dialog-note-history .cu-file-activity-row { grid-template-columns: 1fr; }
 }
 
-/* Applied only outside Conversions; the shared conversion workspace is unchanged. */
+/* Compact client-user page layout. */
 .cu-shell .cu-main.cu-compact { max-width: 1440px; margin: 0 auto; padding: 18px 24px 36px; gap: 14px; }
 .cu-compact .cu-card { padding: 16px; }
 .cu-compact .cu-heading { padding-bottom: 12px; gap: 12px 20px; }

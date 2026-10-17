@@ -170,7 +170,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
 
   return <div className="cu-analysis">
     <section className="cu-card cu-analysis-upload" aria-label="Upload claim files">
-      <div className="cu-analysis-steps"><h2>Compare claim files</h2></div>
+      <div className="cu-analysis-steps"><h2>Compare claim files</h2><span>Up to 10 MB per file</span></div>
       <div className="cu-analysis-inputs">
         {(["837", "835"] as const).map(kind => {
           const saved = fileCounts[kind];
@@ -181,7 +181,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           return <div key={kind} className="cu-analysis-file">
             <div><label htmlFor={`analysis-${kind}`}>{kind === "837" ? "837 · Submitted claims" : "835 · Payer response"}</label>
               <p title={selected.map(file => file.name).join(", ")}>{selected.length ? selected.map(file => file.name).join(", ") : `Choose an ${kind} file`}</p>
-              <small role="status">{busyKinds[kind] ? `Validating and saving ${kind}…` : selected.length ? "Not confirmed saved · Retry or choose another file" : `Total saved: ${saved.toLocaleString()} ${saved === 1 ? "file" : "files"} · Up to 10 MB per file`}</small>
+              <small role="status">{busyKinds[kind] ? `Validating and saving ${kind}…` : selected.length ? "Not confirmed saved · Retry or choose another file" : `Total saved: ${saved.toLocaleString()} ${saved === 1 ? "file" : "files"}`}</small>
             </div>
             {/* X12 sources may be extensionless; the server validates their contents. */}
             <input id={`analysis-${kind}`} ref={ref} type="file" multiple className="cu-analysis-file-input"
@@ -204,38 +204,42 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           </div>;
         })}
       </div>
-      <p className="cu-help">Valid claims are saved; claims with validation issues are listed for review. Invalid X12 envelopes prevent the file from being processed. Each upload adds to this analysis.</p>
       {loading && <p role="status">Loading Analysis results…</p>}
       {error && <p className="cu-error" role="alert">{error}</p>}
       {loadFailed && <button className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
     </section>
-    <div className="cu-comparison-category"><span>Claim status</span>
-      <div className="cu-filters" role="group" aria-label="Claim status">
-        {[["both", "Mismatch amount"], ["837-only", "Missing in 835"]].map(([value, label]) => <button type="button" key={value}
-          className={displayedCategory === value ? "active" : ""} aria-pressed={displayedCategory === value}
-          onClick={() => { setCategory(value); setPage(1); }}>{label}<span className="cu-analysis-count">{count(value)}</span></button>)}
-      </div>
-    </div>
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
-        <p className="cu-help">Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Claims matching both comparisons are excluded.</p></div>
+        <details className="cu-analysis-explainer"><summary>Comparison details</summary>
+          <p>Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Claims matching both comparisons are excluded.</p>
+          <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
+        </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{total.toLocaleString()} claims</span>
           <button className="cu-btn" disabled={!total || !!busy || loading || exporting || loadFailed} onClick={download}>{exporting ? "Downloading…" : "Download CSV"}</button></div>
       </div>
-      <form className="cu-835837-search cu-analysis-search" role="search" aria-label="Search uploaded claims"
-        onSubmit={event => { event.preventDefault(); setSearch(searchInput.trim()); setPage(1); }}>
-        <label htmlFor="analysis-search">Search</label><input id="analysis-search" type="search" maxLength={100}
-          autoComplete="off" placeholder="Claim, internal ID or filename" value={searchInput} onChange={event => setSearchInput(event.target.value)} />
-        <button className="cu-btn" type="submit">Search</button>
-        {(search || searchInput) && <button className="cu-btn" type="button" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>Clear</button>}
-      </form>
+      <div className="cu-analysis-toolbar">
+        <div className="cu-analysis-status-filter"><span>Claim status</span>
+          <div className="cu-filters" role="group" aria-label="Claim status">
+            {[["both", "Mismatch amount"], ["837-only", "Missing in 835"]].map(([value, label]) => <button type="button" key={value}
+              className={displayedCategory === value ? "active" : ""} aria-pressed={displayedCategory === value}
+              onClick={() => { setCategory(value); setPage(1); }}>{label}<span className="cu-analysis-count">{count(value)}</span></button>)}
+          </div>
+        </div>
+        <form className="cu-835837-search cu-analysis-search" role="search" aria-label="Search uploaded claims"
+          onSubmit={event => { event.preventDefault(); setSearch(searchInput.trim()); setPage(1); }}>
+          <label htmlFor="analysis-search">Search</label><input id="analysis-search" type="search" maxLength={100}
+            autoComplete="off" placeholder="Claim, internal ID or filename" value={searchInput} onChange={event => setSearchInput(event.target.value)} />
+          <button className="cu-btn" type="submit">Search</button>
+          {(search || searchInput) && <button className="cu-btn" type="button" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>Clear</button>}
+        </form>
+      </div>
       <AnalysisComparisonTable rows={loadFailed ? [] : rows}
         onOpenClaim={setSelectedClaim} disabled={!!busy || loading || loadFailed}
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
         }} emptyMessage={loading ? "Loading Analysis results…" : loadFailed ? "Analysis results could not be loaded." : !fileCounts["837"] ? busy ? "Validating uploaded claims…" : fileCounts["835"] ? "835 data saved. Upload an 837 file to compare claims." : "Upload a file to begin." :
           displayedCategory === "both" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching both comparisons are excluded." : "No claims missing in 835 match these filters."} />
-      <div className="cu-comparison-footer"><p className="cu-help">One row per claim. Open a claim to see its source files and individual amounts. Missing amounts stay unknown.</p>
+      <div className="cu-comparison-footer"><p className="cu-help">Open a claim for source files and amounts. — means unavailable.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>Page {currentPage} of {pages}</span>
           <button className="cu-btn" disabled={loading || loadFailed || currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>

@@ -52,10 +52,12 @@ try {
   const { readClientRoute, clientPagePath } = await server.ssrLoadModule('/src/utils/clientPortalRoute.ts');
   const reload = async () => {
     await act(async () => root.render(React.createElement(Portal, { key: ++mount, user: { name: 'Test user' } })));
-    if (['/', '/conversions', '/analysis', '/835-837-status'].includes(window.location.pathname)) {
+    assert.equal(document.querySelector('[aria-label="Page navigation"]'), null);
+    assert.ok(![...document.querySelectorAll('button, a')].some(item => /^(Conversions|Convert a file)$/.test(item.textContent)));
+    if (['/', '/analysis', '/835-837-status'].includes(window.location.pathname)) {
       assert.equal(document.querySelector('[aria-label="Page navigation"]'), null, 'Header shortcuts are absent on every main page');
       const buttons = [...document.querySelectorAll('#client-navigation button')];
-      assert.deepEqual(buttons.slice(0, 4).map(button => button.textContent), ['Home', 'Conversions', '835/837 status', 'Analysis']);
+      assert.deepEqual(buttons.slice(0, 3).map(button => button.textContent), ['Home', '835/837 status', 'Analysis']);
       assert.equal(buttons.filter(button => button.getAttribute('aria-current') === 'page').length, 1);
       if (process.env.CLIENT_PORTAL_PREVIEW_PATH) {
         const fs = await import('node:fs/promises');
@@ -103,7 +105,7 @@ try {
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/pages/ClientClaimDetail.css', 'src/components/ClientClaimComparison.css'].map(path => fs.readFile(path, 'utf8')));
     await fs.writeFile(process.env.CLIENT_PORTAL_PREVIEW_PATH, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Client portal preview</title><style>${styles.join('\n')}</style></head><body>${document.getElementById('root').innerHTML}</body></html>`);
   }
-  await click('Conversions');
+  await click('835/837 status');
   assert.equal(nav().getAttribute('aria-hidden'), 'false', 'Pinned menu stays open across navigation');
   await act(async () => menu().click());
   assert.equal(menu().getAttribute('aria-expanded'), 'false', 'Second click closes and unpins');
@@ -112,10 +114,10 @@ try {
   await act(async () => menu().click());
   await act(async () => window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' })));
   assert.equal(menu().getAttribute('aria-expanded'), 'false');
-  assert.equal(window.location.pathname, '/conversions');
-  assert.ok(document.body.textContent.includes('Start a conversion'));
+  assert.equal(window.location.pathname, '/835-837-status');
+  assert.equal(document.querySelector('h1').textContent, '835/837 status');
   await reload();
-  assert.ok(document.body.textContent.includes('Start a conversion'), 'Conversion survives reload');
+  assert.equal(document.querySelector('h1').textContent, '835/837 status', 'Status survives reload');
   await click('Analysis');
   assert.equal(window.location.pathname, '/analysis');
   const beforeReload = paths.length;
@@ -124,8 +126,8 @@ try {
   assert.equal(paths.slice(beforeReload).length, 1, 'Refreshing Analysis uses one paged comparison request');
   assert.ok(paths.at(-1).startsWith('/edi835/api/client-portal/analysis/?view=comparison'));
   await moveHistory('back');
-  assert.equal(window.location.pathname, '/conversions');
-  assert.ok(document.body.textContent.includes('Start a conversion'));
+  assert.equal(window.location.pathname, '/835-837-status');
+  assert.equal(document.querySelector('h1').textContent, '835/837 status');
   await moveHistory('forward');
   assert.equal(document.querySelector('h1').textContent, 'Analysis');
   await act(async () => document.querySelector('[data-analysis-claim]').click());
@@ -163,6 +165,16 @@ try {
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('not available'));
   await click('← Back to Analysis');
   assert.equal(window.location.pathname, '/analysis');
+  for (const removed of ['/conversions', '/conversions/', '/conversions?run=old']) {
+    const before = paths.length;
+    await visit(removed);
+    assert.equal(window.location.pathname, '/');
+    assert.equal(document.querySelector('h1').textContent, 'Claims overview');
+    assert.ok(!paths.slice(before).some(path => path.includes('/tracked-files/')));
+    await reload();
+    assert.equal(window.location.pathname, '/');
+  }
+  assert.equal(readClientRoute('/conversions').tab, 'home');
   assert.equal(readClientRoute('/analysis/').tab, 'analysis');
   assert.equal(readClientRoute('/claims/%broken').tab, 'home');
   assert.equal(clientPagePath('analysis', 'A/B?#'), '/analysis/claims/A%2FB%3F%23');

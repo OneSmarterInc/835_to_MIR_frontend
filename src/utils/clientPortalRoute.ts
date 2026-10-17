@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const pagePaths = {
-  home: "/", convert: "/conversions", analysis: "/analysis",
+  home: "/", analysis: "/analysis",
   "835837": "/835-837-status", history: "/history", settings: "/settings",
 } as const;
 type Page = keyof typeof pagePaths;
@@ -34,7 +34,15 @@ export function clientPagePath(page: Page | "claim", id?: string | null): string
 export function useClientPortalRoute() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
   useEffect(() => {
-    const update = () => setPathname(window.location.pathname);
+    const update = () => {
+      // Retire only the client-user page; shared conversion APIs and other
+      // roles' routing continue to be owned by their existing workspaces.
+      if (window.location.pathname.replace(/\/+$/, "") === "/conversions") {
+        window.history.replaceState(window.history.state, "", "/");
+      }
+      setPathname(window.location.pathname);
+    };
+    update();
     window.addEventListener("popstate", update);
     return () => window.removeEventListener("popstate", update);
   }, []);

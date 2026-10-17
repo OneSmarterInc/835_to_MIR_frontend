@@ -13,7 +13,7 @@
 .cu-analysis .cu-analysis-upload-button:disabled { opacity: .45; }
 .cu-analysis-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .cu-analysis-file:focus-within { outline: 2px solid #087f73; outline-offset: 2px; }
-.cu-analysis-search { margin: 14px 0; }
+.cu-analysis-search { margin: 0; }
 .cu-analysis-count { display: inline-block; margin-left: 8px; font-size: 11px; opacity: .8; }
 .cu-analysis .cu-comparison .cu-analysis-table { min-width: 1080px; table-layout: fixed; }
 .cu-analysis-table thead th:nth-child(1) { width: 12%; }
@@ -80,3 +80,49 @@
 .cu-analysis-rejection-list section { padding: 0.5rem 0; border-bottom: 1px solid #dbe3eb; overflow-wrap: anywhere; }
 .cu-analysis-rejection-list ul { padding-left: 1.25rem; }
 .cu-analysis-rejection-list li { margin: 0.25rem 0; }
+
+/* Keep upload, filtering and comparison as two compact, aligned sections. */
+.cu-main.cu-compact .cu-analysis { gap: 10px; }
+.cu-main.cu-compact .cu-analysis > .cu-card { padding: 12px; }
+.cu-analysis .cu-analysis-steps { justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cu-main.cu-compact .cu-analysis .cu-analysis-steps h2 { margin: 0; }
+.cu-analysis .cu-analysis-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cu-analysis .cu-analysis-file { gap: 8px 12px; padding: 10px 12px; }
+.cu-analysis .cu-analysis-file p { margin: 3px 0; line-height: 1.4; }
+.cu-analysis .cu-analysis-file > div:first-child > p { max-height: 54px; overflow: auto; }
+.cu-analysis .cu-analysis-upload-button { min-height: 34px; padding: 6px 12px; }
+.cu-analysis .cu-analysis-file .cu-analysis-progress { padding-top: 6px; }
+.cu-analysis .cu-analysis-upload-errors { max-height: 160px; overflow: auto; }
+.cu-main.cu-compact .cu-analysis .cu-comparison-heading { align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.cu-main.cu-compact .cu-analysis .cu-comparison-heading h2 { margin: 0 0 4px; }
+.cu-analysis-explainer { color: #53677f; font-size: 12px; max-width: 760px; }
+.cu-analysis-explainer summary { cursor: pointer; width: fit-content; color: var(--teal); }
+.cu-analysis-explainer summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.cu-analysis-explainer p { margin: 6px 0 0; line-height: 1.5; }
+.cu-analysis-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 10px; }
+.cu-analysis-status-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cu-analysis-status-filter > span { font-size: 11px; color: #53677f; }
+.cu-main.cu-compact .cu-analysis-status-filter .cu-filters { margin: 0; gap: 5px; }
+.cu-analysis-status-filter .cu-filters button { min-height: 34px; padding: 6px 10px; border-radius: 3px; }
+.cu-analysis .cu-analysis-search { flex: 1 1 330px; max-width: 500px; gap: 6px; margin: 0; flex-wrap: nowrap; }
+.cu-analysis .cu-analysis-search label { flex: 0 0 auto; }
+.cu-analysis .cu-analysis-search input { width: auto; min-width: 100px; flex: 1; min-height: 34px; padding: 6px 9px; }
+.cu-analysis .cu-analysis-search .cu-btn { min-height: 34px; }
+.cu-main.cu-compact .cu-analysis .cu-analysis-table thead th { padding: 0; white-space: normal; }
+.cu-analysis .cu-analysis-table thead th button { min-height: 58px; padding: 8px; }
+.cu-analysis .cu-analysis-table thead th small { margin-top: 3px; }
+.cu-analysis .cu-analysis-table tbody td, .cu-analysis .cu-analysis-table tbody th { padding: 8px !important; }
+.cu-analysis .cu-analysis-result small { margin-top: 3px; }
+.cu-analysis .cu-comparison-scroll { min-height: 0; }
+.cu-analysis .cu-comparison-footer { margin-top: 0; padding-top: 10px; gap: 8px; }
+.cu-analysis .cu-comparison-footer .cu-help { margin: 0; font-size: 11px; }
+@media (max-width: 750px) {
+  .cu-analysis .cu-analysis-inputs { grid-template-columns: 1fr; }
+  .cu-analysis .cu-analysis-search { max-width: none; flex-basis: 100%; }
+  .cu-analysis .cu-analysis-upload-button, .cu-analysis .cu-analysis-search .cu-btn,
+  .cu-analysis-status-filter .cu-filters button { min-height: 40px; }
+}
+@media (max-width: 480px) {
+  .cu-analysis .cu-analysis-file { flex-direction: row; align-items: center; }
+  .cu-analysis .cu-analysis-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
