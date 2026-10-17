@@ -8,6 +8,8 @@ export type AnalysisFile = { id: string; filename: string; kind: "837" | "835"; 
 export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — review" | "Awaiting 835 upload" | "Not in uploaded 835" | "Amount unavailable";
 export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null };
 export type AnalysisRow = Omit<Row, "occurrences"> & { category: "both" | "837-only";
+  reference_count?: number;
+  display_amounts?: Record<"billed_837" | "billed_835" | "payment" | "patient_responsibility" | "allowed", { count: number; value: string | null }>;
   payment: string | null; patient_responsibility: string | null; allowed: string | null;
   billed_status: ComparisonStatus; allowed_status: ComparisonStatus; allowed_difference: string | null;
   occurrences: AnalysisOccurrence[] };

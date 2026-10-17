@@ -39,10 +39,13 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             data-analysis-claim={row.key} aria-label={`Open claim ${safe(row.claim)}`}
             onClick={event => { event.stopPropagation(); onOpenClaim(row.key); }}>{safe(row.claim)}</button></th>
           <td>{(() => {
+            if (row.reference_count !== undefined) return row.reference_count > 1 ? `Multiple (${row.reference_count})` : safe(row.internal_number);
             const references = [...new Set(row.occurrences.map(item => item.internal_number).filter(Boolean))];
             return references.length > 1 ? `Multiple (${references.length})` : safe(references[0] || "");
           })()}</td>
           {(["billed_837", "billed_835", "payment", "patient_responsibility", "allowed"] as const).map(key => {
+            const summary = row.display_amounts?.[key];
+            if (summary) return <td key={key} className="cu-num">{summary.count > 1 ? <span className="cu-analysis-multiple">Multiple ({summary.count})</span> : money(summary.value)}</td>;
             const values = analysisValues(row, key);
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}

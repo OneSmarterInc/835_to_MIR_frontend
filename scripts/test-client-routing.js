@@ -14,9 +14,17 @@ const originalFetch = globalThis.fetch;
 const paths = [];
 let holdClaim = false, resolveClaim;
 const json = body => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
-globalThis.fetch = async (url, options = {}) => {
+globalThis.fetch = async (url) => {
   paths.push(String(url));
-  if (url.includes('/analysis/')) return json({ success: true, files: [{ id: 'source-837', kind: '837', filename: 'synthetic', uploaded_at: '2026-10-17T00:00:00Z', claims: [{ claim: 'TEST/CLAIM', sequence: 1, internal_number: 'REF', billed: '100.00' }] }], next_cursor: null });
+  if (url.includes('/analysis/')) {
+    const row = { key: 'TEST/CLAIM', claim: 'TEST/CLAIM', internal_number: 'REF', category: '837-only',
+      billed_status: 'Awaiting 835 upload', allowed_status: 'Awaiting 835 upload', difference: null, allowed_difference: null,
+      occurrences: [{ key: '1', source_type: '837', filename: 'synthetic', received_at: '2026-10-17T00:00:00Z', internal_number: 'REF', billed_837: '100.00' }] };
+    if (url.includes('view=claim')) return json(new URL(url, 'http://localhost').searchParams.get('claim') === row.claim
+      ? { success: true, row } : { success: false, error: 'This claim is not available in your Analysis files.' });
+    return json({ success: true, rows: [row], total: 1, page: 1, pages: 1, category: '837-only',
+      counts: { both: 0, '837-only': 1 }, file_counts: { '837': 1, '835': 0 } });
+  }
   if (url.includes('/claim/42/')) {
     const response = json({ success: true, claim: { id: 42, number: 'TEST', file_id: 'file', billed: '100', paid: '80', services: [], sources: [] } });
     if (holdClaim) { holdClaim = false; return new Promise(resolve => { resolveClaim = () => resolve(response); }); }
@@ -109,7 +117,8 @@ try {
   const beforeReload = paths.length;
   await reload();
   assert.equal(document.querySelector('h1').textContent, 'Analysis');
-  assert.deepEqual(paths.slice(beforeReload), ['/edi835/api/client-portal/analysis/'], 'Refreshing Analysis never loads home data');
+  assert.equal(paths.slice(beforeReload).length, 1, 'Refreshing Analysis uses one paged comparison request');
+  assert.ok(paths.at(-1).startsWith('/edi835/api/client-portal/analysis/?view=comparison'));
   await moveHistory('back');
   assert.equal(window.location.pathname, '/conversions');
   assert.ok(document.body.textContent.includes('Start a conversion'));

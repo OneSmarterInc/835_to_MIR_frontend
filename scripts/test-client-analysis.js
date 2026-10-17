@@ -13,6 +13,9 @@ const originalFetch = globalThis.fetch, createUrl = URL.createObjectURL, revokeU
 const anchorClick = window.HTMLAnchorElement.prototype.click;
 const calls = [], downloads = [];
 let fail = false, deferred = null, hold = false, failLoad = false;
+let compare, exportCsv, mismatch;
+let holdComparison = false, deferredComparison;
+const summary = ({ claims = [], rejections: _rejections, ...file }) => ({ ...file, accepted_count: file.accepted_count ?? claims.length, rejected_count: file.rejected_count ?? 0 });
 const savedFiles = new Map();
 const claim = (id, billed, sequence, payment = null, patient_responsibility = null) => ({ claim: id, billed, sequence, payment, patient_responsibility, internal_number: 'REF-TEST' });
 const file = (kind, claims) => ({ id: 'file-' + kind, filename: kind === '837' ? 'submitted-claims.837' : 'payer-response.835', kind, uploaded_at: '2026-10-17T12:00:00Z', claims });
@@ -24,13 +27,54 @@ URL.createObjectURL = () => 'blob:analysis'; URL.revokeObjectURL = () => {};
 window.HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
 globalThis.fetch = async (url, options) => {
   assert.ok(url.startsWith('/edi835/api/client-portal/analysis/'));
-  assert.equal(options.credentials, 'include'); calls.push(options);
+  assert.equal(options.credentials, 'include'); calls.push({ ...options, url });
   if (options.method !== 'POST') {
     if (url.includes('csrf_only')) return json({ success: true, csrf_token: 'test-csrf' });
+    if (holdComparison && url.includes('view=comparison')) {
+      holdComparison = false;
+      return new Promise(resolve => { deferredComparison = resolve; });
+    }
     if (failLoad) { failLoad = false; return json({ success: false, error: 'Loading failed' }, 503); }
+    const params = new URL(url, 'http://localhost').searchParams;
     const files = [...savedFiles.values()];
-    const offset = Number(new URL(url, 'http://localhost').searchParams.get('after') || 0);
-    return json({ success: true, csrf_token: 'test-csrf', files: files.slice(offset, offset + 1), next_cursor: offset + 1 < files.length ? String(offset + 1) : null });
+    const rows = compare(files.filter(file => file.kind === '837'), files.filter(file => file.kind === '835'));
+    const view = params.get('view');
+    if (view === 'claim') return rows.some(row => row.claim === params.get('claim'))
+      ? json({ success: true, row: rows.find(row => row.claim === params.get('claim')) })
+      : json({ success: false, error: 'Claim not found.' }, 404);
+    if (view === 'rejections' || view === 'rejection-export') {
+      const file = savedFiles.get(params.get('upload'));
+      assert.ok(file, 'Report requested for unknown upload');
+      return view === 'rejections' ? json({ success: true, rejections: file.rejections || [], total: file.rejected_count || 0 })
+        : new Response('Claim occurrence,Reason\r\n2,Invalid amount', { headers: { 'Content-Type': 'text/csv' } });
+    }
+    assert.ok(['comparison', 'export'].includes(view), 'Must not fetch saved file history');
+    const category = params.get('category') === 'auto' ? files.some(file => file.kind === '835') ? 'both' : '837-only' : params.get('category');
+    const search = (params.get('search') || '').toUpperCase();
+    const found = rows.filter(row => !search || row.claim.includes(search) || row.occurrences.some(item =>
+      item.internal_number.toUpperCase().includes(search) || item.filename.toUpperCase().includes(search)));
+    const counts = { both: found.filter(mismatch).length, '837-only': found.filter(row => row.category === '837-only').length };
+    const filtered = found.filter(row => category === 'both' ? mismatch(row) : row.category === '837-only');
+    const sort = params.get('sort') || 'claim', direction = params.get('direction') === 'desc' ? -1 : 1;
+    filtered.sort((a, b) => {
+      const av = a[sort], bv = b[sort];
+      if (av == null || bv == null) return av === bv ? a.claim.localeCompare(b.claim) : av == null ? 1 : -1;
+      const order = ['claim', 'internal_number'].includes(sort) ? String(av).localeCompare(String(bv)) : Number(av) - Number(bv);
+      return order * direction || a.claim.localeCompare(b.claim);
+    });
+    if (view === 'export') return new Response(exportCsv(filtered), { headers: { 'Content-Type': 'text/csv' } });
+    const size = Number(params.get('page_size') || 10), pages = Math.max(1, Math.ceil(filtered.length / size));
+    const page = Math.min(Number(params.get('page') || 1), pages);
+    const pageRows = filtered.slice((page - 1) * size, page * size).map(row => {
+      const refs = [...new Set(row.occurrences.map(item => item.internal_number).filter(Boolean))];
+      const display_amounts = Object.fromEntries(['billed_837', 'billed_835', 'payment', 'patient_responsibility', 'allowed'].map(key => {
+        const values = [...new Set(row.occurrences.filter(item => item.source_type === (key === 'billed_837' ? '837' : '835')).map(item => item[key]))];
+        return [key, { count: values.length, value: values[0] ?? null }];
+      }));
+      return { ...row, occurrences: [], source_837: '', source_835: '', reference_count: refs.length, display_amounts };
+    });
+    return json({ success: true, rows: pageRows, total: filtered.length, counts, page, pages, category,
+      file_counts: { '837': files.filter(file => file.kind === '837').length, '835': files.filter(file => file.kind === '835').length } });
   }
   assert.equal(options.headers['X-CSRFToken'], 'test-csrf');
   assert.equal(options.body.getAll('file').length, 1);
@@ -42,7 +86,8 @@ globalThis.fetch = async (url, options) => {
   const saved = batchName.startsWith("batch-") ? { ...file(batchKind, [claim(batchName.split(".")[0].toUpperCase(), batchKind === "837" ? "100.00" : "90.00", 1, "70.00", "10.00")]), id: batchName, filename: batchName } : replacement ? { ...file('837', [claim('REPLACEMENT', '20.00', 1)]), id: 'another-837', filename: 'replacement.837' } : options.body.get('kind') === '837' ? submission : remittance;
   const reused = savedFiles.has(saved.id);
   savedFiles.set(saved.id, saved);
-  return json({ success: true, saved: true, reused, file: saved });
+  assert.equal(new URL(url, 'http://localhost').searchParams.get('compact'), '1');
+  return json({ success: true, saved: true, reused, file: summary(saved) });
 };
 const button = text => {
   const result = [...document.querySelectorAll('button')].find(item => item.textContent === text || item.textContent.startsWith(text));
@@ -68,6 +113,7 @@ async function capturePreview(path) {
 try {
   const { default: Analysis } = await server.ssrLoadModule('/src/components/ClientAnalysis.tsx');
   const { analyzeClaims, analysisCsv, analysisSources, isAnalysisMismatch } = await server.ssrLoadModule('/src/utils/claimAnalysis.ts');
+  compare = analyzeClaims; exportCsv = analysisCsv; mismatch = isAnalysisMismatch;
   // Exercise the actual response interceptor: display masking must not change
   // identifiers before comparison/grouping (different claims can share a suffix).
   const { readFile } = await import('node:fs/promises');
@@ -127,12 +173,18 @@ try {
   const { default: UploadResults } = await server.ssrLoadModule('/src/components/AnalysisUploadResults.tsx');
   const partialFile = { ...submission, claims: submission.claims.slice(0, 2), accepted_count: 2, rejected_count: 1, status: 'PARTIAL',
     rejections: [{ sequence: 2, claim_number: 'REJECTED', reason: 'Claim occurrence 2 has an invalid CLM02 amount.' }] };
-  await act(async () => root.render(React.createElement(UploadResults, { files: [partialFile], kind: '837' })));
+  savedFiles.set(partialFile.id, partialFile);
+  await act(async () => root.render(React.createElement(UploadResults, { files: [summary(partialFile)], kind: '837' })));
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
+  assert.equal(calls.length, 0, 'Rejection details are not fetched with counts');
+  await act(async () => {
+    const details = document.querySelector('details'); details.open = true; details.dispatchEvent(new Event('toggle'));
+  });
   assert.match(document.querySelector('details').textContent, /Claim occurrence 2 has an invalid CLM02 amount/);
   await click('Download rejection report');
   assert.equal(downloads.at(-1), 'submitted-claims.837-rejections.csv');
   downloads.length = 0;
+  calls.length = 0; savedFiles.clear();
   await act(async () => root.render(null));
 
   const repeated = analyzeClaims(file('837', [claim('DUP', '657.00', 1), claim('DUP', '657.00', 2)]),
@@ -211,7 +263,8 @@ try {
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$80.00'));
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$90.00'));
   assert.ok(!document.querySelector('.cu-analysis-detail').textContent.includes('$657.00'), 'Other claim amounts must not leak into detail');
-  assert.equal(calls.length, beforeDetail, 'Detail uses only the selected Analysis claim, never production endpoints');
+  assert.equal(calls.length, beforeDetail + 1, 'Detail loads only on demand');
+  assert.ok(calls.at(-1).url.includes('view=claim&claim=SYNTHETIC-1003'));
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-claim.html'));
   await click('← Back to Analysis');
   assert.equal(document.querySelector('input[type="search"]').value, 'SYNTHETIC-1003');
@@ -235,6 +288,8 @@ try {
   assert.equal(button('Retry 835').disabled, false);
   await click('Retry 835');
   assert.equal(document.querySelector('#analysis-835').value, '');
+  assert.equal(button('Missing in 835').getAttribute('aria-pressed'), 'true', 'Successful uploads preserve the selected filter');
+  await click('Mismatch amount');
   assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Retry reuses existing file without duplicate rows');
   assert.ok(document.body.textContent.includes('already saved'));
   hold = true; await upload('835');
@@ -245,7 +300,7 @@ try {
   assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
   assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 1, saved: 0, failed: 0 });
   assert.equal(button('Upload 835').disabled, true);
-  await act(async () => deferred(json({ success: true, saved: true, file: remittance })));
+  await act(async () => deferred(json({ success: true, saved: true, file: summary(remittance) })));
   await click('Missing in 835');
   assert.equal(document.querySelectorAll('tbody tr').length, 2, 'New uploads accumulate alongside existing staging files');
   const before = calls.length;
@@ -320,7 +375,7 @@ try {
   assert.ok(document.querySelector('[aria-label="835 upload status"]').textContent.includes('batch-live-b.835'));
   const liveSaved = { ...file('835', [claim('BATCH-LIVE-B', '90.00', 1, '70.00', '10.00')]), id: 'batch-live-b.835', filename: 'batch-live-b.835' };
   savedFiles.set(liveSaved.id, liveSaved);
-  await act(async () => deferred(json({ success: true, saved: true, file: liveSaved })));
+  await act(async () => deferred(json({ success: true, saved: true, file: summary(liveSaved) })));
   assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 2, failed: 1 });
   assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 2.*Claims rejected 0/,
     'Batch totals exclude historical uploads and failed requests');
@@ -337,11 +392,14 @@ try {
   hold = true;
   await upload('837', 'partial.837');
   savedFiles.set(partialFile.id, partialFile);
-  await act(async () => deferred(json({ success: true, saved: true, file: partialFile })));
+  await act(async () => deferred(json({ success: true, saved: true, file: summary(partialFile) })));
   assert.equal(document.querySelector('#analysis-837').value, '', 'A committed partial file clears the picker');
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
   assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
-  document.querySelector('.cu-analysis-rejections').open = true;
+  await act(async () => {
+    const details = document.querySelector('.cu-analysis-rejections'); details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+  });
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-partial.html'));
   await upload('835');
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/,
@@ -354,17 +412,58 @@ try {
   const nextFile = { ...partialFile, id: 'batch-next-a.837', filename: 'batch-next-a.837' };
   savedFiles.set(nextFile.id, nextFile);
   hold = true;
-  await act(async () => deferred(json({ success: true, saved: true, file: nextFile })));
+  await act(async () => deferred(json({ success: true, saved: true, file: summary(nextFile) })));
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/,
     'Current run claim counts update while the next file is processing');
   assert.deepEqual([...document.querySelectorAll('.cu-analysis-rejection-list section > strong')].map(item => item.textContent), [nextFile.filename]);
   const finalFile = { ...file('837', [claim('NEW-RUN-CLAIM', '25.00', 1)]), id: 'batch-next-b.837', filename: 'batch-next-b.837' };
   savedFiles.set(finalFile.id, finalFile);
-  await act(async () => deferred(json({ success: true, saved: true, file: finalFile })));
+  await act(async () => deferred(json({ success: true, saved: true, file: summary(finalFile) })));
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 3.*Claims rejected 1/);
   await act(async () => root.render(React.createElement(Analysis, { key: 'partial-reload' })));
   assert.equal(document.querySelector('.cu-analysis-claim-results'), null, 'Loading saved history must not show historical totals as a current upload run');
   assert.ok(document.querySelector('[data-analysis-claim="SYNTHETIC-1001"]'), 'Saved comparison claims remain available after reload');
+  // A large saved history still makes exactly one initial request. Only the
+  // requested rows arrive, and navigation/search/export stay server-driven.
+  savedFiles.clear();
+  const many = file('837', Array.from({ length: 31 }, (_, index) => claim(`PAGE-${String(index).padStart(2, '0')}`, String(index) + '.00', index + 1)));
+  savedFiles.set(many.id, many);
+  const pageStart = calls.length;
+  await act(async () => root.render(React.createElement(Analysis, { key: 'paged' })));
+  assert.equal(calls.length - pageStart, 1);
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 10);
+  assert.ok(document.body.textContent.includes('Page 1 of 4'));
+  await click('Next');
+  assert.ok(calls.at(-1).url.includes('page=2'));
+  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-10');
+  const beforeBatch = calls.length;
+  await upload('837', 'batch-page-preserved.837');
+  assert.equal(calls.slice(beforeBatch).filter(call => call.url.includes('view=comparison')).length, 1,
+    'Upload completion refreshes only one comparison page');
+  assert.ok(document.body.textContent.includes('Page 2 of 4'), 'Upload refresh preserves the selected page');
+  const searchFor = async text => {
+    await act(async () => {
+      const input = document.querySelector('input[type="search"]');
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, text);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await click('Search');
+  };
+  holdComparison = true;
+  await searchFor('PAGE-01');
+  const oldRequest = calls.at(-1);
+  await searchFor('PAGE-30');
+  assert.equal(oldRequest.signal.aborted, true, 'Replacing a query cancels the previous request');
+  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30');
+  await act(async () => deferredComparison(json({ success: true, rows: [], total: 0, page: 1, pages: 1,
+    counts: { both: 0, '837-only': 0 }, file_counts: { '837': 0, '835': 0 }, category: '837-only' })));
+  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30', 'Stale responses cannot replace current results');
+  await click('Download CSV');
+  assert.ok(calls.at(-1).url.includes('view=export'));
+  assert.ok(calls.at(-1).url.includes('search=PAGE-30'));
+  assert.ok(!calls.at(-1).url.includes('page='), 'Export includes every filtered result, not only the visible page');
+  assert.equal(calls.filter(call => call.url.includes('view=rejections')).length, 1,
+    'Rejection details load only for explicitly expanded reports');
   assert.equal(localStorage.length, 0, 'Uploaded data must not enter browser storage');
   console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, independent batch queues, live counts, failure-only retry, accumulation and reload persistence passed.');
 } finally {
