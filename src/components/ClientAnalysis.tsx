@@ -18,7 +18,8 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   const [detailError, setDetailError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setLoading] = useState(true);
+  const [settledQuery, setSettledQuery] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadVersion, setLoadVersion] = useState(0);
   const [pending, setPending] = useState<Partial<Record<"837" | "835", File[]>>>({});
@@ -47,6 +48,9 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<AnalysisSortKey>("claim");
   const [direction, setDirection] = useState("asc");
+  // Invalidate visible results during render, before the fetch effect runs.
+  const queryKey = JSON.stringify([loadVersion, category, search, page, pageSize, sort, direction]);
+  const loading = fetching || settledQuery !== queryKey;
   const active = useRef<Partial<Record<"837" | "835", AbortController>>>({});
   const file837 = useRef<HTMLInputElement>(null), file835 = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -61,11 +65,13 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
         if (!controller.signal.aborted) {
           setLoadFailed(true); setError(issue instanceof Error ? issue.message : "Unable to load saved Analysis files.");
         }
-      } finally { if (!controller.signal.aborted) setLoading(false); }
+      } finally {
+        if (!controller.signal.aborted) { setSettledQuery(queryKey); setLoading(false); }
+      }
     }
     void load();
     return () => controller.abort();
-  }, [loadVersion, category, search, page, pageSize, sort, direction]);
+  }, [loadVersion, category, search, page, pageSize, sort, direction, queryKey]);
   useEffect(() => {
     const controller = new AbortController();
     setDetail(null); setDetailError("");
@@ -204,7 +210,6 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           </div>;
         })}
       </div>
-      {loading && <p role="status">Loading Analysis results…</p>}
       {error && <p className="cu-error" role="alert">{error}</p>}
       {loadFailed && <button className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
     </section>
@@ -214,7 +219,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           <p>Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Matched amount shows claims where both comparisons match. Differences and unresolved comparisons appear under Mismatch amount.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
-        <div className="cu-comparison-header-actions"><span role="status">{total.toLocaleString()} claims</span>
+        <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>
           <button className="cu-btn" disabled={!total || !!busy || loading || exporting || loadFailed} onClick={download}>{exporting ? "Downloading…" : "Download CSV"}</button></div>
       </div>
       <div className="cu-analysis-toolbar">
@@ -233,7 +238,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           {(search || searchInput) && <button className="cu-btn" type="button" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>Clear</button>}
         </form>
       </div>
-      <AnalysisComparisonTable rows={loadFailed ? [] : rows}
+      <AnalysisComparisonTable rows={loading || loadFailed ? [] : rows} loading={loading} loadingRows={rows.length || Math.min(pageSize, 10)}
         onOpenClaim={setSelectedClaim} disabled={!!busy || loading || loadFailed}
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
@@ -241,7 +246,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           displayedCategory !== "837-only" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "matched" ? "No claims match both billed and allowed amounts with these filters." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching both comparisons are excluded." : "No claims missing in 835 match these filters."} />
       <div className="cu-comparison-footer"><p className="cu-help">Open a claim for source files and amounts. — means unavailable.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
-          {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>Page {currentPage} of {pages}</span>
+          {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>{loading ? "Loading page…" : loadFailed ? "Page unavailable" : `Page ${currentPage} of ${pages}`}</span>
           <button className="cu-btn" disabled={loading || loadFailed || currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
           <button className="cu-btn" disabled={loading || loadFailed || currentPage === pages} onClick={() => setPage(currentPage + 1)}>Next</button>
         </div></div>

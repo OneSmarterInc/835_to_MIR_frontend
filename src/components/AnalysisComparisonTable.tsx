@@ -21,9 +21,9 @@ export function ComparisonResult({ status, difference }: { status: ComparisonSta
   </div>;
 }
 
-export default function AnalysisComparisonTable({ rows, sort, direction, onSort, onOpenClaim, disabled, emptyMessage }: {
+export default function AnalysisComparisonTable({ rows, sort, direction, onSort, onOpenClaim, disabled, emptyMessage, loading = false, loadingRows = 10 }: {
   rows: AnalysisRow[]; sort: AnalysisSortKey; direction: string; onSort: (key: AnalysisSortKey) => void; emptyMessage: string;
-  onOpenClaim: (key: string) => void; disabled?: boolean;
+  onOpenClaim: (key: string) => void; disabled?: boolean; loading?: boolean; loadingRows?: number;
 }) {
   return <div className="cu-table-scroll cu-comparison-scroll" tabIndex={0} role="region" aria-label="Claim amount comparisons">
     <table className="cu-table cu-comparison-table cu-analysis-table">
@@ -33,7 +33,12 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
           <span>{label}<small>{source}</small></span><span aria-hidden="true">{key === sort ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
         </button>
       </th>)}</tr></thead>
-      {rows.map(row => <tbody key={row.key} className="cu-analysis-group" aria-label={`Claim ${safe(row.claim)}`}>
+      {loading && <tbody className="cu-analysis-skeleton" aria-hidden="true">
+        {Array.from({ length: loadingRows }, (_, index) => <tr key={index}>
+          {columns.map(([key]) => <td key={key}><span /></td>)}
+        </tr>)}
+      </tbody>}
+      {!loading && rows.map(row => <tbody key={row.key} className="cu-analysis-group" aria-label={`Claim ${safe(row.claim)}`}>
         <tr className="cu-analysis-claim-row" onClick={() => { if (!disabled) onOpenClaim(row.key); }}>
           <th scope="row" className="cu-analysis-claim"><button type="button" className="cu-link" disabled={disabled}
             data-analysis-claim={row.key} aria-label={`Open claim ${safe(row.claim)}`}
@@ -53,7 +58,7 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} /></td>
         </tr>
       </tbody>)}
-      {!rows.length && <tbody><tr><td colSpan={columns.length} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
+      {!loading && !rows.length && <tbody><tr><td colSpan={columns.length} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
     </table>
   </div>;
 }

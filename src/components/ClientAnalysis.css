@@ -114,6 +114,9 @@
 .cu-analysis .cu-analysis-table tbody td, .cu-analysis .cu-analysis-table tbody th { padding: 8px !important; }
 .cu-analysis .cu-analysis-result small { margin-top: 3px; }
 .cu-analysis .cu-comparison-scroll { min-height: 0; }
+.cu-analysis .cu-analysis-skeleton td { height: 58px; box-sizing: border-box; }
+.cu-analysis-skeleton td > span { display: block; height: 12px; width: 75%; border-radius: 3px; background: #e7edf3; }
+.cu-analysis-skeleton td:nth-child(n+3):nth-child(-n+7) > span { margin-left: auto; width: 65%; }
 .cu-analysis .cu-comparison-footer { margin-top: 0; padding-top: 10px; gap: 8px; }
 .cu-analysis .cu-comparison-footer .cu-help { margin: 0; font-size: 11px; }
 @media (max-width: 750px) {

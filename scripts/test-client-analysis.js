@@ -14,7 +14,8 @@ const anchorClick = window.HTMLAnchorElement.prototype.click;
 const calls = [], downloads = [];
 let fail = false, deferred = null, hold = false, failLoad = false;
 let compare, exportCsv, mismatch;
-let holdComparison = false, deferredComparison;
+let holdComparison = false, deferredComparison, deferredComparisonResponse;
+const comparisonCommits = [];
 const summary = ({ claims = [], rejections: _rejections, ...file }) => ({ ...file, accepted_count: file.accepted_count ?? claims.length, rejected_count: file.rejected_count ?? 0 });
 const savedFiles = new Map();
 const claim = (id, billed, sequence, payment = null, patient_responsibility = null) => ({ claim: id, billed, sequence, payment, patient_responsibility, internal_number: 'REF-TEST' });
@@ -30,10 +31,6 @@ globalThis.fetch = async (url, options) => {
   assert.equal(options.credentials, 'include'); calls.push({ ...options, url });
   if (options.method !== 'POST') {
     if (url.includes('csrf_only')) return json({ success: true, csrf_token: 'test-csrf' });
-    if (holdComparison && url.includes('view=comparison')) {
-      holdComparison = false;
-      return new Promise(resolve => { deferredComparison = resolve; });
-    }
     if (failLoad) { failLoad = false; return json({ success: false, error: 'Loading failed' }, 503); }
     const params = new URL(url, 'http://localhost').searchParams;
     const files = [...savedFiles.values()];
@@ -74,8 +71,13 @@ globalThis.fetch = async (url, options) => {
       }));
       return { ...row, occurrences: [], source_837: '', source_835: '', reference_count: refs.length, display_amounts };
     });
-    return json({ success: true, rows: pageRows, total: filtered.length, counts, page, pages, category,
+    const response = json({ success: true, rows: pageRows, total: filtered.length, counts, page, pages, category,
       file_counts: { '837': files.filter(file => file.kind === '837').length, '835': files.filter(file => file.kind === '835').length } });
+    if (holdComparison) {
+      holdComparison = false; deferredComparisonResponse = response;
+      return new Promise(resolve => { deferredComparison = resolve; });
+    }
+    return response;
   }
   assert.equal(options.headers['X-CSRFToken'], 'test-csrf');
   assert.equal(options.body.getAll('file').length, 1);
@@ -214,7 +216,13 @@ try {
   assert.ok(csv.includes("'=FORMULA"));
   assert.equal(analysisCsv(compared).split('\r\n').length, 5);
 
-  await act(async () => root.render(React.createElement(Analysis)));
+  await act(async () => root.render(React.createElement(React.Profiler, { id: 'analysis', onRender: () => {
+    // Observe every committed render, including the one before passive fetch effects.
+    comparisonCommits.push({
+      active: document.querySelector('[aria-label="Claim status"] [aria-pressed="true"]')?.textContent,
+      claims: [...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim),
+    });
+  } }, React.createElement(Analysis))));
   assert.equal(calls.length, 1, 'Analysis loads only its isolated staging endpoint');
   assert.equal(button('Upload 835').disabled, false);
   assert.equal(document.querySelectorAll('.cu-aging-row').length, 0);
@@ -252,7 +260,19 @@ try {
   assert.deepEqual([...document.querySelectorAll('[aria-label="Claim status"] button')].map(item => item.childNodes[0].textContent.trim()),
     ['Mismatch amount', 'Matched amount', 'Missing in 835']);
   assert.ok(button('Matched amount').textContent.endsWith('1'));
+  comparisonCommits.length = 0;
+  const previousRowCount = document.querySelectorAll('[data-analysis-claim]').length;
+  holdComparison = true;
   await click('Matched amount');
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Old claims disappear immediately while the new tab loads');
+  assert.equal(document.querySelectorAll('.cu-analysis-skeleton tr').length, previousRowCount, 'Loading preserves the existing row slots');
+  assert.equal(button('Download CSV').disabled, true);
+  assert.equal(document.querySelector('[aria-label="Uploaded claim comparison"]').getAttribute('aria-busy'), 'true');
+  assert.ok(comparisonCommits.length > 0);
+  assert.ok(comparisonCommits.every(commit => commit.active.startsWith('Matched amount') && commit.claims.length === 0),
+    'No committed render may show mismatch rows under the matched tab, even before the fetch effect');
+  await act(async () => deferredComparison(deferredComparisonResponse));
+  assert.equal(document.querySelector('.cu-analysis-skeleton'), null);
   assert.ok(calls.at(-1).url.includes('category=matched'));
   assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
   assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002']);
@@ -264,6 +284,22 @@ try {
   await click('← Back to Analysis');
   assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-matched.html'));
+  holdComparison = true;
+  await click('Missing in 835');
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0);
+  const abandonedRequest = calls.at(-1), resolveAbandoned = deferredComparison, abandonedResponse = deferredComparisonResponse;
+  await click('Matched amount');
+  assert.equal(abandonedRequest.signal.aborted, true);
+  await act(async () => resolveAbandoned(abandonedResponse));
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002'],
+    'Rapid tab switches cannot display a late response for the abandoned tab');
+  holdComparison = true;
+  await click('Missing in 835');
+  await act(async () => deferredComparison(json({ success: false, error: 'Loading failed' }, 503)));
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Failed tab loads do not restore rows from another tab');
+  assert.equal(document.querySelector('.cu-analysis-skeleton'), null);
+  await click('Retry loading');
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1004']);
   await click('Mismatch amount');
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH);
   await act(async () => {
@@ -479,6 +515,7 @@ try {
   };
   holdComparison = true;
   await searchFor('PAGE-01');
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Search also hides rows from the previous query while loading');
   const oldRequest = calls.at(-1);
   await searchFor('PAGE-30');
   assert.equal(oldRequest.signal.aborted, true, 'Replacing a query cancels the previous request');
