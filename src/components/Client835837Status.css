@@ -7,3 +7,13 @@
 .cu-835837-table th:nth-child(8) { width: 16%; }
 .cu-835837-table .cu-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cu-835837-source { overflow-wrap: anywhere; font-size: 11px; }
+.cu-835837-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+.cu-835837-search label { font-size: 12px; font-weight: 650; }
+.cu-835837-search input { width: clamp(220px, 24vw, 320px); min-width: 0; height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; }
+.cu-835837-search input:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.cu-835837-search .cu-btn { min-height: 34px; padding: 6px 10px; font-size: 12px; }
+@media (max-width: 600px) {
+  .cu-835837-search { width: 100%; }
+  .cu-835837-search label { flex-basis: 100%; }
+  .cu-835837-search input { flex: 1 1 180px; width: auto; }
+}

@@ -29,16 +29,13 @@ globalThis.fetch = async (input, options) => {
   if (failNext) { failNext = false; return json({ success: false, error: 'Synthetic service error' }, 503); }
   const only837 = url.searchParams.get('category') === '837-only';
   return json({ success: true, count: 12, page: Number(url.searchParams.get('page')), pages: 2, ambiguous_claims: 1,
-    amount_summary: only837 ? { matched: 0, mismatched: 0, missing_835: 12 } : { matched: 11, mismatched: 1, missing_835: 0 },
+    amount_summary: only837 ? { matched: 0, mismatched: 0, missing_835: 12 } : { matched: 0, mismatched: 12, missing_835: 0 },
     age_summary: { counts: { '0-10': 0, '10-20': 12, '20-30': 0, '30-plus': 0 }, total: 12, unknown: 0 },
     rows: [{ key: 'row1', claim: '123456789', internal_number: 'ABC123', waiting_days: 15,
       billed_837: '100.00', billed_835: only837 ? null : '80.00', difference: only837 ? null : '20.00',
       status: only837 ? '835 not received' : 'Billed amounts differ', source_837: 'claims_20261001.837',
       source_835: only837 ? '' : 'payment_20261016.835', record_835_id: only837 ? null : 42,
-    }, ...(!only837 ? [{ key: 'row2', claim: '987654321', internal_number: 'XYZ123', waiting_days: 15,
-      billed_837: '100.00', billed_835: '100.00', difference: '0.00', status: 'Billed amounts match',
-      source_837: 'matched.837', source_835: 'matched.835', record_835_id: 43,
-    }] : [])] });
+    }] });
 };
 const button = text => {
   const found = [...document.querySelectorAll('button')].find(item => item.textContent === text);
@@ -59,12 +56,11 @@ try {
   assert.equal(button('In both').getAttribute('aria-pressed'), 'true');
   assert.equal(document.querySelectorAll('thead th').length, 8);
   assert.equal(document.querySelector('tbody tr').cells[5].textContent, '$20.00');
-  assert.equal(requests.at(-1).get('sort'), 'priority');
-  assert.equal(document.querySelectorAll('tbody tr')[1].cells[5].textContent, '$0.00');
-  assert.equal(document.querySelectorAll('tbody tr')[1].cells[6].textContent, 'Billed amounts match');
-  assert.ok(document.querySelectorAll('tbody tr')[1].cells[6].querySelector('.cu-issue-clear'));
-  assert.ok(document.querySelector('main').textContent.includes('11 exact matches'));
-  assert.ok(document.querySelector('main').textContent.includes('1 mismatch'));
+  assert.equal(requests.at(-1).get('sort'), 'waiting_days');
+  assert.equal(document.querySelectorAll('tbody tr').length, 1);
+  assert.ok(!document.querySelector('main').textContent.includes('Billed amounts match'));
+  assert.ok(document.querySelector('main').textContent.includes('Exact matches, including the sign, are excluded'));
+  assert.ok(document.querySelector('form[role="search"]'));
   assert.equal(document.querySelectorAll('.cu-aging-row b')[1].textContent, '12 claims');
   assert.ok(document.querySelector('main').textContent.includes('duplicate or ambiguous'));
   if (process.env.STATUS_PREVIEW_PATH) {
@@ -74,15 +70,25 @@ try {
   }
   await click(document.querySelector('thead th button'));
   assert.equal(requests.at(-1).get('sort'), 'waiting_days');
-  await click('Mismatches first');
-  assert.equal(requests.at(-1).get('sort'), 'priority');
-  await click('Download CSV');
-  assert.equal(requests.at(-1).get('sort'), 'priority');
-  downloads.length = 0;
   await click('Next'); assert.equal(requests.at(-1).get('page'), '2');
+  const requestCount = requests.length;
+  await act(async () => {
+    const input = document.querySelector('input[type="search"]');
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, '  ABC123  ');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  assert.equal(requests.length, requestCount, 'Typing must not send a request for each key');
+  await click('Search');
+  assert.equal(requests.at(-1).get('search'), 'ABC123');
+  assert.equal(requests.at(-1).get('page'), '1');
+  await click('Download CSV');
+  assert.equal(requests.at(-1).get('search'), 'ABC123');
+  assert.equal(requests.at(-1).has('page'), false);
+  downloads.length = 0;
   await click('In 837 only');
   assert.equal(requests.at(-1).get('category'), '837-only');
   assert.equal(requests.at(-1).get('page'), '1');
+  assert.equal(requests.at(-1).get('search'), 'ABC123');
   assert.equal(document.querySelector('tbody tr').cells[4].textContent, '—');
   assert.equal(document.querySelector('tbody tr').cells[5].textContent, '—');
   assert.equal(document.querySelector('tbody .cu-link'), null);
@@ -94,10 +100,15 @@ try {
   await click('Monthly');
   assert.equal(requests.at(-1).get('period'), 'monthly');
   assert.equal(requests.at(-1).get('category'), '837-only');
+  assert.equal(requests.at(-1).get('search'), 'ABC123');
   await click('Download CSV');
   assert.equal(requests.at(-1).get('format'), 'csv');
   assert.equal(requests.at(-1).has('page'), false);
   assert.deepEqual(downloads, ['filex-835-837_837-only_10-20.csv']);
+  await click('Clear');
+  assert.equal(requests.at(-1).has('search'), false);
+  assert.equal(requests.at(-1).get('page'), '1');
+  assert.equal(document.querySelector('input[type="search"]').value, '');
   failNext = true; await click('Refresh');
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('Synthetic service error'));
   await click('Try again');

@@ -281,7 +281,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {tab === "claim" && detail && <span className={"cu-claim-badge" + (detail.reason ? " is-held" : "")}>
               {detail.reason ? "On hold · " + detail.days + " days" : "Payer response available"}
             </span>}
-            {tab !== "claim" && <p>{tab === "835837" ? "Review billed-charge matches, differences and 837 claims awaiting an 835." : tab === "home" ?
+            {tab !== "claim" && <p>{tab === "835837" ? "Review billed-charge differences and 837 claims awaiting an 835." : tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "history" ? "Conversions and review activity for your selected period." :
               tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
