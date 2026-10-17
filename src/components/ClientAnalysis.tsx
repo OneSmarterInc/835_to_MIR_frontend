@@ -8,7 +8,9 @@ const endpoint = "/edi835/api/client-portal/analysis/";
 const maxBytes = 10 * 1024 * 1024;
 type UploadProgress = { queued: number; processing: number; saved: number; failed: number; filename: string };
 
-export default function ClientAnalysis() {
+export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
+  claimNumber?: string | null; onClaimChange?: (claim: string | null) => void;
+} = {}) {
   const [files, setFiles] = useState<AnalysisFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -17,7 +19,9 @@ export default function ClientAnalysis() {
   const [notices, setNotices] = useState<Partial<Record<"837" | "835", string>>>({});
   const [progress, setProgress] = useState<Partial<Record<"837" | "835", UploadProgress>>>({});
   const [uploadErrors, setUploadErrors] = useState<Partial<Record<"837" | "835", string[]>>>({});
-  const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
+  const [localClaim, setLocalClaim] = useState<string | null>(null);
+  const selectedClaim = onClaimChange ? claimNumber : localClaim;
+  const setSelectedClaim = onClaimChange || setLocalClaim;
   const returnFocus = useRef<string | null>(null);
   useEffect(() => {
     if (selectedClaim === null && returnFocus.current) {
@@ -168,6 +172,11 @@ export default function ClientAnalysis() {
   if (detail) return <div className="cu-analysis"><AnalysisClaimDetail row={detail} onBack={() => {
     returnFocus.current = detail.key; setSelectedClaim(null);
   }} /></div>;
+  if (selectedClaim) return <section className="cu-card">
+    <button type="button" className="cu-back-link" onClick={() => setSelectedClaim(null)}>← Back to Analysis</button>
+    {loading ? <p role="status">Loading claim…</p> : <p role="alert">{loadFailed ? error : "This claim is not available in your Analysis files."}</p>}
+    {loadFailed && <button type="button" className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
+  </section>;
 
   return <div className="cu-analysis">
     <section className="cu-card cu-analysis-upload" aria-label="Upload claim files">

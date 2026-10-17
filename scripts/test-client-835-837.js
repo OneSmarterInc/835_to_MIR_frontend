@@ -54,10 +54,10 @@ const click = async item => act(async () => (typeof item === 'string' ? button(i
 try {
   const { default: Portal } = await server.ssrLoadModule('/src/pages/ClientUserPortal.jsx');
   await act(async () => root.render(React.createElement(Portal, { user: { name: 'Example user' } })));
-  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Refresh', 'Convert a file', '835/837 status', 'Analysis']);
+  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Home', 'Convert a file', '835/837 status', 'Analysis']);
   await click('835/837 status');
   assert.equal(document.querySelector('h1').textContent, '835/837 status');
-  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Refresh', 'Convert a file', 'Home', 'Analysis']);
+  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Home', 'Convert a file', '835/837 status', 'Analysis']);
   assert.equal(document.querySelector('.cu-kpis'), null);
   assert.ok(!document.querySelector('main').textContent.includes('Recent conversions'));
   assert.ok(!document.querySelector('main').textContent.includes('Payer category'));
@@ -120,11 +120,11 @@ try {
   assert.equal(requests.at(-1).has('search'), false);
   assert.equal(requests.at(-1).get('page'), '1');
   assert.equal(document.querySelector('input[type="search"]').value, '');
-  failNext = true; await click('Refresh');
+  failNext = true; await click('Daily');
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('Synthetic service error'));
   await click('Try again');
   assert.equal(document.querySelector('[role="alert"]'), null);
-  legacy = true; await click('Refresh');
+  legacy = true; await click('Weekly');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
   assert.equal(document.querySelector('tbody time').textContent, '—');
   legacy = false;
@@ -134,7 +134,7 @@ try {
   const beforeAnalysis = paths.length;
   await click(document.querySelector('.cu-controls button:last-child'));
   assert.equal(document.querySelector('h1').textContent, 'Analysis');
-  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Home']);
+  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(item => item.textContent), ['Home', 'Convert a file', '835/837 status', 'Analysis']);
   assert.equal(document.querySelector('.cu-period-toolbar'), null);
   assert.equal(document.querySelector('.cu-aging-row'), null);
   assert.equal(document.querySelector('.cu-kpis'), null);

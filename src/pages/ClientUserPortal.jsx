@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Topbar from "../components/Topbar";
 import { PortalPagination } from "../components/ClientClaimTable";
 import ClientClaimComparison from "../components/ClientClaimComparison";
@@ -10,6 +10,7 @@ import ClientClaimSources from "../components/ClientClaimSources";
 import Client835837Status from "../components/Client835837Status";
 import ClientAnalysis from "../components/ClientAnalysis";
 import { encodeDemoValue } from "../utils/demoEncoder";
+import { clientPagePath, useClientPortalRoute } from "../utils/clientPortalRoute";
 import "./ClientUserPortal.css";
 import "./ClientClaimDetail.css";
 
@@ -27,7 +28,8 @@ const claimDate = value => {
     ? date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : value;
 };
 const filenameText = value => value == null || value === "" ? "—" : String(value);
-const navigation = [["home","Home"],["convert","Conversions"],["analysis","Analysis"],["history","History"]];
+const navigation = [["home","Home"],["convert","Conversions"],["835837","835/837 status"],["analysis","Analysis"],["history","History"]];
+const pageNavigation = [["home", "Home"], ["convert", "Convert a file"], ["835837", "835/837 status"], ["analysis", "Analysis"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
 const displayPeriodDate = value => {
   if (!value) return "";
@@ -62,7 +64,7 @@ const adjustmentMeaning = (group, code) => {
 const isPlanIssue = issue => /plan.?id|subscriber.?id|member.?id/i.test(issue.reason || "");
 const isDictionaryIssue = issue => /dictionary|remark|code.?mapping|unknown.?code/i.test(issue.reason || "");
 export default function ClientUserPortal({ user, onLogout }) {
-  const [tab, setTab] = useState("home");
+  const { tab, claimId, analysisClaim, historySection, pathname, navigate } = useClientPortalRoute();
   const isAnalysis = tab === "analysis";
   const [periodMode, setPeriodMode] = useState("daily");
   const [customFrom, setCustomFrom] = useState("");
@@ -90,12 +92,35 @@ export default function ClientUserPortal({ user, onLogout }) {
   // Financial summary is hidden: const [comparisonMoney, setComparisonMoney] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [drawer, setDrawer] = useState(false);
-  useEffect(() => { window.scrollTo(0, 0); }, [tab]);
+  const [drawerPinned, setDrawerPinned] = useState(false);
+  const [drawerHover, setDrawerHover] = useState(false);
+  const drawer = drawerPinned || drawerHover;
+  const drawerCloseTimer = useRef(null);
+  const cancelDrawerClose = () => window.clearTimeout(drawerCloseTimer.current);
+  const openDrawerPreview = event => {
+    if (event.pointerType === "touch") return;
+    cancelDrawerClose();
+    setDrawerHover(true);
+  };
+  const closeDrawerPreview = () => {
+    cancelDrawerClose();
+    // Allow the pointer to cross the short gap below the menu button.
+    drawerCloseTimer.current = window.setTimeout(() => setDrawerHover(false), 180);
+  };
+  const toggleDrawerPin = () => {
+    cancelDrawerClose();
+    setDrawerHover(false);
+    setDrawerPinned(value => !value);
+  };
+  useEffect(() => () => window.clearTimeout(drawerCloseTimer.current), []);
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   useEffect(() => {
     if (!drawer) return undefined;
     const onEscape = event => {
-      if (event.key === "Escape") setDrawer(false);
+      if (event.key === "Escape") {
+        cancelDrawerClose(); setDrawerHover(false); setDrawerPinned(false);
+        document.querySelector(".cu-header-menu")?.focus();
+      }
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
@@ -112,7 +137,7 @@ export default function ClientUserPortal({ user, onLogout }) {
   const [claimActivityError, setClaimActivityError] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
-  const [historySection, setHistorySection] = useState("files");
+  const setHistorySection = section => navigate(section === "activity" ? "/history/activity" : "/history");
   const [historyResult, setHistoryResult] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -169,28 +194,34 @@ export default function ClientUserPortal({ user, onLogout }) {
   }, [tab, detail?.id, claimActivityPage, refresh]);
 
   const go = next => {
-    if (next === "history") { setHistoryPage(1); setHistorySection("files"); }
-    setTab(next);
+    if (next === "history") setHistoryPage(1);
+    navigate(clientPagePath(next));
+  };
+  useEffect(() => {
     setDetail(null);
     setDecision(null);
     setError("");
-    setDrawer(false);
+    setDrawerHover(false);
     setNotice("");
-  };
-  const showClaim = async id => {
-    if (detailLoading) return;
+  }, [pathname]);
+  const showClaim = id => navigate(clientPagePath("claim", String(id)));
+  useEffect(() => {
+    if (tab !== "claim" || !claimId) {
+      setDetailLoading(false);
+      return undefined;
+    }
+    const controller = new AbortController();
     setClaimActivityPage(1);
     setClaimActivity(null);
     setDetailLoading(true);
     setError("");
     setNotice("");
-    try {
-      const response = await jsonFetch(baseUrl + "claim/" + encodeURIComponent(id) + "/");
-      setDetail(response.claim);
-      setTab("claim");
-    } catch(e) { setError(e.message); }
-    finally { setDetailLoading(false); }
-  };
+    jsonFetch(baseUrl + "claim/" + encodeURIComponent(claimId) + "/", { signal: controller.signal })
+      .then(response => { if (!controller.signal.aborted) setDetail(response.claim); })
+      .catch(e => { if (!controller.signal.aborted) setError(e.message); })
+      .finally(() => { if (!controller.signal.aborted) setDetailLoading(false); });
+    return () => controller.abort();
+  }, [tab, claimId]);
   const choose = (kind, file_id, claim_id, title) => {
     if ((kind === "NOTE" || kind.startsWith("REQUEST_")) && claim_id == null) return;
     setNote("");
@@ -249,15 +280,17 @@ export default function ClientUserPortal({ user, onLogout }) {
   ] : [];
 
   return <>
-    <Topbar user={user} clientUser onToggleDrawer={() => setDrawer(v => !v)} onLogout={onLogout} />
+    <Topbar user={user} clientUser onToggleDrawer={toggleDrawerPin} onLogout={onLogout}
+      drawerOpen={drawer} drawerPinned={drawerPinned}
+      onMenuPointerEnter={openDrawerPreview} onMenuPointerLeave={closeDrawerPreview} />
     <div className="cu-shell">
-      {drawer && <button type="button" className="cu-sidebar-backdrop"
-        aria-label="Close navigation menu" onClick={() => setDrawer(false)}/>}
-      <nav className={"cu-sidebar" + (drawer ? " cu-sidebar-open" : "")}
+      <nav id="client-navigation" className={"cu-sidebar" + (drawer ? " cu-sidebar-open" : "")}
+        onPointerEnter={openDrawerPreview} onPointerLeave={closeDrawerPreview}
         aria-label="Client navigation" aria-hidden={!drawer} inert={!drawer}>
         <div className="grp eyebrow">Operations</div>
         {navigation.filter(([key]) => key !== "history").map(([key,label]) =>
           <button type="button" key={key}
+            aria-current={tab === key ? "page" : undefined}
             className={"cu-navitem" + ((tab === key || (key === "home" && tab === "claim")) ? " on" : "")}
             onClick={() => go(key)}><span>{label}</span>
           </button>
@@ -269,16 +302,16 @@ export default function ClientUserPortal({ user, onLogout }) {
         <button type="button" className={"cu-navitem" + (tab === "settings" ? " on" : "")}
           onClick={() => go("settings")}><span>Settings</span></button>
       </nav>
-      <main className={"cu-main" + (tab === "convert" ? "" : " cu-compact") + (tab === "claim" ? " cu-claim-page" : "")}>
-        {tab !== "home" && tab !== "835837" && tab !== "analysis" && <button type="button" className="cu-back-link"
+      <main className={"cu-main cu-compact" + (tab === "claim" ? " cu-claim-page" : "")}>
+        {!["home", "convert", "835837", "analysis"].includes(tab) && <button type="button" className="cu-back-link"
           onClick={() => go("home")}>
           ← Back to Home
         </button>}
-        {tab !== "convert" && <header className={"cu-heading" + (tab === "claim" ? " cu-claim-heading" : "")}>
+        <header className={"cu-heading" + (tab === "claim" ? " cu-claim-heading" : "")}>
           <div className="cu-heading-copy">
-            <span className="eyebrow">{dashboard?.client || user.client}{tab !== "analysis" && <> · {periodMode.toUpperCase()}</>}</span>
+            <span className="eyebrow">{dashboard?.client || user.client}{!["analysis", "convert"].includes(tab) && <> · {periodMode.toUpperCase()}</>}</span>
             <h1>{tab === "analysis" ? "Analysis" : tab === "835837" ? "835/837 status" : tab === "home" ? "Claims overview" : tab === "history" ?
-              "History" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
+              "History" : tab === "convert" ? "Conversions" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
             {tab === "claim" && detail && <span className={"cu-claim-badge" + (detail.reason ? " is-held" : "")}>
               {detail.reason ? "On hold · " + detail.days + " days" : "Payer response available"}
@@ -310,15 +343,11 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
             </dl>
           </>}
-          {tab === "analysis" && <div className="cu-controls"><button type="button" className="cu-btn" onClick={() => go("home")}>Home</button></div>}
-          {["home", "835837"].includes(tab) && <div className="cu-controls">
-            <button type="button" className="cu-btn" onClick={reload} disabled={!periodQuery}>Refresh</button>
-            <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
-            <button type="button" className="cu-btn" onClick={() => go(tab === "home" ? "835837" : "home")}>
-              {tab === "home" ? "835/837 status" : "Home"}</button>
-            <button type="button" className="cu-btn" onClick={() => go("analysis")}>Analysis</button>
-          </div>}
-        </header>}
+          {pageNavigation.some(([key]) => key === tab) && <nav className="cu-controls cu-page-navigation" aria-label="Page navigation">
+            {pageNavigation.map(([key, label]) => <button type="button" className="cu-btn" key={key}
+              aria-current={tab === key ? "page" : undefined} onClick={() => go(key)}>{label}</button>)}
+          </nav>}
+        </header>
         {["home", "history", "835837"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
           <div className="cu-period-main">
             <div className="cu-period-options" role="group" aria-label="Activity period">
@@ -349,7 +378,8 @@ export default function ClientUserPortal({ user, onLogout }) {
         {tab !== "analysis" && loading && <p>Loading current client records…</p>}
         {detailLoading && <p>Opening claim…</p>}
 
-        {tab === "analysis" && <ClientAnalysis />}
+        {tab === "analysis" && <ClientAnalysis claimNumber={analysisClaim}
+          onClaimChange={id => navigate(clientPagePath("analysis", id))} />}
         {tab === "835837" && periodQuery && <Client835837Status periodQuery={periodQuery} refresh={refresh} onOpen={showClaim} />}
         {tab === "home" && periodQuery && <>
           <div className="cu-kpis">

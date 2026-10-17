@@ -535,9 +535,9 @@ export default function ConversionsView({
 
   return (
     <section className="view on table-screen" id="v-batches">
-      <WorkspaceHeader eyebrow="Conversion workspace" title="Conversions" description="Upload, validate, convert, and deliver healthcare transaction files.">
+      {!isClientUser && <WorkspaceHeader eyebrow="Conversion workspace" title="Conversions" description="Upload, validate, convert, and deliver healthcare transaction files.">
         {isAdmin && clients?.length > 0 && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={handleClientChange} includeGlobal fullWidth /></div>}
-      </WorkspaceHeader>
+      </WorkspaceHeader>}
 
       {/* START A CONVERSION CARD */}
       <div className="start-conversion-card">

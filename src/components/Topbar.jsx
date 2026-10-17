@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
-export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = false }) {
+export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = false,
+  drawerOpen = false, drawerPinned = false, onMenuPointerEnter, onMenuPointerLeave }) {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const displayName = user?.name || user?.email || "Client User";
   const initials = displayName.split(" ").filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "CU";
@@ -11,7 +12,9 @@ export default function Topbar({ user, onToggleDrawer, onLogout, clientUser = fa
         {clientUser ? <>
           <div className="cu-topbar-brand">
             <button type="button" className="cu-header-menu" title="Toggle Navigation Menu"
-              aria-label="Toggle Navigation Menu" onClick={onToggleDrawer}>
+              aria-label="Toggle Navigation Menu" onClick={onToggleDrawer}
+              aria-controls="client-navigation" aria-expanded={drawerOpen} aria-pressed={drawerPinned}
+              onPointerEnter={onMenuPointerEnter} onPointerLeave={onMenuPointerLeave}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                 strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/>

@@ -1,3 +1,4 @@
+html:has(.cu-shell) { scrollbar-gutter: stable; }
 .cu-shell{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:calc(100vh - 56px);background:var(--paper)}
 .cu-sidebar{background:var(--ink);color:#e6edf4;padding:24px 14px;display:flex;flex-direction:column;gap:12px}
 .cu-org{font-size:16px;font-weight:750;color:white;padding:0 12px;overflow-wrap:anywhere}
@@ -199,11 +200,6 @@
    Keep this scoped to Client User to avoid changing existing Client Admin UI. */
 .cu-shell { display: block; position: relative; min-height: calc(100vh - 56px); }
 .cu-shell .cu-main { max-width: 100%; margin: 0; padding: 26px 30px 60px; }
-.cu-sidebar-backdrop {
-  position: fixed; inset: 56px 0 0; z-index: 90; width: 100%;
-  background: rgba(13,23,36,.28); backdrop-filter: blur(2px);
-  cursor: default;
-}
 .cu-shell .cu-sidebar {
   position: fixed; top: 56px; left: 0; bottom: 0; width: 206px; height: calc(100vh - 56px);
   z-index: 100; display: block; flex: none; min-height: 0; padding: 18px 0;
@@ -366,6 +362,14 @@
 .cu-compact .cu-filters { margin: 12px 0 10px; gap: 6px; }
 .cu-compact .cu-filters button { padding: 5px 10px; }
 .cu-compact .cu-btn { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+.cu-heading .cu-controls .cu-btn { background: #000; border-color: #000; color: #fff; }
+.cu-heading .cu-controls .cu-btn:hover { background: #242424; border-color: #242424; }
+.cu-heading .cu-controls .cu-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.cu-heading .cu-page-navigation { align-self: flex-start; display: grid; grid-template-columns: repeat(4, max-content); }
+.cu-heading .cu-page-navigation .cu-btn[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--teal); }
+@media (max-width: 600px) {
+  .cu-heading .cu-page-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .cu-compact .cu-table th, .cu-compact .cu-table td { padding: 9px 8px; }
 .cu-compact .cu-table td { overflow-wrap: anywhere; }
 .cu-compact .cu-explanation { padding: 12px; margin: 10px 0; }

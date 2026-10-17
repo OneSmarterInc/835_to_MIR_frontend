@@ -114,6 +114,7 @@ try {
     reason = holdReason;
     records = [];
     posts = [];
+    window.history.replaceState(null, '', '/');
     await act(async () => {
       root.render(React.createElement(Portal, { key: holdReason, user: { name: 'Test user' } }));
     });
