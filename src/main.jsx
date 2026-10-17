@@ -84,6 +84,10 @@ function applyDemoEncodingToJsonResponse(response) {
     }
   })();
   if (/\/api\/file-content\//.test(responsePath) || /\/api\/claims-dashboard\//.test(responsePath)) return response;
+  // These tables group and compare exact identifiers in memory, then mask
+  // their visible cells. Masking first can merge unrelated claims with the
+  // same visible suffix and also prevents searching the original number.
+  if (/\/api\/client-portal\/(analysis|comparison-835-837)\//.test(responsePath)) return response;
 
   // Archived source viewers fetch the original file with ?view=1 and apply
   // PHI masking themselves at the field/segment level. Do not globally encode

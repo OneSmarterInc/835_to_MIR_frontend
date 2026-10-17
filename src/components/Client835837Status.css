@@ -1,12 +1,21 @@
-.cu-comparison .cu-835837-table { min-width: 1050px; }
-.cu-835837-table th:nth-child(1) { width: 10%; }
-.cu-835837-table th:nth-child(2) { width: 15%; }
-.cu-835837-table th:nth-child(3) { width: 10%; }
-.cu-835837-table th:nth-child(n+4):nth-child(-n+6) { width: 11%; }
-.cu-835837-table th:nth-child(7) { width: 16%; }
-.cu-835837-table th:nth-child(8) { width: 16%; }
+.cu-comparison .cu-835837-table { min-width: 1400px; }
+.cu-835837-table thead th:nth-child(1) { width: 12%; }
+.cu-835837-table thead th:nth-child(2) { width: 7%; }
+.cu-835837-table thead th:nth-child(3) { width: 4%; }
+.cu-835837-table thead th:nth-child(4) { width: 18%; }
+.cu-835837-table thead th:nth-child(5) { width: 12%; }
+.cu-835837-table thead th:nth-child(n+6):nth-child(-n+8) { width: 9%; }
+.cu-835837-table thead th:nth-child(9) { width: 8%; }
+.cu-835837-table thead th:nth-child(10) { width: 12%; }
 .cu-835837-table .cu-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cu-835837-source { overflow-wrap: anywhere; font-size: 11px; }
+.cu-835837-source small { display: block; color: var(--ink-2); font-size: 10px; margin-top: 3px; }
+.cu-835837-table tbody .cu-835837-claim { background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 650; text-transform: none; letter-spacing: normal; vertical-align: top; overflow-wrap: anywhere; padding: 9px 8px !important; }
+.cu-835837-table .cu-835837-age { vertical-align: top; }
+.cu-835837-table .cu-835837-result { vertical-align: middle; }
+.cu-835837-group + .cu-835837-group tr:first-child > * { border-top: 2px solid var(--line); }
+.cu-835837-date { font-size: 11px; }
+.cu-835837-type { font-size: 11px; font-weight: 650; }
 .cu-835837-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
 .cu-835837-search label { font-size: 12px; font-weight: 650; }
 .cu-835837-search input { width: clamp(220px, 24vw, 320px); min-width: 0; height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; }
