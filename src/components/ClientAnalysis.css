@@ -3,7 +3,7 @@
 .cu-analysis-steps h2 { margin: 0; }
 .cu-analysis-steps > span { color: #53677f; font-size: 12px; }
 .cu-analysis-steps > span > span { padding: 0 12px; }
-.cu-analysis-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cu-analysis-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
 .cu-analysis-file { position: relative; display: flex; align-items: center; gap: 16px; border: 1px dashed #bfccdc; border-radius: 4px; background: #f7f9fc; padding: 14px; min-width: 0; }
 .cu-analysis-file > div { flex: 1; min-width: 0; }
 .cu-analysis-file label { font-size: 12px; font-weight: 700; }
@@ -71,3 +71,12 @@
 .cu-analysis-progress-counts [data-stage="saved"] b { color: #10735b; }
 .cu-analysis-progress-counts .has-failures, .cu-analysis-progress-counts .has-failures b { color: #ad3028; }
 .cu-analysis-processing-file { display: block; margin-top: 6px; overflow-wrap: anywhere; }
+.cu-analysis-file .cu-analysis-claim-results { flex: 1 0 100%; font-size: 0.8125rem; }
+.cu-analysis-claim-results > p { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; margin: 0; }
+.cu-analysis-claim-results > p > span { margin-left: 0.75rem; }
+.cu-analysis-rejections { margin-top: 0.6rem; border-top: 1px solid #dbe3eb; padding-top: 0.6rem; }
+.cu-analysis-rejections summary { cursor: pointer; color: #9a3412; font-weight: 600; }
+.cu-analysis-rejection-list { max-height: 15rem; overflow: auto; margin-top: 0.5rem; }
+.cu-analysis-rejection-list section { padding: 0.5rem 0; border-bottom: 1px solid #dbe3eb; overflow-wrap: anywhere; }
+.cu-analysis-rejection-list ul { padding-left: 1.25rem; }
+.cu-analysis-rejection-list li { margin: 0.25rem 0; }

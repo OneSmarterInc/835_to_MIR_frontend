@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AnalysisComparisonTable from "./AnalysisComparisonTable";
 import AnalysisClaimDetail from "./AnalysisClaimDetail";
+import AnalysisUploadResults from "./AnalysisUploadResults";
 import { analyzeClaims, analysisCsv, type AnalysisFile, type AnalysisSortKey, isAnalysisMismatch } from "../utils/claimAnalysis";
 import "./ClientAnalysis.css";
 
@@ -209,11 +210,12 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
               {status.filename && <small className="cu-analysis-processing-file">Processing: {status.filename}</small>}
             </div>}
             {notices[kind] && <p className="cu-analysis-upload-notice" role="status">{notices[kind]}</p>}
+            <AnalysisUploadResults files={saved} kind={kind} />
             {!!uploadErrors[kind]?.length && <div className="cu-error cu-analysis-upload-errors" role="alert">{uploadErrors[kind]?.map((message, index) => <p key={index}>{message}</p>)}</div>}
           </div>;
         })}
       </div>
-      <p className="cu-help">Validation checks X12 envelopes, transaction counts and claim amounts. Saved uploads remain available here; each upload adds to this analysis.</p>
+      <p className="cu-help">Valid claims are saved; claims with validation issues are listed for review. Invalid X12 envelopes prevent the file from being processed. Each upload adds to this analysis.</p>
       {loading && <p role="status">Loading saved Analysis files…</p>}
       {error && <p className="cu-error" role="alert">{error}</p>}
       {loadFailed && <button className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
@@ -227,7 +229,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     </div>
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison">
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
-        <p className="cu-help">Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (CLP04 + CLP05). Claims matching both comparisons are excluded. Differences and unresolved records remain visible for review.</p></div>
+        <p className="cu-help">Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Claims matching both comparisons are excluded.</p></div>
         <div className="cu-comparison-header-actions"><span role="status">{filtered.length.toLocaleString()} claims</span>
           <button className="cu-btn" disabled={!filtered.length || !!busy} onClick={download}>Download CSV</button></div>
       </div>

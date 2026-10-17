@@ -7,8 +7,8 @@ const columns: [AnalysisSortKey, string, string][] = [
   ["claim", "Claim", "837 / 835"],
   ["internal_number", "Internal claim", "Source reference"],
   ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · CLP03"],
-  ["payment", "Claim payment", "835 · CLP04"], ["patient_responsibility", "Patient responsibility", "835 · CLP05"],
-  ["allowed", "Allowed amount", "835 · CLP04 + CLP05"],
+  ["payment", "Claim payment", "835 · CLP04"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR"],
+  ["allowed", "Allowed amount", "835 · Payment + responsibility"],
   ["difference", "Billed comparison", "CLM02 vs CLP03"], ["allowed_difference", "Allowed comparison", "CLM02 vs allowed"],
 ];
 const safe = (value: string) => value ? encodeDemoValue(value, true) : "—";
@@ -17,7 +17,7 @@ export function ComparisonResult({ status, difference }: { status: ComparisonSta
   const tone = status === "Match" ? "match" : status === "Mismatch" ? "mismatch" : "review";
   return <div className={`cu-analysis-result is-${tone}`}><strong>{status}</strong>
     {difference !== null && <small>Difference {money(difference)}</small>}
-    {status === "Amount unavailable" && <small>CLP04 or CLP05 not provided</small>}
+    {status === "Amount unavailable" && <small>Source amounts need reprocessing</small>}
   </div>;
 }
 

@@ -62,7 +62,7 @@ async function capturePreview(path) {
   if (path) {
     const fs = await import('node:fs/promises');
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css', 'src/components/ClientAnalysis.css'].map(path => fs.readFile(path, 'utf8')));
-    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div><div class="cu-controls"><button class="cu-btn">Home</button></div></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
+    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div><nav class="cu-controls cu-page-navigation"><button class="cu-btn">Home</button><button class="cu-btn">Convert a file</button><button class="cu-btn">835/837 status</button><button class="cu-btn" aria-current="page">Analysis</button></nav></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
   }
 }
 try {
@@ -117,6 +117,24 @@ try {
   assert.equal(centsRow.allowed_status, 'Match');
   const legacy = analyzeClaims(file('837', [claim('LEGACY', '100.00', 1)]), file('835', [{ claim: 'LEGACY', billed: '100.00', sequence: 1, internal_number: '' }]))[0];
   assert.equal(legacy.allowed_status, 'Amount unavailable');
+  // Persisted backend recovery must render real zero responsibility, not a dash.
+  const recovered = analyzeClaims(file('837', [claim('RECOVERED', '2483.00', 1)]),
+    file('835', [claim('RECOVERED', '2483.00', 1, '284.77', '0.00')]))[0];
+  assert.equal(recovered.billed_status, 'Match');
+  assert.equal(recovered.allowed_status, 'Mismatch');
+  assert.equal(recovered.allowed, '284.77');
+  assert.equal(recovered.allowed_difference, '2198.23');
+  const { default: UploadResults } = await server.ssrLoadModule('/src/components/AnalysisUploadResults.tsx');
+  const partialFile = { ...submission, claims: submission.claims.slice(0, 2), accepted_count: 2, rejected_count: 1, status: 'PARTIAL',
+    rejections: [{ sequence: 2, claim_number: 'REJECTED', reason: 'Claim occurrence 2 has an invalid CLM02 amount.' }] };
+  await act(async () => root.render(React.createElement(UploadResults, { files: [partialFile], kind: '837' })));
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
+  assert.match(document.querySelector('details').textContent, /Claim occurrence 2 has an invalid CLM02 amount/);
+  await click('Download rejection report');
+  assert.equal(downloads.at(-1), 'submitted-claims.837-rejections.csv');
+  downloads.length = 0;
+  await act(async () => root.render(null));
+
   const repeated = analyzeClaims(file('837', [claim('DUP', '657.00', 1), claim('DUP', '657.00', 2)]),
     file('835', [claim('DUP', '657.00', 1, '0.00', '657.00'), claim('DUP', '657.00', 2, '0.00', '657.00')]));
   assert.equal(repeated.length, 1);
@@ -158,7 +176,7 @@ try {
   assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
   assert.equal(document.querySelectorAll('table time').length, 0);
   assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
-    ['837 · CLM02', '835 · CLP03', '835 · CLP04', '835 · CLP05', '835 · CLP04 + CLP05']);
+    ['837 · CLM02', '835 · CLP03', '835 · CLP04', '835 · CLP05 / PR', '835 · Payment + responsibility']);
   assert.equal(document.querySelector('[data-analysis-claim="SYNTHETIC-1002"]'), null, 'Both-match claim excluded from table');
   assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
   assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));
@@ -310,6 +328,19 @@ try {
   assert.equal(document.querySelector('#analysis-835').value, '');
   assert.deepEqual(calls.slice(liveStart).filter(call => call.method === 'POST').map(call => call.body.get('file').name),
     ['batch-live-a.835', 'batch-live-b.835', 'batch-live-c.835', 'batch-live-a.835']);
+  savedFiles.clear();
+  await act(async () => root.render(React.createElement(Analysis, { key: 'partial-upload' })));
+  hold = true;
+  await upload('837', 'partial.837');
+  savedFiles.set(partialFile.id, partialFile);
+  await act(async () => deferred(json({ success: true, saved: true, file: partialFile })));
+  assert.equal(document.querySelector('#analysis-837').value, '', 'A committed partial file clears the picker');
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
+  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  document.querySelector('.cu-analysis-rejections').open = true;
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-partial.html'));
+  await act(async () => root.render(React.createElement(Analysis, { key: 'partial-reload' })));
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
   assert.equal(localStorage.length, 0, 'Uploaded data must not enter browser storage');
   console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, independent batch queues, live counts, failure-only retry, accumulation and reload persistence passed.');
 } finally {

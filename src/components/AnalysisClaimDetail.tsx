@@ -25,7 +25,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
       <div className="cu-analysis-detail-results">
         <div><h3>Billed comparison <small>CLM02 vs CLP03</small></h3>
           <ComparisonResult status={row.billed_status} difference={row.difference} /></div>
-        <div><h3>Allowed comparison <small>CLM02 vs CLP04 + CLP05</small></h3>
+        <div><h3>Allowed comparison <small>CLM02 vs payment + responsibility</small></h3>
           <ComparisonResult status={row.allowed_status} difference={row.allowed_difference} /></div>
       </div>
       {row.ambiguous && <p className="cu-help">This claim has multiple distinct source records. Review the amounts below; no records have been summed or chosen as a match.</p>}
@@ -40,8 +40,8 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
             <thead><tr><th scope="col">Uploaded (UTC)</th><th scope="col">Internal claim</th>
               <th scope="col">Billed charges <small>{is835 ? "835 · CLP03" : "837 · CLM02"}</small></th>
               {is835 && <><th scope="col">Claim payment <small>835 · CLP04</small></th>
-                <th scope="col">Patient responsibility <small>835 · CLP05</small></th>
-                <th scope="col">Allowed amount <small>835 · CLP04 + CLP05</small></th></>}
+                <th scope="col">Patient responsibility <small>835 · CLP05 / PR</small></th>
+                <th scope="col">Allowed amount <small>835 · Payment + responsibility</small></th></>}
             </tr></thead>
             <tbody>{records.map(item => <tr key={item.key}>
               <td><time dateTime={item.received_at}>{date(item.received_at)}</time></td>

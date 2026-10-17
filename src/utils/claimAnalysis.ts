@@ -2,7 +2,9 @@ import type { Occurrence, Row } from "../components/ClaimOccurrenceTable";
 
 export type AnalysisClaim = { claim: string; internal_number: string; billed: string; sequence: number;
   payment?: string | null; patient_responsibility?: string | null; allowed?: string | null };
-export type AnalysisFile = { id: string; filename: string; kind: "837" | "835"; uploaded_at: string; claims: AnalysisClaim[] };
+export type AnalysisFile = { id: string; filename: string; kind: "837" | "835"; uploaded_at: string; claims: AnalysisClaim[];
+  status?: "SAVED" | "PARTIAL" | "REJECTED"; accepted_count?: number; rejected_count?: number;
+  rejections?: { sequence: number; claim_number: string; reason: string }[] };
 export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — review" | "Awaiting 835 upload" | "Not in uploaded 835" | "Amount unavailable";
 export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null };
 export type AnalysisRow = Omit<Row, "occurrences"> & { category: "both" | "837-only";
@@ -110,9 +112,9 @@ export function analysisCsv(rows: AnalysisRow[]): string {
   return "\ufeff" + [
     ["Claim", "837 source file", "835 source file", "837 uploaded (UTC)", "835 uploaded (UTC)", "Internal claim",
       "Billed charges (837 CLM02)", "Billed charges (835 CLP03)", "Claim payment (835 CLP04)",
-      "Patient responsibility (835 CLP05)", "Allowed amount (835 CLP04 + CLP05)",
+      "Patient responsibility (835 CLP05 / PR)", "Allowed amount (835 payment + responsibility)",
       "Billed difference (CLM02 vs CLP03)", "Billed comparison status",
-      "Allowed difference (CLM02 vs CLP04 + CLP05)", "Allowed comparison status"],
+      "Allowed difference (CLM02 vs payment + responsibility)", "Allowed comparison status"],
     ...rows.map(row => {
       const sources = analysisSources(row);
       const source = (kind: string, key: "filename" | "received_at") => sources.filter(item => item.source_type === kind).map(item => item[key]).join(" | ");
