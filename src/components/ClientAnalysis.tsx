@@ -19,6 +19,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   const [pending, setPending] = useState<Partial<Record<"837" | "835", File[]>>>({});
   const [notices, setNotices] = useState<Partial<Record<"837" | "835", string>>>({});
   const [progress, setProgress] = useState<Partial<Record<"837" | "835", UploadProgress>>>({});
+  const [runFiles, setRunFiles] = useState<Partial<Record<"837" | "835", AnalysisFile[]>>>({});
   const [uploadErrors, setUploadErrors] = useState<Partial<Record<"837" | "835", string[]>>>({});
   const [localClaim, setLocalClaim] = useState<string | null>(null);
   const selectedClaim = onClaimChange ? claimNumber : localClaim;
@@ -81,6 +82,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     const controller = new AbortController(); active.current[kind] = controller;
     setPending(current => ({ ...current, [kind]: selected }));
     setUploadErrors(current => ({ ...current, [kind]: [] }));
+    setRunFiles(current => ({ ...current, [kind]: [] }));
     setNotices(current => ({ ...current, [kind]: "" }));
     setBusyKinds(current => ({ ...current, [kind]: true }));
     setProgress(current => ({ ...current, [kind]: { queued: selected.length, processing: 0, saved: 0, failed: 0, filename: "" } }));
@@ -108,6 +110,9 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           if (!response.ok || !result.success || result.saved !== true) throw new Error(result.error || "The file could not be saved. Please retry.");
           if (controller.signal.aborted) break;
           setFiles(current => [...current.filter(item => item.id !== result.file.id), result.file]);
+          setRunFiles(current => ({ ...current,
+            [kind]: [...(current[kind] || []).filter(item => item.id !== result.file.id), result.file],
+          }));
           setPending(current => ({ ...current, [kind]: current[kind]?.filter(item => item !== file) }));
           savedCount++; if (result.reused) reusedCount++;
         } catch (issue) {
@@ -210,7 +215,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
               {status.filename && <small className="cu-analysis-processing-file">Processing: {status.filename}</small>}
             </div>}
             {notices[kind] && <p className="cu-analysis-upload-notice" role="status">{notices[kind]}</p>}
-            <AnalysisUploadResults files={saved} kind={kind} />
+            <AnalysisUploadResults files={runFiles[kind] || []} kind={kind} />
             {!!uploadErrors[kind]?.length && <div className="cu-error cu-analysis-upload-errors" role="alert">{uploadErrors[kind]?.map((message, index) => <p key={index}>{message}</p>)}</div>}
           </div>;
         })}

@@ -322,9 +322,13 @@ try {
   savedFiles.set(liveSaved.id, liveSaved);
   await act(async () => deferred(json({ success: true, saved: true, file: liveSaved })));
   assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 2, failed: 1 });
+  assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 2.*Claims rejected 0/,
+    'Batch totals exclude historical uploads and failed requests');
   assert.equal(document.querySelector('.cu-analysis-processing-file'), null);
   await click('Retry 835');
   assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 1.*Claims rejected 0/,
+    'Retry totals include only files processed by that retry');
   assert.equal(document.querySelector('#analysis-835').value, '');
   assert.deepEqual(calls.slice(liveStart).filter(call => call.method === 'POST').map(call => call.body.get('file').name),
     ['batch-live-a.835', 'batch-live-b.835', 'batch-live-c.835', 'batch-live-a.835']);
@@ -339,8 +343,28 @@ try {
   assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
   document.querySelector('.cu-analysis-rejections').open = true;
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-partial.html'));
+  await upload('835');
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/,
+    'An independent 835 run preserves the 837 run results');
+  hold = true;
+  await uploadMany('837', ['batch-next-a.837', 'batch-next-b.837'].map(name => new File(['synthetic'], name)));
+  assert.equal(document.querySelector('[aria-label="837 claim results"]'), null, 'New run clears old counts immediately');
+  assert.equal(document.querySelector('.cu-analysis-rejections'), null, 'Old rejection reports are cleared with the run');
+  assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 4.*Claims rejected 0/);
+  const nextFile = { ...partialFile, id: 'batch-next-a.837', filename: 'batch-next-a.837' };
+  savedFiles.set(nextFile.id, nextFile);
+  hold = true;
+  await act(async () => deferred(json({ success: true, saved: true, file: nextFile })));
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/,
+    'Current run claim counts update while the next file is processing');
+  assert.deepEqual([...document.querySelectorAll('.cu-analysis-rejection-list section > strong')].map(item => item.textContent), [nextFile.filename]);
+  const finalFile = { ...file('837', [claim('NEW-RUN-CLAIM', '25.00', 1)]), id: 'batch-next-b.837', filename: 'batch-next-b.837' };
+  savedFiles.set(finalFile.id, finalFile);
+  await act(async () => deferred(json({ success: true, saved: true, file: finalFile })));
+  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 3.*Claims rejected 1/);
   await act(async () => root.render(React.createElement(Analysis, { key: 'partial-reload' })));
-  assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
+  assert.equal(document.querySelector('.cu-analysis-claim-results'), null, 'Loading saved history must not show historical totals as a current upload run');
+  assert.ok(document.querySelector('[data-analysis-claim="SYNTHETIC-1001"]'), 'Saved comparison claims remain available after reload');
   assert.equal(localStorage.length, 0, 'Uploaded data must not enter browser storage');
   console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, independent batch queues, live counts, failure-only retry, accumulation and reload persistence passed.');
 } finally {
