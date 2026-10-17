@@ -7,6 +7,7 @@ import SecurityView from "./SecurityView";
 import ConversionsView from "./ConversionsView";
 import FileViewerModal from "../components/FileViewerModal";
 import ClientClaimSources from "../components/ClientClaimSources";
+import Client835837Status from "../components/Client835837Status";
 import { encodeDemoValue } from "../utils/demoEncoder";
 import "./ClientUserPortal.css";
 import "./ClientClaimDetail.css";
@@ -267,20 +268,20 @@ export default function ClientUserPortal({ user, onLogout }) {
           onClick={() => go("settings")}><span>Settings</span></button>
       </nav>
       <main className={"cu-main" + (tab === "convert" ? "" : " cu-compact") + (tab === "claim" ? " cu-claim-page" : "")}>
-        {tab !== "home" && <button type="button" className="cu-back-link"
+        {tab !== "home" && tab !== "835837" && <button type="button" className="cu-back-link"
           onClick={() => go("home")}>
           ← Back to Home
         </button>}
         {tab !== "convert" && <header className={"cu-heading" + (tab === "claim" ? " cu-claim-heading" : "")}>
           <div className="cu-heading-copy">
             <span className="eyebrow">{dashboard?.client || user.client} · {periodMode.toUpperCase()}</span>
-            <h1>{tab === "home" ? "Claims overview" : tab === "history" ?
+            <h1>{tab === "835837" ? "835/837 status" : tab === "home" ? "Claims overview" : tab === "history" ?
               "History" : tab === "convert" ? "Convert an 835 file" : tab === "settings" ? "Account settings" :
               "Claim " + safe(detail?.number)}</h1>
             {tab === "claim" && detail && <span className={"cu-claim-badge" + (detail.reason ? " is-held" : "")}>
               {detail.reason ? "On hold · " + detail.days + " days" : "Payer response available"}
             </span>}
-            {tab !== "claim" && <p>{tab === "home" ?
+            {tab !== "claim" && <p>{tab === "835837" ? "Review billed-charge differences and 837 claims awaiting an 835." : tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "history" ? "Conversions and review activity for your selected period." :
               tab === "convert" ? "Upload a validated 835 for conversion and optional outbound delivery." : tab === "settings" ? "Manage your FileX security keys." :
@@ -307,12 +308,14 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
             </dl>
           </>}
-          {tab === "home" && <div className="cu-controls">
+          {["home", "835837"].includes(tab) && <div className="cu-controls">
             <button type="button" className="cu-btn" onClick={reload} disabled={!periodQuery}>Refresh</button>
             <button type="button" className="cu-btn cu-primary" onClick={() => go("convert")}>Convert a file</button>
+            <button type="button" className="cu-btn" onClick={() => go(tab === "home" ? "835837" : "home")}>
+              {tab === "home" ? "835/837 status" : "Home"}</button>
           </div>}
         </header>}
-        {["home", "history"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
+        {["home", "history", "835837"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
           <div className="cu-period-main">
             <div className="cu-period-options" role="group" aria-label="Activity period">
               {PERIODS.map(([key, label]) => <button type="button" key={key}
@@ -342,6 +345,7 @@ export default function ClientUserPortal({ user, onLogout }) {
         {loading && <p>Loading current client records…</p>}
         {detailLoading && <p>Opening claim…</p>}
 
+        {tab === "835837" && periodQuery && <Client835837Status periodQuery={periodQuery} refresh={refresh} onOpen={showClaim} />}
         {tab === "home" && periodQuery && <>
           <div className="cu-kpis">
             {[

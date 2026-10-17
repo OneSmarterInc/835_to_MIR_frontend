@@ -50,6 +50,29 @@ const makeParams = ({periodQuery, payerFilter, ageFilter, sort, direction, page,
   return params;
 };
 
+export function ClaimAgeSummary({ summary, loading = false }) {
+  const num = n => Number(n || 0).toLocaleString("en-US");
+  const maxAgeCount = Math.max(1, ...Object.values(summary?.counts || {}));
+  return (
+    <section className="cu-card cu-aging-summary" aria-label="Claims waiting by days" aria-busy={loading}>
+      <div className="cu-section-title">
+        <h2>Claims waiting by days</h2>
+        <span>{loading ? "Updating…" : summary ? num(summary.total) + " claims in selected view" : "Age summary unavailable"}</span>
+      </div>
+      <div className="cu-aging-grid">
+        {AGE_OPTIONS.slice(1).map(([band, label]) => <div className={"cu-aging-row cu-row-age-" + band} key={band}>
+          <span className={band === "30-plus" ? "cu-old" : ""}>{label}</span>
+          <div className="cu-track"><i style={{ width: ((summary?.counts[band] || 0) / maxAgeCount * 100) + "%" }} /></div>
+          <b>{summary ? num(summary.counts[band]) + " claims" : "—"}</b>
+        </div>)}
+      </div>
+      <p className="cu-help">Uses the same waiting days and filters as the table below, across all pages.
+        {summary?.unknown > 0 && ` ${num(summary.unknown)} claims have unknown age and are excluded from the bands.`}
+      </p>
+    </section>
+  );
+}
+
 export default function ClientClaimComparison({ periodQuery, refresh, onOpen, payerFilter = "All", onFinancialTotals }) {
   const [sort, setSort] = useState("waiting_days");
   const [direction, setDirection] = useState("desc");
@@ -133,24 +156,8 @@ export default function ClientClaimComparison({ periodQuery, refresh, onOpen, pa
   const num = n => Number(n || 0).toLocaleString("en-US");
   const rows = data?.rows || [];
   const ageSummary = !loading && !error ? data?.age_summary : null;
-  const maxAgeCount = Math.max(1, ...Object.values(ageSummary?.counts || {}));
   return <>
-    <section className="cu-card cu-aging-summary" aria-label="Claims waiting by days" aria-busy={loading}>
-      <div className="cu-section-title">
-        <h2>Claims waiting by days</h2>
-        <span>{loading ? "Updating…" : ageSummary ? num(ageSummary.total) + " claims in selected view" : "Age summary unavailable"}</span>
-      </div>
-      <div className="cu-aging-grid">
-        {AGE_OPTIONS.slice(1).map(([band, label]) => <div className={"cu-aging-row cu-row-age-" + band} key={band}>
-          <span className={band === "30-plus" ? "cu-old" : ""}>{label}</span>
-          <div className="cu-track"><i style={{ width: ((ageSummary?.counts[band] || 0) / maxAgeCount * 100) + "%" }} /></div>
-          <b>{ageSummary ? num(ageSummary.counts[band]) + " claims" : "—"}</b>
-        </div>)}
-      </div>
-      <p className="cu-help">Uses the same waiting days and filters as the table below, across all pages.
-        {ageSummary?.unknown > 0 && ` ${num(ageSummary.unknown)} claims have unknown age and are excluded from the bands.`}
-      </p>
-    </section>
+    <ClaimAgeSummary summary={ageSummary} loading={loading} />
     <section className="cu-card cu-comparison" aria-label="835, MIR and Recon claim comparison">
     <div className="cu-section-title cu-comparison-heading">
       <div><h2>Claims, payments and reconciliation</h2>

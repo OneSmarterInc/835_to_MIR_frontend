@@ -1,0 +1,9 @@
+.cu-comparison .cu-835837-table { min-width: 1050px; }
+.cu-835837-table th:nth-child(1) { width: 10%; }
+.cu-835837-table th:nth-child(2) { width: 15%; }
+.cu-835837-table th:nth-child(3) { width: 10%; }
+.cu-835837-table th:nth-child(n+4):nth-child(-n+6) { width: 11%; }
+.cu-835837-table th:nth-child(7) { width: 16%; }
+.cu-835837-table th:nth-child(8) { width: 16%; }
+.cu-835837-table .cu-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cu-835837-source { overflow-wrap: anywhere; font-size: 11px; }
