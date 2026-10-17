@@ -70,7 +70,7 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
   const occurrence = (file: AnalysisFile, claim: AnalysisClaim): AnalysisOccurrence => ({
     key: `${file.id}:${claim.sequence}`, record_id: claim.sequence, file_id: file.id,
     source_type: file.kind, filename: file.filename, received_at: file.uploaded_at,
-    internal_number: claim.internal_number, claim_sequence: claim.sequence,
+    internal_number: file.kind === "835" ? claim.internal_number : "", claim_sequence: claim.sequence,
     billed_837: file.kind === "837" ? claim.billed : null, billed_835: file.kind === "835" ? claim.billed : null,
     payment: file.kind === "835" ? claim.payment ?? null : null,
     patient_responsibility: file.kind === "835" ? claim.patient_responsibility ?? null : null,
@@ -88,7 +88,7 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
     const comparisonStatus = (delta: string | null): ComparisonStatus => ambiguous ? "Multiple occurrences — review" :
       !matches.length ? receivedFiles.length ? "Not in uploaded 835" : "Awaiting 835 upload" :
       delta === null ? "Amount unavailable" : delta === "0.00" ? "Match" : "Mismatch";
-    rows.push({ key: number, claim: number, internal_number: claims[0].claim.internal_number, waiting_days: 0,
+    rows.push({ key: number, claim: number, internal_number: matches[0]?.claim.internal_number || "", waiting_days: 0,
       category: matches.length ? "both" : "837-only", ambiguous,
       billed_837: claims.length === 1 ? claims[0].claim.billed : null,
       billed_835: matches.length === 1 ? matches[0].claim.billed : null,

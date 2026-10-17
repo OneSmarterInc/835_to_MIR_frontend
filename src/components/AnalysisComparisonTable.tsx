@@ -5,7 +5,7 @@ import { analysisValues, type AnalysisRow, type AnalysisSortKey, type Comparison
 
 const columns: [AnalysisSortKey, string, string][] = [
   ["claim", "Claim", "837 / 835"],
-  ["internal_number", "Internal claim", "Source reference"],
+  ["internal_number", "Internal claim", "835 · CLP07"],
   ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · CLP03"],
   ["payment", "Claim payment", "835 · CLP04"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR"],
   ["allowed", "Allowed amount", "835 · Payment + responsibility"],
@@ -40,7 +40,7 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             onClick={event => { event.stopPropagation(); onOpenClaim(row.key); }}>{safe(row.claim)}</button></th>
           <td>{(() => {
             if (row.reference_count !== undefined) return row.reference_count > 1 ? `Multiple (${row.reference_count})` : safe(row.internal_number);
-            const references = [...new Set(row.occurrences.map(item => item.internal_number).filter(Boolean))];
+            const references = [...new Set(row.occurrences.filter(item => item.source_type === "835").map(item => item.internal_number).filter(Boolean))];
             return references.length > 1 ? `Multiple (${references.length})` : safe(references[0] || "");
           })()}</td>
           {(["billed_837", "billed_835", "payment", "patient_responsibility", "allowed"] as const).map(key => {

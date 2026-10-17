@@ -37,7 +37,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
         <h3><span className="cu-analysis-file-type">{source.source_type}</span> {source.filename}</h3>
         <div className="cu-table-scroll" role="region" tabIndex={0} aria-label={`${source.source_type} claim amounts`}>
           <table className="cu-table cu-analysis-source-table">
-            <thead><tr><th scope="col">Uploaded (UTC)</th><th scope="col">Internal claim</th>
+            <thead><tr><th scope="col">Uploaded (UTC)</th>{is835 && <th scope="col">Internal claim <small>835 · CLP07</small></th>}
               <th scope="col">Billed charges <small>{is835 ? "835 · CLP03" : "837 · CLM02"}</small></th>
               {is835 && <><th scope="col">Claim payment <small>835 · CLP04</small></th>
                 <th scope="col">Patient responsibility <small>835 · CLP05 / PR</small></th>
@@ -45,7 +45,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
             </tr></thead>
             <tbody>{records.map(item => <tr key={item.key}>
               <td><time dateTime={item.received_at}>{date(item.received_at)}</time></td>
-              <td>{safe(item.internal_number)}</td><td>{money(is835 ? item.billed_835 : item.billed_837)}</td>
+              {is835 && <td>{safe(item.internal_number)}</td>}<td>{money(is835 ? item.billed_835 : item.billed_837)}</td>
               {is835 && <><td>{money(item.payment)}</td><td>{money(item.patient_responsibility)}</td><td>{money(item.allowed)}</td></>}
             </tr>)}</tbody>
           </table>

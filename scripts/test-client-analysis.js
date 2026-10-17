@@ -137,6 +137,13 @@ try {
   assert.equal(compared[2].ambiguous, true);
   assert.equal(compared[3].category, '837-only');
   assert.ok(!compared.some(row => row.claim === 'NOT-IN-837'));
+  const internalOnly = analyzeClaims(file('837', [{ ...claim('REFERENCE', '100.00', 1), internal_number: 'SUBMISSION-REF' }]),
+    file('835', [{ ...claim('REFERENCE', '80.00', 1, '50.00', '0.00'), internal_number: 'PAYER-REF' }]))[0];
+  assert.equal(internalOnly.internal_number, 'PAYER-REF');
+  assert.equal(internalOnly.occurrences.find(item => item.source_type === '837').internal_number, '');
+  assert.ok(!analysisCsv([internalOnly]).includes('SUBMISSION-REF'));
+  assert.ok(analysisCsv([internalOnly]).includes('PAYER-REF'));
+  assert.equal(compared[3].internal_number, '', 'An 837-only claim has no 835 internal number');
   assert.equal(analyzeClaims(file('837', [claim('SIGNED', '100.00', 1)]), file('835', [claim('SIGNED', '-100.00', 1)]))[0].difference, '200.00');
   assert.equal(analyzeClaims(file('837', [claim('CENT', '99999999999999.99', 1)]), file('835', [claim('CENT', '99999999999999.98', 1)]))[0].difference, '0.01');
   for (const amount of ['0.00', '-100.00', '100.00']) {
@@ -222,6 +229,7 @@ try {
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
   assert.equal(document.querySelectorAll('thead th').length, 9);
+  assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
   assert.equal(document.querySelectorAll('tbody button[data-analysis-claim]').length, 2);
   assert.ok(!document.querySelector('table').textContent.includes('submitted-claims.837'));
@@ -260,6 +268,9 @@ try {
   assert.equal(document.querySelectorAll('.cu-analysis-detail-file').length, 2);
   assert.deepEqual([...document.querySelectorAll('.cu-analysis-detail-file h3')].map(item => item.textContent),
     ['837 submitted-claims.837', '835 payer-response.835']);
+  const sourceCards = [...document.querySelectorAll('.cu-analysis-detail-file')];
+  assert.ok(!sourceCards[0].querySelector('thead').textContent.includes('Internal claim'));
+  assert.ok(sourceCards[1].querySelector('thead').textContent.includes('Internal claim'));
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$80.00'));
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$90.00'));
   assert.ok(!document.querySelector('.cu-analysis-detail').textContent.includes('$657.00'), 'Other claim amounts must not leak into detail');
