@@ -13,7 +13,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   claimNumber?: string | null; onClaimChange?: (claim: string | null) => void;
 } = {}) {
   const [data, setData] = useState<AnalysisPage>({ rows: [], total: 0, page: 1, pages: 1,
-    category: "837-only", counts: { both: 0, "837-only": 0 }, file_counts: { "837": 0, "835": 0 } });
+    category: "837-only", counts: { both: 0, matched: 0, "837-only": 0 }, file_counts: { "837": 0, "835": 0 } });
   const [detail, setDetail] = useState<AnalysisRow | null>(null);
   const [detailError, setDetailError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
@@ -149,12 +149,12 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
 
   const { rows, total, pages, page: currentPage, file_counts: fileCounts } = data;
   const displayedCategory = category === "auto" ? data.category : category;
-  const count = (value: string) => data.counts[value as "both" | "837-only"];
+  const count = (value: string) => data.counts[value as keyof AnalysisPage["counts"]] ?? 0;
   async function download() {
     setExporting(true); setError("");
     try {
       await downloadAnalysis(new URLSearchParams({ view: "export", category: displayedCategory, search, sort, direction }),
-        `filex-analysis_${displayedCategory === "both" ? "mismatch-amount" : "missing-in-835"}.csv`);
+        `filex-analysis_${displayedCategory === "both" ? "mismatch-amount" : displayedCategory === "matched" ? "matched-amount" : "missing-in-835"}.csv`);
     } catch (issue) { setError(issue instanceof Error ? issue.message : "Unable to download CSV."); }
     finally { setExporting(false); }
   }
@@ -211,7 +211,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
         <details className="cu-analysis-explainer"><summary>Comparison details</summary>
-          <p>Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Claims matching both comparisons are excluded.</p>
+          <p>Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Matched amount shows claims where both comparisons match. Differences and unresolved comparisons appear under Mismatch amount.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{total.toLocaleString()} claims</span>
@@ -220,7 +220,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
       <div className="cu-analysis-toolbar">
         <div className="cu-analysis-status-filter"><span>Claim status</span>
           <div className="cu-filters" role="group" aria-label="Claim status">
-            {[["both", "Mismatch amount"], ["837-only", "Missing in 835"]].map(([value, label]) => <button type="button" key={value}
+            {[["both", "Mismatch amount"], ["matched", "Matched amount"], ["837-only", "Missing in 835"]].map(([value, label]) => <button type="button" key={value}
               className={displayedCategory === value ? "active" : ""} aria-pressed={displayedCategory === value}
               onClick={() => { setCategory(value); setPage(1); }}>{label}<span className="cu-analysis-count">{count(value)}</span></button>)}
           </div>
@@ -238,7 +238,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
         }} emptyMessage={loading ? "Loading Analysis results…" : loadFailed ? "Analysis results could not be loaded." : !fileCounts["837"] ? busy ? "Validating uploaded claims…" : fileCounts["835"] ? "835 data saved. Upload an 837 file to compare claims." : "Upload a file to begin." :
-          displayedCategory === "both" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching both comparisons are excluded." : "No claims missing in 835 match these filters."} />
+          displayedCategory !== "837-only" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "matched" ? "No claims match both billed and allowed amounts with these filters." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching both comparisons are excluded." : "No claims missing in 835 match these filters."} />
       <div className="cu-comparison-footer"><p className="cu-help">Open a claim for source files and amounts. — means unavailable.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>Page {currentPage} of {pages}</span>

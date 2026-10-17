@@ -23,7 +23,7 @@ globalThis.fetch = async (url) => {
     if (url.includes('view=claim')) return json(new URL(url, 'http://localhost').searchParams.get('claim') === row.claim
       ? { success: true, row } : { success: false, error: 'This claim is not available in your Analysis files.' });
     return json({ success: true, rows: [row], total: 1, page: 1, pages: 1, category: '837-only',
-      counts: { both: 0, '837-only': 1 }, file_counts: { '837': 1, '835': 0 } });
+      counts: { both: 0, matched: 0, '837-only': 1 }, file_counts: { '837': 1, '835': 0 } });
   }
   if (url.includes('/claim/42/')) {
     const response = json({ success: true, claim: { id: 42, number: 'TEST', file_id: 'file', billed: '100', paid: '80', services: [], sources: [] } });

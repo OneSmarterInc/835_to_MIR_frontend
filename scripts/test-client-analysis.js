@@ -53,8 +53,9 @@ globalThis.fetch = async (url, options) => {
     const search = (params.get('search') || '').toUpperCase();
     const found = rows.filter(row => !search || row.claim.includes(search) || row.occurrences.some(item =>
       item.internal_number.toUpperCase().includes(search) || item.filename.toUpperCase().includes(search)));
-    const counts = { both: found.filter(mismatch).length, '837-only': found.filter(row => row.category === '837-only').length };
-    const filtered = found.filter(row => category === 'both' ? mismatch(row) : row.category === '837-only');
+    const matched = row => row.category === 'both' && row.billed_status === 'Match' && row.allowed_status === 'Match';
+    const counts = { both: found.filter(mismatch).length, matched: found.filter(matched).length, '837-only': found.filter(row => row.category === '837-only').length };
+    const filtered = found.filter(row => category === 'both' ? mismatch(row) : category === 'matched' ? matched(row) : row.category === '837-only');
     const sort = params.get('sort') || 'claim', direction = params.get('direction') === 'desc' ? -1 : 1;
     filtered.sort((a, b) => {
       const av = a[sort], bv = b[sort];
@@ -248,6 +249,22 @@ try {
   assert.ok(analysisCsv(compared).includes('Allowed comparison status'));
   assert.ok(analysisCsv(compared).includes('Claim payment (835 CLP04)'));
   await click('Download CSV'); assert.deepEqual(downloads, ['filex-analysis_mismatch-amount.csv']);
+  assert.deepEqual([...document.querySelectorAll('[aria-label="Claim status"] button')].map(item => item.childNodes[0].textContent.trim()),
+    ['Mismatch amount', 'Matched amount', 'Missing in 835']);
+  assert.ok(button('Matched amount').textContent.endsWith('1'));
+  await click('Matched amount');
+  assert.ok(calls.at(-1).url.includes('category=matched'));
+  assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002']);
+  assert.deepEqual([...document.querySelectorAll('.cu-analysis-result strong')].map(item => item.textContent), ['Match', 'Match']);
+  await click('Download CSV');
+  assert.equal(downloads.at(-1), 'filex-analysis_matched-amount.csv');
+  await act(async () => document.querySelector('[data-analysis-claim]').click());
+  assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'));
+  await click('← Back to Analysis');
+  assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-matched.html'));
+  await click('Mismatch amount');
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH);
   await act(async () => {
     const input = document.querySelector('input[type="search"]');
@@ -467,7 +484,7 @@ try {
   assert.equal(oldRequest.signal.aborted, true, 'Replacing a query cancels the previous request');
   assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30');
   await act(async () => deferredComparison(json({ success: true, rows: [], total: 0, page: 1, pages: 1,
-    counts: { both: 0, '837-only': 0 }, file_counts: { '837': 0, '835': 0 }, category: '837-only' })));
+    counts: { both: 0, matched: 0, '837-only': 0 }, file_counts: { '837': 0, '835': 0 }, category: '837-only' })));
   assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30', 'Stale responses cannot replace current results');
   await click('Download CSV');
   assert.ok(calls.at(-1).url.includes('view=export'));
