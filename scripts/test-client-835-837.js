@@ -29,12 +29,16 @@ globalThis.fetch = async (input, options) => {
   if (failNext) { failNext = false; return json({ success: false, error: 'Synthetic service error' }, 503); }
   const only837 = url.searchParams.get('category') === '837-only';
   return json({ success: true, count: 12, page: Number(url.searchParams.get('page')), pages: 2, ambiguous_claims: 1,
+    amount_summary: only837 ? { matched: 0, mismatched: 0, missing_835: 12 } : { matched: 11, mismatched: 1, missing_835: 0 },
     age_summary: { counts: { '0-10': 0, '10-20': 12, '20-30': 0, '30-plus': 0 }, total: 12, unknown: 0 },
     rows: [{ key: 'row1', claim: '123456789', internal_number: 'ABC123', waiting_days: 15,
       billed_837: '100.00', billed_835: only837 ? null : '80.00', difference: only837 ? null : '20.00',
       status: only837 ? '835 not received' : 'Billed amounts differ', source_837: 'claims_20261001.837',
       source_835: only837 ? '' : 'payment_20261016.835', record_835_id: only837 ? null : 42,
-    }] });
+    }, ...(!only837 ? [{ key: 'row2', claim: '987654321', internal_number: 'XYZ123', waiting_days: 15,
+      billed_837: '100.00', billed_835: '100.00', difference: '0.00', status: 'Billed amounts match',
+      source_837: 'matched.837', source_835: 'matched.835', record_835_id: 43,
+    }] : [])] });
 };
 const button = text => {
   const found = [...document.querySelectorAll('button')].find(item => item.textContent === text);
@@ -55,6 +59,12 @@ try {
   assert.equal(button('In both').getAttribute('aria-pressed'), 'true');
   assert.equal(document.querySelectorAll('thead th').length, 8);
   assert.equal(document.querySelector('tbody tr').cells[5].textContent, '$20.00');
+  assert.equal(requests.at(-1).get('sort'), 'priority');
+  assert.equal(document.querySelectorAll('tbody tr')[1].cells[5].textContent, '$0.00');
+  assert.equal(document.querySelectorAll('tbody tr')[1].cells[6].textContent, 'Billed amounts match');
+  assert.ok(document.querySelectorAll('tbody tr')[1].cells[6].querySelector('.cu-issue-clear'));
+  assert.ok(document.querySelector('main').textContent.includes('11 exact matches'));
+  assert.ok(document.querySelector('main').textContent.includes('1 mismatch'));
   assert.equal(document.querySelectorAll('.cu-aging-row b')[1].textContent, '12 claims');
   assert.ok(document.querySelector('main').textContent.includes('duplicate or ambiguous'));
   if (process.env.STATUS_PREVIEW_PATH) {
@@ -62,6 +72,13 @@ try {
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/pages/ClientClaimDetail.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css'].map(path => fs.readFile(path, 'utf8')));
     await fs.writeFile(process.env.STATUS_PREVIEW_PATH, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>835/837 status preview</title><style>${styles.join('\n')}</style></head><body>${document.getElementById('root').innerHTML}</body></html>`);
   }
+  await click(document.querySelector('thead th button'));
+  assert.equal(requests.at(-1).get('sort'), 'waiting_days');
+  await click('Mismatches first');
+  assert.equal(requests.at(-1).get('sort'), 'priority');
+  await click('Download CSV');
+  assert.equal(requests.at(-1).get('sort'), 'priority');
+  downloads.length = 0;
   await click('Next'); assert.equal(requests.at(-1).get('page'), '2');
   await click('In 837 only');
   assert.equal(requests.at(-1).get('category'), '837-only');

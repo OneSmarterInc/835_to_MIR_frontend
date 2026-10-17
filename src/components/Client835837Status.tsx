@@ -7,6 +7,7 @@ type Row = { key: string; claim: string; internal_number: string; waiting_days: 
   billed_837: string; billed_835: string | null; difference: string | null;
   status: string; source_837: string; source_835: string; record_835_id: number | null };
 type Result = { rows: Row[]; count: number; page: number; pages: number; ambiguous_claims: number;
+  amount_summary?: { matched: number; mismatched: number; missing_835: number };
   age_summary: { total: number; unknown: number; counts: Record<string, number> } };
 const columns: [keyof Row, string][] = [["waiting_days", "Waiting days"], ["claim", "Claim"],
   ["internal_number", "Internal claim"], ["billed_837", "Billed 837"], ["billed_835", "Billed 835"],
@@ -19,7 +20,7 @@ export default function Client835837Status({ periodQuery, refresh, onOpen }: {
 }) {
   const [category, setCategory] = useState("both");
   const [age, setAge] = useState("all");
-  const [sort, setSort] = useState<keyof Row>("waiting_days");
+  const [sort, setSort] = useState<keyof Row | "priority">("priority");
   const [direction, setDirection] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -80,7 +81,7 @@ export default function Client835837Status({ periodQuery, refresh, onOpen }: {
     <section className="cu-card cu-comparison" aria-label="835 and 837 claim comparison">
       <div className="cu-section-title cu-comparison-heading">
         <div><h2>835/837 billed comparison</h2>
-          <p className="cu-help">{category === "both" ? "Claims present in both files with different billed amounts." : "837 claims with no matching 835 record."}
+          <p className="cu-help">{category === "both" ? "Claims present in both files, including exact billed-amount matches. Mismatches appear first by default." : "837 claims with no matching 835 record."}
             {" "}Dates select 837 arrivals; matching 835s are checked across all dates. Waiting days start at 837 receipt.</p></div>
         <div className="cu-comparison-header-actions">
           <span role="status">{loading ? "Updating…" : data ? data.count.toLocaleString() + " claims" : "—"}</span>
@@ -88,12 +89,19 @@ export default function Client835837Status({ periodQuery, refresh, onOpen }: {
             onClick={exportCsv}>{exporting ? "Preparing CSV…" : "Download CSV"}</button>
         </div>
       </div>
+      {category === "both" && data?.amount_summary && <p className="cu-help" role="status">
+        <span className="cu-issue-error">{data.amount_summary.mismatched.toLocaleString()} {data.amount_summary.mismatched === 1 ? "mismatch" : "mismatches"}</span>
+        {" · "}<span className="cu-issue-clear">{data.amount_summary.matched.toLocaleString()} exact {data.amount_summary.matched === 1 ? "match" : "matches"}</span>
+        {" · Across all pages with the current filters."}
+      </p>}
       {!!data?.ambiguous_claims && <p className="cu-help" role="status">{data.ambiguous_claims} {data.ambiguous_claims === 1 ? "claim group has" : "claim groups have"} duplicate or ambiguous matches in this period and {data.ambiguous_claims === 1 ? "is" : "are"} excluded from these results.</p>}
       <div className="cu-age-toolbar">
         <label className="cu-age-filter">Waiting days <select value={age} disabled={exporting}
           onChange={event => { setAge(event.target.value); setPage(1); }}>
           {AGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select></label>
+        {sort !== "priority" && <button type="button" className="cu-btn" disabled={loading || exporting}
+          onClick={() => { setSort("priority"); setDirection("desc"); setPage(1); }}>Mismatches first</button>}
         <div className="cu-age-legend" aria-label="Days badge colors">
           {AGE_OPTIONS.slice(1).map(([value, label]) => <span key={value}><i className={"cu-age-swatch cu-row-age-" + value} aria-hidden="true" />{label}</span>)}
         </div>
@@ -114,7 +122,7 @@ export default function Client835837Status({ periodQuery, refresh, onOpen }: {
             <td>{safe(row.internal_number)}</td>
             <td className="cu-num">{money(row.billed_837)}</td><td className="cu-num">{money(row.billed_835)}</td>
             <td className="cu-num">{money(row.difference)}</td>
-            <td><span className="cu-issue-error" title={row.source_835 ? "835 source: " + row.source_835 : "No 835 found across available history"}>{row.status}</span></td>
+            <td><span className={row.difference !== null && Number(row.difference) === 0 ? "cu-issue-clear" : "cu-issue-error"} title={row.source_835 ? "835 source: " + row.source_835 : "No 835 found across available history"}>{row.status}</span></td>
             <td className="cu-835837-source" title={row.source_837}>{row.source_837}</td>
           </tr>)}
           {!data?.rows.length && <tr><td colSpan={columns.length} className="cu-empty-comparison">
