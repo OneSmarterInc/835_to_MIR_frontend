@@ -107,7 +107,7 @@ async function capturePreview(path) {
   if (path) {
     const fs = await import('node:fs/promises');
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css', 'src/components/ClientAnalysis.css'].map(path => fs.readFile(path, 'utf8')));
-    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div><nav class="cu-controls cu-page-navigation"><button class="cu-btn">Home</button><button class="cu-btn">Convert a file</button><button class="cu-btn">835/837 status</button><button class="cu-btn" aria-current="page">Analysis</button></nav></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
+    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
   }
 }
 try {

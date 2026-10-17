@@ -41,6 +41,9 @@ globalThis.fetch = async (url) => {
 const click = async text => {
   const button = [...document.querySelectorAll('button')].find(item => item.textContent === text);
   assert.ok(button, 'Missing button ' + text);
+  if (button.closest('#client-navigation')?.getAttribute('aria-hidden') === 'true') {
+    await act(async () => document.querySelector('.cu-header-menu').click());
+  }
   await act(async () => button.click());
 };
 let mount = 0;
@@ -50,8 +53,9 @@ try {
   const reload = async () => {
     await act(async () => root.render(React.createElement(Portal, { key: ++mount, user: { name: 'Test user' } })));
     if (['/', '/conversions', '/analysis', '/835-837-status'].includes(window.location.pathname)) {
-      const buttons = [...document.querySelectorAll('[aria-label="Page navigation"] button')];
-      assert.deepEqual(buttons.map(button => button.textContent), ['Home', 'Convert a file', '835/837 status', 'Analysis']);
+      assert.equal(document.querySelector('[aria-label="Page navigation"]'), null, 'Header shortcuts are absent on every main page');
+      const buttons = [...document.querySelectorAll('#client-navigation button')];
+      assert.deepEqual(buttons.slice(0, 4).map(button => button.textContent), ['Home', 'Conversions', '835/837 status', 'Analysis']);
       assert.equal(buttons.filter(button => button.getAttribute('aria-current') === 'page').length, 1);
       if (process.env.CLIENT_PORTAL_PREVIEW_PATH) {
         const fs = await import('node:fs/promises');
@@ -67,7 +71,7 @@ try {
     window.history[direction](); await changed;
   });
   await visit('/');
-  assert.deepEqual([...document.querySelectorAll('.cu-controls button')].map(button => button.textContent), ['Home', 'Convert a file', '835/837 status', 'Analysis']);
+  assert.equal(document.querySelector('.cu-page-navigation'), null);
   assert.ok([...document.querySelectorAll('#client-navigation button')].some(button => button.textContent === '835/837 status'));
   const menu = () => document.querySelector('.cu-header-menu');
   const nav = () => document.querySelector('#client-navigation');
@@ -99,7 +103,7 @@ try {
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/pages/ClientClaimDetail.css', 'src/components/ClientClaimComparison.css'].map(path => fs.readFile(path, 'utf8')));
     await fs.writeFile(process.env.CLIENT_PORTAL_PREVIEW_PATH, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Client portal preview</title><style>${styles.join('\n')}</style></head><body>${document.getElementById('root').innerHTML}</body></html>`);
   }
-  await click('Convert a file');
+  await click('Conversions');
   assert.equal(nav().getAttribute('aria-hidden'), 'false', 'Pinned menu stays open across navigation');
   await act(async () => menu().click());
   assert.equal(menu().getAttribute('aria-expanded'), 'false', 'Second click closes and unpins');

@@ -29,7 +29,7 @@ const claimDate = value => {
 };
 const filenameText = value => value == null || value === "" ? "—" : String(value);
 const navigation = [["home","Home"],["convert","Conversions"],["835837","835/837 status"],["analysis","Analysis"],["history","History"]];
-const pageNavigation = [["home", "Home"], ["convert", "Convert a file"], ["835837", "835/837 status"], ["analysis", "Analysis"]];
+// const pageNavigation = [["home", "Home"], ["convert", "Convert a file"], ["835837", "835/837 status"], ["analysis", "Analysis"]];
 const PERIODS = [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"], ["all", "All"], ["custom", "Custom"]];
 const displayPeriodDate = value => {
   if (!value) return "";
@@ -343,10 +343,12 @@ export default function ClientUserPortal({ user, onLogout }) {
               <div><dt>Patient</dt><dd>{safe(detail.patient_name)}</dd></div>
             </dl>
           </>}
+          {/* Header navigation shortcuts are hidden on every page.
           {pageNavigation.some(([key]) => key === tab) && <nav className="cu-controls cu-page-navigation" aria-label="Page navigation">
             {pageNavigation.map(([key, label]) => <button type="button" className="cu-btn" key={key}
               aria-current={tab === key ? "page" : undefined} onClick={() => go(key)}>{label}</button>)}
           </nav>}
+          */}
         </header>
         {["home", "history", "835837"].includes(tab) && <section className="cu-period-toolbar" aria-label="Client activity date filters">
           <div className="cu-period-main">
