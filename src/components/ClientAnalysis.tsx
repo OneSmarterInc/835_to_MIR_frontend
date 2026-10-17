@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AnalysisComparisonTable from "./AnalysisComparisonTable";
+import AnalysisClaimDetail from "./AnalysisClaimDetail";
 import { analyzeClaims, analysisCsv, type AnalysisFile, type AnalysisSortKey } from "../utils/claimAnalysis";
 import "./ClientAnalysis.css";
 
@@ -13,6 +14,15 @@ export default function ClientAnalysis() {
   const [loadVersion, setLoadVersion] = useState(0);
   const [pending, setPending] = useState<Partial<Record<"837" | "835", File>>>({});
   const [notice, setNotice] = useState("");
+  const [selectedClaim, setSelectedClaim] = useState<string | null>(null);
+  const returnFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedClaim === null && returnFocus.current) {
+      const button = [...document.querySelectorAll<HTMLButtonElement>("button[data-analysis-claim]")]
+        .find(item => item.dataset.analysisClaim === returnFocus.current);
+      button?.focus(); returnFocus.current = null;
+    }
+  }, [selectedClaim]);
   const submitted = useMemo(() => files.filter(file => file.kind === "837"), [files]);
   const received = useMemo(() => files.filter(file => file.kind === "835"), [files]);
   const [busy, setBusy] = useState<"837" | "835" | null>(null);
@@ -112,6 +122,11 @@ export default function ClientAnalysis() {
     } finally { link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1500); }
   }
 
+  const detail = rows.find(row => row.key === selectedClaim);
+  if (detail) return <div className="cu-analysis"><AnalysisClaimDetail row={detail} onBack={() => {
+    returnFocus.current = detail.key; setSelectedClaim(null);
+  }} /></div>;
+
   return <div className="cu-analysis">
     <section className="cu-card cu-analysis-upload" aria-label="Upload claim files">
       <div className="cu-analysis-steps"><h2>Compare claim files</h2><span>1 · Upload 837 <span aria-hidden="true">→</span> 2 · Upload 835</span></div>
@@ -161,11 +176,12 @@ export default function ClientAnalysis() {
         {(search || searchInput) && <button className="cu-btn" type="button" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>Clear</button>}
       </form>
       <AnalysisComparisonTable rows={filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+        onOpenClaim={setSelectedClaim} disabled={!!busy}
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
         }} emptyMessage={loading ? "Loading saved Analysis files…" : loadFailed ? "Saved Analysis files could not be loaded." : !submitted.length ? busy ? "Validating uploaded claims…" : "Upload an 837 file to see its claims." :
           category === "both" && !received.length ? "Upload an 835 file to compare claim amounts." : "No claims match these filters."} />
-      <div className="cu-comparison-footer"><p className="cu-help">One row per claim; repeated filenames appear once. Distinct amounts stay visible for review. Missing amounts stay unknown.</p>
+      <div className="cu-comparison-footer"><p className="cu-help">One row per claim. Open a claim to see its source files and individual amounts. Missing amounts stay unknown.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>Page {currentPage} of {pages}</span>
           <button className="cu-btn" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>

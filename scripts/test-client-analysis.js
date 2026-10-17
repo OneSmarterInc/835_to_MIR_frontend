@@ -53,6 +53,13 @@ const upload = async (kind, name = `claims.${kind}`, contents = 'synthetic conte
   Object.defineProperty(input, 'value', { configurable: true, writable: true, value: name });
   input.dispatchEvent(new Event('change', { bubbles: true }));
 });
+async function capturePreview(path) {
+  if (path) {
+    const fs = await import('node:fs/promises');
+    const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css', 'src/components/ClientAnalysis.css'].map(path => fs.readFile(path, 'utf8')));
+    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div><div class="cu-controls"><button class="cu-btn">Home</button></div></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
+  }
+}
 try {
   const { default: Analysis } = await server.ssrLoadModule('/src/components/ClientAnalysis.tsx');
   const { analyzeClaims, analysisCsv, analysisSources } = await server.ssrLoadModule('/src/utils/claimAnalysis.ts');
@@ -139,9 +146,13 @@ try {
   assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1, 1]);
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
-  assert.equal(document.querySelectorAll('thead th').length, 10);
-  assert.equal(document.querySelector('tbody .cu-link'), null, 'Analysis must not link staging IDs to production claims');
-  assert.deepEqual([...document.querySelectorAll('thead th small')].slice(3, 8).map(cell => cell.textContent),
+  assert.equal(document.querySelectorAll('thead th').length, 9);
+  assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
+  assert.equal(document.querySelectorAll('tbody button[data-analysis-claim]').length, 3);
+  assert.ok(!document.querySelector('table').textContent.includes('submitted-claims.837'));
+  assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
+  assert.equal(document.querySelectorAll('table time').length, 0);
+  assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
     ['837 · CLM02', '835 · CLP03', '835 · CLP04', '835 · CLP05', '835 · CLP04 + CLP05']);
   const example = document.querySelectorAll('tbody')[1];
   assert.deepEqual([...example.querySelectorAll('.cu-analysis-result strong')].map(cell => cell.textContent), ['Match', 'Match']);
@@ -149,11 +160,7 @@ try {
   assert.ok(analysisCsv(compared).includes('Allowed comparison status'));
   assert.ok(analysisCsv(compared).includes('Claim payment (835 CLP04)'));
   await click('Download CSV'); assert.deepEqual(downloads, ['filex-analysis_both.csv']);
-  if (process.env.ANALYSIS_PREVIEW_PATH) {
-    const fs = await import('node:fs/promises');
-    const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css', 'src/components/ClientAnalysis.css'].map(path => fs.readFile(path, 'utf8')));
-    await fs.writeFile(process.env.ANALYSIS_PREVIEW_PATH, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div><div class="cu-controls"><button class="cu-btn">Home</button></div></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
-  }
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH);
   await act(async () => {
     const input = document.querySelector('input[type="search"]');
     Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'SYNTHETIC-1003');
@@ -161,14 +168,38 @@ try {
   });
   await click('Search');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
-  assert.equal(document.querySelectorAll('.cu-analysis-source > div').length, 2, 'same filename shown once for each source');
+  assert.equal(document.querySelectorAll('table time').length, 0);
   const duplicateRow = document.querySelector('tbody tr');
-  assert.ok(duplicateRow.textContent.includes('$80.00') && duplicateRow.textContent.includes('$90.00'));
+  assert.ok(duplicateRow.textContent.includes('Multiple (2)'));
+  assert.ok(!duplicateRow.textContent.includes('$90.00'), 'Conflicting amounts belong in the claim detail, not stacked summary lines');
   assert.ok(duplicateRow.textContent.includes('Multiple occurrences'));
+  const beforeDetail = calls.length;
+  await act(async () => duplicateRow.querySelector('td').click());
+  assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'));
+  assert.equal(document.querySelector('.cu-analysis-detail h2'), document.activeElement, 'Detail heading receives keyboard focus');
+  assert.equal(document.querySelectorAll('.cu-analysis-detail-file').length, 2);
+  assert.deepEqual([...document.querySelectorAll('.cu-analysis-detail-file h3')].map(item => item.textContent),
+    ['837 submitted-claims.837', '835 payer-response.835']);
+  assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$80.00'));
+  assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$90.00'));
+  assert.ok(!document.querySelector('.cu-analysis-detail').textContent.includes('$657.00'), 'Other claim amounts must not leak into detail');
+  assert.equal(calls.length, beforeDetail, 'Detail uses only the selected Analysis claim, never production endpoints');
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-claim.html'));
+  await click('← Back to Analysis');
+  assert.equal(document.querySelector('input[type="search"]').value, 'SYNTHETIC-1003');
+  assert.equal(document.querySelectorAll('tbody tr').length, 1);
+  assert.equal(document.activeElement.dataset.analysisClaim, 'SYNTHETIC-1003');
+  await act(async () => document.activeElement.click());
+  assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'), 'Native claim button provides keyboard-accessible navigation');
+  await click('← Back to Analysis');
   await click('Clear');
   await click('In 837 only');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
   assert.ok(document.body.textContent.includes('Not in uploaded 835'));
+  await act(async () => document.querySelector('tbody button').click());
+  assert.equal(document.querySelectorAll('.cu-analysis-detail-file').length, 1);
+  assert.ok(document.body.textContent.includes('No matching 835'));
+  await click('← Back to Analysis');
   fail = true; await upload('835');
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('segment counts'));
   assert.equal(document.querySelector('#analysis-835').value, 'claims.835', 'failed file stays selected');
