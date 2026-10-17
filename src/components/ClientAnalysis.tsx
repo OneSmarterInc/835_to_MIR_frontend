@@ -184,7 +184,8 @@ export default function ClientAnalysis() {
               <p title={selected.map(file => file.name).join(", ")}>{selected.length ? selected.map(file => file.name).join(", ") : `Choose an ${kind} file`}</p>
               <small role="status">{busyKinds[kind] ? `Validating and saving ${kind}…` : selected.length ? "Not confirmed saved · Retry or choose another file" : `Total saved: ${saved.length.toLocaleString()} ${saved.length === 1 ? "file" : "files"} · Up to 10 MB per file`}</small>
             </div>
-            <input id={`analysis-${kind}`} ref={ref} type="file" multiple accept=".837,.835,.edi,.x12,.txt" className="cu-analysis-file-input"
+            {/* X12 sources may be extensionless; the server validates their contents. */}
+            <input id={`analysis-${kind}`} ref={ref} type="file" multiple className="cu-analysis-file-input"
               disabled={disabled} onChange={event => { void upload(Array.from(event.target.files || []), kind); }} />
             <button className="cu-btn cu-analysis-upload-button" type="button"
               disabled={disabled} onClick={() => ref.current?.click()}>Upload {kind}</button>

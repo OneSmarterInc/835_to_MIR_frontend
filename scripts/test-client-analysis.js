@@ -261,6 +261,15 @@ try {
   await click('Mismatch amount');
   assert.equal(document.querySelectorAll('tbody tr').length, 2, 'Matching works with 835-first upload order after reload');
 
+  for (const kind of ['837', '835']) {
+    assert.equal(document.querySelector(`#analysis-${kind}`).hasAttribute('accept'), false,
+      'Extensionless X12 files must be available in the native picker');
+    await upload(kind, `CLAIMS_${kind}_20261017`);
+    assert.equal(calls.filter(call => call.method === 'POST').at(-1).body.get('file').name, `CLAIMS_${kind}_20261017`);
+    assert.equal(document.querySelector(`#analysis-${kind}`).value, '', 'Successful extensionless upload clears the picker');
+    assert.deepEqual(uploadCounts(kind), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  }
+
   const batchStart = calls.length;
   fail = true;
   await uploadMany('837', [new File(['synthetic'], 'batch-a.837'), new File(['synthetic'], 'batch-b.837')]);
