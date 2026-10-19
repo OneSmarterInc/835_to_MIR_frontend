@@ -95,13 +95,6 @@ export default function Drawer({ isOpen, activeTab, onSelectTab, onClose, isClie
         >
           Contact Us
         </button>
-        <button
-          className={`navitem ${activeTab === "security" ? "on" : ""}`}
-          data-v="security"
-          onClick={() => onSelectTab("security")}
-        >
-          Security Keys
-        </button>
       </nav>
     </>
   );

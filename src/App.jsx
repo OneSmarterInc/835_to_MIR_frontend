@@ -25,7 +25,6 @@ import ContactsView from "./pages/ContactsView";
 import AdminView from "./pages/AdminView";
 import ResultView from "./pages/ResultView";
 import ClientClaimSearchView from "./pages/ClientClaimSearchView";
-import SecurityView from "./pages/SecurityView";
 import ClientUserPortal from "./pages/ClientUserPortal";
 import ClientReviewQueue from "./pages/ClientReviewQueue";
 
@@ -825,11 +824,6 @@ export default function App() {
           {
             activeTab==="contacts" &&
             <ContactsView/>
-          }
-
-          {
-            activeTab==="security" &&
-            <SecurityView/>
           }
 
 
