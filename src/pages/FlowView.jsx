@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TimeDisplay from "../components/TimeDisplay";
 import WorkspaceHeader from "../components/WorkspaceHeader";
+import { withCsrf } from "../utils/api";
 
 export default function FlowView({
   metrics,
@@ -18,11 +19,11 @@ export default function FlowView({
       const abort = new AbortController();
       const timeout = setTimeout(() => abort.abort(), 18000);
       try {
-        const response = await fetch("/edi835/api/sftp/connect/", {
+        const response = await fetch("/edi835/api/sftp/connect/", withCsrf({
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ config_id: config.id, direction }), signal: abort.signal,
-        });
+        }));
         const result = await response.json();
         if (result.success === true) return { state: "connected", label: "Connected — live test passed", checkedAt: new Date() };
         const type = String(result.error_type || "").toUpperCase();
