@@ -3,7 +3,6 @@ import Topbar from "../components/Topbar";
 import { PortalPagination } from "../components/ClientClaimTable";
 import ClientClaimComparison from "../components/ClientClaimComparison";
 // import ClientFinancialAmounts from "../components/ClientFinancialAmounts";
-import SecurityView from "./SecurityView";
 import FileViewerModal from "../components/FileViewerModal";
 import ClientClaimSources from "../components/ClientClaimSources";
 import Client835837Status from "../components/Client835837Status";
@@ -303,7 +302,7 @@ export default function ClientUserPortal({ user, onLogout }) {
             {tab !== "claim" && tab !== "analysis" && <p>{tab === "835837" ? "Review billed-charge differences and 837 claims awaiting an 835." : tab === "home" ?
               "Your client claims, payments and exceptions in one place." :
               tab === "history" ? "Conversions and review activity for your selected period." :
-              tab === "settings" ? "Manage your FileX security keys." :
+              tab === "settings" ? "Manage your account settings." :
               detail?.file_name || ""}</p>}
           </div>
           {tab === "claim" && detail && <>
@@ -399,7 +398,14 @@ export default function ClientUserPortal({ user, onLogout }) {
           </section>
         </>}
 
-        {tab === "settings" && <div className="cu-security-workspace"><SecurityView embedded /></div>}
+        {tab === "settings" && (
+          <section className="cu-card" style={{ padding: "32px", textAlign: "center" }}>
+            <h2 style={{ fontSize: "18px", marginBottom: "8px" }}>Account Settings</h2>
+            <p style={{ color: "var(--ink-3)", fontSize: "13.5px" }}>
+              Standard password authentication is active for this client workspace.
+            </p>
+          </section>
+        )}
 
         {tab === "history" && periodQuery && <section className="cu-card">
           <div className="cu-history-tabs" role="tablist" aria-label="History sections">
