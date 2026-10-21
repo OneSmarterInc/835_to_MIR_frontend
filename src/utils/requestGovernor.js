@@ -104,13 +104,15 @@ function conversionPollDelay(attempt) {
 
 async function runAsyncConversion(nativeFetch, input, options = {}) {
   const endpoint = asyncConversionUrl(input);
+  // Header names are case-insensitive. Object spread can send both the CSRF
+  // wrapper's lowercase content-type and Content-Type, which Fetch combines
+  // into an invalid media type rejected by Django with HTTP 415.
+  const headers = new Headers(options.headers);
+  headers.set('Accept', 'application/json');
+  headers.set('Content-Type', 'application/json');
   const startOptions = {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
+    headers,
     credentials: options.credentials || 'include',
   };
 

@@ -60,7 +60,7 @@ export default function App({ user, onLogout }) {
     const params = new URLSearchParams(window.location.search);
     const n = params.get('nav');
     if (n === 'onboarding' || n === 'onboard') return 'onboard';
-    if (n) return n;
+    if (n && n !== 'security') return n;
     if (params.get('client')) return 'onboard';
     return 'clients';
   });

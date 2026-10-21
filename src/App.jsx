@@ -59,7 +59,7 @@ export default function App() {
 
       const saved = localStorage.getItem("activeTab");
 
-      return saved === "claims-dashboard" ? "flow" : (saved || "flow");
+      return ["claims-dashboard", "security"].includes(saved) ? "flow" : (saved || "flow");
 
     }catch{
 

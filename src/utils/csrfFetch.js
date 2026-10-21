@@ -1,6 +1,6 @@
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
 const API_PATH = /^\/(?:api|accounts|edi835|admin-panel)\//;
-const AUTH_CHANGE = /^\/(?:accounts\/api\/(?:login|logout)|admin-panel\/api\/auth\/(?:login|logout|register))\/?$/;
+const AUTH_CHANGE = /^\/(?:accounts\/api\/(?:login|logout|signup)|admin-panel\/api\/auth\/(?:login|logout|register))\/?$/;
 
 // Use the server-issued masked token, not document.cookie: the API may be
 // hosted on a different origin whose cookies this page cannot read.
@@ -46,7 +46,7 @@ export function createCsrfFetch(fetchImpl, { frontendOrigin, backendUrl = '' }) 
     if (AUTH_CHANGE.test(url.pathname)) tokens.delete(url.origin);
     if (response.status === 403) {
       const body = await response.clone().json().catch(() => ({}));
-      if (/csrf/i.test(String(body.error || body.detail || ''))) tokens.delete(url.origin);
+      if (body.code === 'CSRF_FAILED' || /csrf/i.test(String(body.error || body.detail || ''))) tokens.delete(url.origin);
     }
     // Never automatically replay a mutation.
     return response;

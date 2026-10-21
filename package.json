@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test:csrf": "node scripts/test-csrf-fetch.js && node scripts/test-conversion-request-stack.js",
     "test:client-financials": "node scripts/test-client-financials.js",
     "test:client-comparison": "node scripts/test-client-comparison.js",
     "test:client-claim-actions": "node scripts/test-client-claim-actions.js",
