@@ -14,6 +14,7 @@ import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
 import DemoRevealLayer from './components/DemoRevealLayer.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 import { encodeDemoData } from './utils/demoEncoder.js'
+import { createCsrfFetch } from './utils/csrfFetch.js'
 
 const demoStorageKey = 'mir-demo-substitution';
 
@@ -23,7 +24,10 @@ localStorage.setItem(demoStorageKey, 'true');
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';
-const originalFetch = window.fetch;
+const originalFetch = createCsrfFetch(window.fetch.bind(window), {
+  frontendOrigin: window.location.origin,
+  backendUrl: BACKEND_URL,
+});
 
 window.fetch = function (url, options = {}) {
   if (typeof url === 'string') {
