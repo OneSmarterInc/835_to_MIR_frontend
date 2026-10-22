@@ -45,7 +45,7 @@ globalThis.fetch = async (url, options) => {
       return view === 'rejections' ? json({ success: true, rejections: file.rejections || [], total: file.rejected_count || 0 })
         : new Response('Claim occurrence,Reason\r\n2,Invalid amount', { headers: { 'Content-Type': 'text/csv' } });
     }
-    assert.ok(['comparison', 'export'].includes(view), 'Must not fetch saved file history');
+    assert.ok(['comparison', 'export', 'excel'].includes(view), 'Must not fetch saved file history');
     const category = params.get('category') === 'auto' ? files.some(file => file.kind === '835') ? 'both' : '837-only' : params.get('category');
     const search = (params.get('search') || '').toUpperCase();
     const found = rows.filter(row => !search || row.claim.includes(search) || row.occurrences.some(item =>
@@ -60,6 +60,7 @@ globalThis.fetch = async (url, options) => {
       const order = ['claim', 'internal_number'].includes(sort) ? String(av).localeCompare(String(bv)) : Number(av) - Number(bv);
       return order * direction || a.claim.localeCompare(b.claim);
     });
+    if (view === 'excel') return new Response('workbook tested by backend', { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' } });
     if (view === 'export') return new Response(exportCsv(filtered), { headers: { 'Content-Type': 'text/csv' } });
     const size = Number(params.get('page_size') || 10), pages = Math.max(1, Math.ceil(filtered.length / size));
     const page = Math.min(Number(params.get('page') || 1), pages);
@@ -286,7 +287,7 @@ try {
   assert.ok(button('Missing in 835').textContent.endsWith('1'));
   assert.ok(analysisCsv(compared).includes('Allowed comparison status'));
   assert.ok(analysisCsv(compared).includes('Claim payment (835 CLP04)'));
-  await click('Download CSV'); assert.deepEqual(downloads, ['filex-analysis_mismatch-amount.csv']);
+  await click('Download Excel'); assert.deepEqual(downloads, ['Claims-Reconciliation.xlsx']);
   assert.deepEqual([...document.querySelectorAll('[aria-label="Claim status"] button')].map(item => item.childNodes[0].textContent.trim()),
     ['Mismatch amount', 'Matched amount', 'Missing in 835']);
   assert.ok(button('Matched amount').textContent.endsWith('1'));
@@ -296,7 +297,7 @@ try {
   await click('Matched amount');
   assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Old claims disappear immediately while the new tab loads');
   assert.equal(document.querySelectorAll('.cu-analysis-skeleton tr').length, previousRowCount, 'Loading preserves the existing row slots');
-  assert.equal(button('Download CSV').disabled, true);
+  assert.equal(button('Download Excel').disabled, true);
   assert.equal(document.querySelector('[aria-label="Uploaded claim comparison"]').getAttribute('aria-busy'), 'true');
   assert.ok(comparisonCommits.length > 0);
   assert.ok(comparisonCommits.every(commit => commit.active.startsWith('Matched amount') && commit.claims.length === 0),
@@ -307,8 +308,8 @@ try {
   assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
   assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002']);
   assert.deepEqual([...document.querySelectorAll('.cu-analysis-result strong')].map(item => item.textContent), ['Match', 'Match']);
-  await click('Download CSV');
-  assert.equal(downloads.at(-1), 'filex-analysis_matched-amount.csv');
+  await click('Download Excel');
+  assert.equal(downloads.at(-1), 'Claims-Reconciliation.xlsx');
   await act(async () => document.querySelector('[data-analysis-claim]').click());
   assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'));
   await click('← Back to Analysis');
@@ -553,13 +554,23 @@ try {
   await act(async () => deferredComparison(json({ success: true, rows: [], total: 0, page: 1, pages: 1,
     counts: { both: 0, matched: 0, '837-only': 0 }, file_counts: { '837': 0, '835': 0 }, category: '837-only' })));
   assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30', 'Stale responses cannot replace current results');
-  await click('Download CSV');
-  assert.ok(calls.at(-1).url.includes('view=export'));
+  await click('Download Excel');
+  assert.ok(calls.at(-1).url.includes('view=excel'));
   assert.ok(calls.at(-1).url.includes('search=PAGE-30'));
+  assert.ok(!calls.at(-1).url.includes('category='), 'Workbook includes all three categories');
   assert.ok(!calls.at(-1).url.includes('page='), 'Export includes every filtered result, not only the visible page');
   assert.equal(calls.filter(call => call.url.includes('view=rejections')).length, 1,
     'Rejection details load only for explicitly expanded reports');
   assert.equal(localStorage.length, 0, 'Uploaded data must not enter browser storage');
+  savedFiles.clear();
+  savedFiles.set(submission.id, { ...submission, claims: [submission.claims[1]] });
+  savedFiles.set(remittance.id, { ...remittance, claims: [remittance.claims[1]] });
+  await act(async () => root.render(React.createElement(Analysis, { key: 'excel-empty-category' })));
+  await click('Mismatch amount');
+  assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0);
+  assert.equal(button('Download Excel').disabled, false, 'Other categories remain exportable when the selected tab is empty');
+  await click('Download Excel');
+  assert.equal(downloads.at(-1), 'Claims-Reconciliation.xlsx');
   console.log('Analysis uploads, signed comparisons, duplicate grouping, CSV, filters, validation errors, independent batch queues, live counts, failure-only retry, accumulation and reload persistence passed.');
 } finally {
   await act(async () => root.unmount()); await server.close();

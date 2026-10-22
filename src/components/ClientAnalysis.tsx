@@ -159,9 +159,9 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   async function download() {
     setExporting(true); setError("");
     try {
-      await downloadAnalysis(new URLSearchParams({ view: "export", category: displayedCategory, search, sort, direction }),
-        `filex-analysis_${displayedCategory === "both" ? "mismatch-amount" : displayedCategory === "matched" ? "matched-amount" : "missing-in-835"}.csv`);
-    } catch (issue) { setError(issue instanceof Error ? issue.message : "Unable to download CSV."); }
+      await downloadAnalysis(new URLSearchParams({ view: "excel", search, sort, direction }),
+        "Claims-Reconciliation.xlsx");
+    } catch (issue) { setError(issue instanceof Error ? issue.message : "Unable to download Excel."); }
     finally { setExporting(false); }
   }
 
@@ -220,7 +220,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>
-          <button className="cu-btn" disabled={!total || !!busy || loading || exporting || loadFailed} onClick={download}>{exporting ? "Downloading…" : "Download CSV"}</button></div>
+          <button className="cu-btn" title="Download all three claim statuses with the current search" disabled={!Object.values(data.counts).some(value => value > 0) || !!busy || loading || exporting || loadFailed} onClick={download}>{exporting ? "Downloading…" : "Download Excel"}</button></div>
       </div>
       <div className="cu-analysis-toolbar">
         <div className="cu-analysis-status-filter"><span>Claim status</span>
