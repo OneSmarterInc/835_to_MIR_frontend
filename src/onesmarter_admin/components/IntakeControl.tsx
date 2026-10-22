@@ -44,22 +44,24 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
   const [validationError, setValidationError] = useState('');
   const [extracting, setExtracting] = useState(false);
   const [routes, setRoutes] = useState<Record<string, string>[]>([]);
-  const [routeChoice, setRouteChoice] = useState('');
+  const [routeFiles, setRouteFiles] = useState<Partial<Record<'835' | '837', File>>>({});
   const [extractionMessage, setExtractionMessage] = useState('');
   const extraction = useRef<AbortController | null>(null);
   useEffect(() => () => extraction.current?.abort(), []);
-  async function extractFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
+  async function extractFiles(files: Partial<Record<'835' | '837', File>>) {
+    setRouteFiles(files);
     extraction.current?.abort();
     const controller = new AbortController(); extraction.current = controller;
-    setValidationError(''); setExtractionMessage(''); setRoutes([]); setRouteChoice('');
+    setValidationError(''); setExtractionMessage(''); setRoutes([]); setExtracting(false);
     setValues(current => ({ ...current, ...Object.fromEntries(spec.fields.filter(f => f.key !== 'client_id').map(f => [f.key, ''])) }));
-    if (!file.size || file.size > 10 * 1024 * 1024) { setValidationError('Choose one 835 or 837 file up to 10 MiB.'); return; }
+    if (!Object.keys(files).length) return;
+    if (Object.values(files).some(file => !file.size || file.size > 10 * 1024 * 1024)) {
+      setValidationError('Each 835 or 837 file must be nonempty and no larger than 10 MiB.'); return;
+    }
     setExtracting(true);
     try {
-      const body = new FormData(); body.append('action', 'route_preview'); body.append('partner_id', String(spec.partner?.id)); body.append('file', file);
+      const body = new FormData(); body.append('action', 'route_preview'); body.append('partner_id', String(spec.partner?.id));
+      Object.entries(files).forEach(([workflow, file]) => body.append(`file_${workflow}`, file));
       const response = await fetch(endpoint, { method: 'POST', credentials: 'include', cache: 'no-store', body, signal: controller.signal });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not read the file envelope.');
@@ -67,9 +69,9 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
       if (!Array.isArray(result.routes) || !result.routes.length) throw new Error('No supported route was found.');
       setRoutes(result.routes);
       if (result.routes.length === 1) {
-        setValues(current => ({ ...current, ...result.routes[0] })); setRouteChoice('0');
+        setValues(current => ({ ...current, ...result.routes[0] }));
         setExtractionMessage('Fields filled from the file. Review the client and values, then save.');
-      } else setExtractionMessage(`${result.routes.length} different routes found. Select one to review and save.`);
+      } else setExtractionMessage(`${result.routes.length} routes found. Review every route below and select the client they belong to. Save approves all listed routes together.`);
     } catch (issue) {
       if (!controller.signal.aborted) setValidationError(issue instanceof Error ? issue.message : 'Could not read the file envelope.');
     } finally { if (!controller.signal.aborted) setExtracting(false); }
@@ -79,7 +81,7 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
   useEffect(() => { first.current?.focus(); }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (extracting) return;
+    if (extracting || (Object.keys(routeFiles).length > 0 && routes.length === 0)) return;
     setValidationError('');
     const missing = spec.fields.find(f => f.type === 'multi' && !f.optional && !(values[f.key] as string[]).length);
     if (missing) { setValidationError(`Select at least one option for ${missing.label.toLowerCase()}.`); return; }
@@ -93,6 +95,11 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
       data[field.key] = Math.round(bytes);
     }
     if (spec.operation) {
+      if (spec.operation === 'ROUTE' && routes.length > 1) {
+        await onSave({ action: 'partner', partner_id: spec.partner?.id, operation: 'ROUTES',
+          data: { client_id: values.client_id, routes }, reason });
+        return;
+      }
       if (spec.operation === 'PERMISSIONS') {
         data.permissions = (data.permissions as string[]).map(value => { const [workflow, action] = value.split(':'); return { workflow, action, channel: 'PARTNER' }; });
       }
@@ -103,18 +110,28 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
     <div className="ic-heading"><h3 ref={first} tabIndex={-1}>{spec.title}</h3><button type="button" onClick={onClose} disabled={busy}>Cancel</button></div>
     {spec.note && <p className="ic-muted">{spec.note}</p>}
     {spec.operation === 'ROUTE' && <div className="ic-route-import">
-      <label><span>Fill from an 835 or 837 file</span><input type="file" disabled={busy || extracting} onChange={extractFile} /></label>
-      <p className="ic-muted">Choose a sample file to fill the fields below, or enter them manually. The file is only inspected; it is not added to processing or saved as an intake upload.</p>
+      <div className="ic-route-files">{(['835', '837'] as const).map(workflow => <div key={workflow}>
+        <label><span>{workflow} file</span><input type="file" aria-label={`${workflow} file`} disabled={busy || extracting || !((spec.partner?.workflows as string[] | undefined) ?? []).includes(workflow)} onChange={event => {
+          const file = event.target.files?.[0]; event.target.value = '';
+          if (file) void extractFiles({ ...routeFiles, [workflow]: file });
+        }} /></label>
+        {routeFiles[workflow] && <div className="ic-route-file-name"><span>{routeFiles[workflow]?.name}</span><button type="button" disabled={busy || extracting} onClick={() => {
+          const files = { ...routeFiles }; delete files[workflow]; void extractFiles(files);
+        }}>Remove {workflow}</button></div>}
+      </div>)}</div>
+      <p className="ic-muted">Choose a full 835 file, a full 837 file, or both (up to 10 MiB each). Only envelope details are inspected; these files are not added to processing. Both files must belong to the client selected below. You can also enter a single route manually.</p>
       {extracting && <p role="status">Reading envelope…</p>}
       {extractionMessage && <p role="status">{extractionMessage}</p>}
-      {routes.length > 1 && <label><span>Route to review</span><select value={routeChoice} disabled={busy} onChange={e => {
-        const index = e.target.value; setRouteChoice(index);
-        if (index !== '') setValues(current => ({ ...current, ...routes[Number(index)] }));
-      }}><option value="">Select a route…</option>{routes.map((route, index) => <option key={index} value={index}>{index + 1}. {route.workflow} · {route.isa_sender} → {route.isa_receiver} · {route.gs_version}</option>)}</select></label>}
+      {routes.length > 1 && <div className="ic-table-wrap"><table aria-label="Envelope routes to approve"><thead><tr>
+        <th>Workflow</th><th>ISA sender → receiver</th><th>GS sender → receiver</th><th>Versions (ISA / GS / ST)</th>
+      </tr></thead><tbody>{routes.map((route, index) => <tr key={index}><td>{route.workflow}</td>
+        <td>{route.isa_sender_qualifier}:{route.isa_sender} → {route.isa_receiver_qualifier}:{route.isa_receiver}</td>
+        <td>{route.gs_sender} → {route.gs_receiver}</td><td>{route.isa_version} / {route.gs_version} / {route.st_version || '—'}</td>
+      </tr>)}</tbody></table></div>}
     </div>}
     {validationError && <p role="alert" className="ic-error">{validationError}</p>}
     <form onSubmit={submit}><fieldset disabled={busy || extracting} className="ic-fieldset"><div className="ic-fields">
-      {spec.fields.map(f => f.type === 'multi' ? <fieldset key={f.key} className="ic-choices ic-wide"><legend>{f.label}</legend><div className="ic-choice-grid">
+      {spec.fields.filter(f => routes.length <= 1 || f.key === 'client_id').map(f => f.type === 'multi' ? <fieldset key={f.key} className="ic-choices ic-wide"><legend>{f.label}</legend><div className="ic-choice-grid">
         {f.options?.map(o => <label key={o.value} className="ic-choice"><input type="checkbox" checked={(values[f.key] as string[]).includes(o.value)} onChange={e => {
           const checked = e.target.checked;
           setValues(current => ({ ...current, [f.key]: checked ? [...(current[f.key] as string[]), o.value] : (current[f.key] as string[]).filter(v => v !== o.value) }));
@@ -132,7 +149,7 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
           maxLength={f.key === 'name' ? 100 : 200} value={String(values[f.key])} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />}
       </label>)}
       <label className="ic-wide"><span>Reason</span><input required minLength={3} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Business reason or change ticket; omit patient information" /></label>
-    </div><button className="ic-primary" type="submit">{busy ? 'Saving…' : 'Save change'}</button></fieldset></form>
+    </div><button className="ic-primary" type="submit" disabled={Object.keys(routeFiles).length > 0 && routes.length === 0}>{busy ? 'Saving…' : routes.length > 1 ? `Approve ${routes.length} routes` : 'Save change'}</button></fieldset></form>
   </section>;
 }
 

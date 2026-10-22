@@ -156,8 +156,8 @@ try {
   await click('Partners');
   await click('Manage');
   await click('Add route');
-  const uploadSample = async () => {
-    const input = document.querySelector('input[type="file"]');
+  const uploadSample = async (workflow = '837') => {
+    const input = document.querySelector(`input[aria-label="${workflow} file"]`);
     assert.equal(input.accept, '', 'Extensionless EDI is selectable');
     Object.defineProperty(input, 'files', { configurable: true, value: [new File(['synthetic envelope'], 'extensionless')] });
     await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })));
@@ -165,6 +165,7 @@ try {
   };
   await uploadSample();
   assert.equal(previews.length, 1);
+  assert.ok(previews[0].get('file_837'));
   assert.equal(posts.length, 5, 'Preview does not save a route');
   assert.equal(field('Workflow').value, '837');
   assert.equal(field('ISA sender ID').value, 'SAMPLE');
@@ -176,12 +177,26 @@ try {
   assert.equal(posts.at(-1).data.client_id, 'client-a');
   assert.equal(posts.at(-1).data.gs_version, '005010X222A1');
   await click('Add route');
-  previewRoutes = [extractedRoute, { ...extractedRoute, isa_sender: 'SECOND' }];
+  previewRoutes = [extractedRoute];
   await uploadSample();
-  assert.equal(field('ISA sender ID').value, '', 'Multiple routes require selection');
-  await change(field('Route to review'), '1');
-  assert.equal(field('ISA sender ID').value, 'SECOND');
-  assert.equal(posts.length, 6, 'Selecting a preview does not save it');
+  previewRoutes = [{ ...extractedRoute, workflow: '835', gs_version: '005010X221A1', st_version: '' }, extractedRoute];
+  await uploadSample('835');
+  assert.ok(previews.at(-1).get('file_835'));
+  assert.ok(previews.at(-1).get('file_837'), 'Selecting 835 retains the selected 837');
+  assert.equal(document.querySelectorAll('[aria-label="Envelope routes to approve"] tbody tr').length, 2);
+  assert.equal(field('ISA sender ID'), undefined, 'Bulk routes are reviewed together rather than overwritten');
+  assert.equal(posts.length, 6, 'Inspection does not approve routes');
+  await change(field('Client'), 'client-a');
+  await change(field('Reason'), 'Reviewed both full files for the selected client');
+  await submit();
+  assert.equal(posts.at(-1).operation, 'ROUTES');
+  assert.deepEqual(posts.at(-1).data.routes, previewRoutes);
+  assert.equal(posts.at(-1).data.client_id, 'client-a');
+  await click('Add route');
+  previewRoutes = [extractedRoute];
+  await uploadSample();
+  await click('Remove 837');
+  assert.equal(field('ISA sender ID').value, '', 'Removing a file clears extracted fields');
   await click('Cancel');
   console.log('PASS: saved settings, selected partner above editor, checkbox permissions/scopes, byte-preserving storage units and limits, no stale rows, token dismissal and default-deny grants.');
 } finally {
