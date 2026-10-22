@@ -30,7 +30,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
       </div>
       {row.ambiguous && <p className="cu-help">This claim has multiple 837 source records, so the submission needs review. Individual source amounts appear below.</p>}
     </div>
-    <p className="cu-help">835 billed uses CLP03 from the latest payment date (BPR16). Payments and patient responsibility accumulate across distinct records. Allowed comparison matches either total payments or payments plus responsibility. The source files below show each contribution.</p>
+    <p className="cu-help">835 billed uses CLP03 from the most recently uploaded 835 file. Within that file, the final CLP sequence for this internal claim supplies CLP03. A final reversal remains for review. Payments and patient responsibility accumulate within this internal claim. Allowed comparison matches either total payments or payments plus responsibility. The source files below show each contribution.</p>
     <h2 className="cu-analysis-files-heading">Claim source files</h2>
     {[...sources].map(([key, records]) => {
       const source = records[0], is835 = source.source_type === "835";
@@ -38,7 +38,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
         <h3><span className="cu-analysis-file-type">{source.source_type}</span> {source.filename}</h3>
         <div className="cu-table-scroll" role="region" tabIndex={0} aria-label={`${source.source_type} claim amounts`}>
           <table className="cu-table cu-analysis-source-table">
-            <thead><tr><th scope="col">Uploaded (UTC)</th>{is835 && <><th scope="col">Payment date <small>835 · BPR16</small></th><th scope="col">Internal claim <small>835 · CLP07</small></th></>}
+            <thead><tr><th scope="col">Uploaded (UTC)</th>{is835 && <><th scope="col">Payment date <small>835 · BPR16</small></th><th scope="col">Internal claim <small>835 · CLP07</small></th><th scope="col">Claim status <small>835 · CLP02</small></th></>}
               <th scope="col">Billed charges <small>{is835 ? "835 · CLP03" : "837 · CLM02"}</small></th>
               {is835 && <><th scope="col">Claim payment <small>835 · CLP04</small></th>
                 <th scope="col">Patient responsibility <small>835 · CLP05 / PR</small></th>
@@ -46,7 +46,7 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
             </tr></thead>
             <tbody>{records.map(item => <tr key={item.key}>
               <td><time dateTime={item.received_at}>{date(item.received_at)}</time></td>
-              {is835 && <><td>{item.payment_date || "—"}</td><td>{safe(item.internal_number)}</td></>}<td>{money(is835 ? item.billed_835 : item.billed_837)}</td>
+              {is835 && <><td>{item.payment_date || "—"}</td><td>{safe(item.internal_number)}</td><td>{item.claim_status || "—"}{item.record_id === row.selected_record_id && <small>Used for billed comparison</small>}</td></>}<td>{money(is835 ? item.billed_835 : item.billed_837)}</td>
               {is835 && <><td>{money(item.payment)}</td><td>{money(item.patient_responsibility)}</td><td>{money(item.allowed)}</td></>}
             </tr>)}</tbody>
           </table>

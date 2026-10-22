@@ -50,6 +50,8 @@ let mount = 0;
 try {
   const { default: Portal } = await server.ssrLoadModule('/src/pages/ClientUserPortal.jsx');
   const { readClientRoute, clientPagePath } = await server.ssrLoadModule('/src/utils/clientPortalRoute.ts');
+  const composite = JSON.stringify(['TEST/CLAIM', 'id:INTERNAL-1']);
+  assert.equal(readClientRoute(clientPagePath('analysis', composite)).analysisClaim, composite);
   const reload = async () => {
     await act(async () => root.render(React.createElement(Portal, { key: ++mount, user: { name: 'Test user' } })));
     assert.equal(document.querySelector('[aria-label="Page navigation"]'), null);

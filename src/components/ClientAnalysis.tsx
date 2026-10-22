@@ -165,7 +165,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     finally { setExporting(false); }
   }
 
-  if (detail && detail.claim === selectedClaim) return <div className="cu-analysis"><AnalysisClaimDetail row={detail} onBack={() => {
+  if (detail && (detail.key === selectedClaim || detail.claim === selectedClaim)) return <div className="cu-analysis"><AnalysisClaimDetail row={detail} onBack={() => {
     returnFocus.current = detail.key; setSelectedClaim(null);
   }} /></div>;
   if (selectedClaim) return <section className="cu-card">
@@ -216,7 +216,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
         <details className="cu-analysis-explainer"><summary>Comparison details</summary>
-          <p>Billed comparison uses 837 CLM02 and CLP03 from the latest 835 payment date (BPR16), without adding billed charges across files. Allowed comparison matches when CLM02 equals either cumulative CLP04 payments or cumulative payments plus patient responsibility. Negative amounts reduce totals. When CLP05 is omitted, responsibility comes from PR adjustments, or zero when none are present. Both comparisons must match for Matched amount. Missing dates or conflicting latest amounts remain for review.</p>
+          <p>Billed comparison uses 837 CLM02 and CLP03 from the most recently uploaded 835 file, without adding billed charges across files. Allowed comparison matches when CLM02 equals either cumulative CLP04 payments or cumulative payments plus patient responsibility. Negative amounts reduce totals. When CLP05 is omitted, responsibility comes from PR adjustments, or zero when none are present. Both comparisons must match for Matched amount. Rows are grouped by full internal claim number. Within the latest upload, the final CLP sequence supplies CLP03; a final reversal remains for review.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>

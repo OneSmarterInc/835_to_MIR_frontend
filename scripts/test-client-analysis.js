@@ -12,6 +12,11 @@ const server = await createServer({ server: { middlewareMode: true }, appType: '
 const originalFetch = globalThis.fetch, createUrl = URL.createObjectURL, revokeUrl = URL.revokeObjectURL;
 const anchorClick = window.HTMLAnchorElement.prototype.click;
 const calls = [], downloads = [];
+const displayedClaim = item => item.dataset.analysisClaim.startsWith('["') ? JSON.parse(item.dataset.analysisClaim)[0] : item.dataset.analysisClaim;
+const findClaim = number => [...document.querySelectorAll('[data-analysis-claim]')].find(item => {
+  const key = item.dataset.analysisClaim;
+  return (key.startsWith('["') ? JSON.parse(key)[0] : key) === number;
+});
 let fail = false, deferred = null, hold = false, failLoad = false;
 let compare, exportCsv, mismatch;
 let holdComparison = false, deferredComparison, deferredComparisonResponse;
@@ -24,6 +29,24 @@ const submission = file('837', [claim('SYNTHETIC-1001', '100.00', 1), claim('SYN
   claim('SYNTHETIC-1003', '80.00', 3), claim('SYNTHETIC-1003', '90.00', 4), claim('SYNTHETIC-1004', '45.00', 5)]);
 const remittance = file('835', [claim('SYNTHETIC-1001', '80.00', 1, '50.00', '20.00'), claim('SYNTHETIC-1002', '657.00', 2, '0.00', '657.00'), claim('SYNTHETIC-1003', '80.00', 3, '60.00', '20.00'), claim('NOT-IN-837', '10.00', 4, '10.00', '0.00')]);
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
+// Exercise the XHR transport through the same synthetic server as read APIs.
+globalThis.XMLHttpRequest = class {
+  upload = {}; headers = {}; controller = new AbortController();
+  open(method, url) { this.method = method; this.url = url; }
+  setRequestHeader(name, value) { this.headers[name] = value; }
+  getResponseHeader() { return 'application/json'; }
+  abort() { this.controller.abort(); this.onabort?.(); }
+  async send(body) {
+    this.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 });
+    this.upload.onload?.();
+    try {
+      const response = await fetch(this.url, { method: this.method, body, headers: this.headers,
+        credentials: this.withCredentials ? 'include' : 'omit', signal: this.controller.signal });
+      this.status = response.status; this.responseText = await response.text();
+      if (!this.controller.signal.aborted) this.onload?.();
+    } catch { this.onerror?.(); }
+  }
+};
 URL.createObjectURL = () => 'blob:analysis'; URL.revokeObjectURL = () => {};
 window.HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
 globalThis.fetch = async (url, options) => {
@@ -36,8 +59,8 @@ globalThis.fetch = async (url, options) => {
     const files = [...savedFiles.values()];
     const rows = compare(files.filter(file => file.kind === '837'), files.filter(file => file.kind === '835'));
     const view = params.get('view');
-    if (view === 'claim') return rows.some(row => row.claim === params.get('claim'))
-      ? json({ success: true, row: rows.find(row => row.claim === params.get('claim')) })
+    if (view === 'claim') return rows.some(row => row.key === params.get('claim') || row.claim === params.get('claim'))
+      ? json({ success: true, row: rows.find(row => row.key === params.get('claim') || row.claim === params.get('claim')) })
       : json({ success: false, error: 'Claim not found.' }, 404);
     if (view === 'rejections' || view === 'rejection-export') {
       const file = savedFiles.get(params.get('upload'));
@@ -145,12 +168,13 @@ try {
   assert.equal(totals.occurrences.length, 3);
   assert.equal(totals.reference_count, 1);
   const paidSources = [
-    { ...file('835', [{ ...claim('PAID', '624.00', 1, '507.00', '20.00', '2026-09-14'), internal_number: ' ref ' }]), filename: 'first-upload.835' },
-    { ...file('835', [{ ...claim('PAID', '117.00', 1, '117.00', '0.00', '2026-09-03'), internal_number: 'REF' }]), filename: 'second-upload.835' },
+    { ...file('835', [{ ...claim('PAID', '117.00', 1, '117.00', '0.00', '2026-09-16'), internal_number: ' ref ' }]), id: 'first', filename: 'first-upload.835', uploaded_at: '2026-10-17T12:00:00Z' },
+    { ...file('835', [{ ...claim('PAID', '624.00', 1, '507.00', '20.00', '2026-09-08'), internal_number: 'REF' }]), id: 'second', filename: 'second-upload.835', uploaded_at: '2026-10-17T12:01:00Z' },
   ];
-  const paid = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), paidSources)[0];
+  const paid = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [...paidSources].reverse())[0];
   assert.equal(paid.reference_count, 1, 'Identical complete references display once');
-  assert.equal(paid.billed_835, '624.00', 'Payment date determines latest, not input/upload order');
+  assert.deepEqual(paid.internal_numbers, ['REF']);
+  assert.equal(paid.billed_835, '624.00', 'Upload time determines latest, not payment date or array order');
   assert.equal(paid.allowed, '644.00');
   assert.equal(paid.allowed_status, 'Match');
   assert.equal(paid.allowed_basis, 'payment');
@@ -158,12 +182,26 @@ try {
   const undated = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
     paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], payment_date: null }] },
   ])[0];
-  assert.equal(undated.billed_835, null);
-  assert.equal(undated.billed_status, 'Latest 835 needs review');
+  assert.equal(undated.billed_835, '624.00');
   const tied = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
-    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], payment_date: '2026-09-14' }] },
+    { ...paidSources[1], claims: [paidSources[0].claims[0], { ...paidSources[1].claims[0], sequence: 2 }] },
   ])[0];
-  assert.equal(tied.billed_status, 'Latest 835 needs review');
+  assert.equal(tied.billed_835, '624.00', 'Final CLP sequence supplies its own charge amount');
+  const smaller = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
+    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], billed: '4.00' }] },
+  ])[0];
+  assert.equal(smaller.billed_835, '4.00', 'Never choose a sum or maximum CLP03');
+  const separate = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
+    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], internal_number: 'DIFFERENT' }] },
+  ]);
+  assert.equal(separate.length, 2, 'Different full internal IDs remain separate claims');
+  assert.equal(new Set(separate.map(row => row.key)).size, 2);
+  assert.deepEqual(separate.map(row => row.payment).sort(), ['117.00', '507.00']);
+  const reversed = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
+    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], claim_status: '22', billed: '-117.00', payment: '-117.00' }] },
+  ])[0];
+  assert.equal(reversed.billed_status, 'Reversed — review');
+  assert.equal(reversed.allowed_status, 'Reversed — review');
   assert.ok(analysisCsv([totals]).includes('"624.00","624.00","550.00","74.00","624.00"'));
   const { renderToStaticMarkup } = await import('react-dom/server');
   const { default: TotalsTable } = await server.ssrLoadModule('/src/components/AnalysisComparisonTable.tsx');
@@ -172,6 +210,12 @@ try {
   }));
   assert.ok(totalHtml.includes('$550.00') && totalHtml.includes('$74.00'));
   assert.ok(!totalHtml.includes('Multiple occurrences') && !totalHtml.includes('Multiple ('));
+  const distinctHtml = renderToStaticMarkup(React.createElement(TotalsTable, {
+    rows: [{ ...paid, internal_numbers: ['FIRST', 'SECOND'], reference_count: 2 }], sort: 'claim', direction: 'asc', onSort() {}, onOpenClaim() {}, emptyMessage: '',
+  }));
+  assert.ok(!distinctHtml.includes('Multiple ('));
+  const referencesDom = new JSDOM(distinctHtml);
+  assert.equal(referencesDom.window.document.querySelectorAll('.cu-analysis-references > span').length, 2);
   const signedTotal = analyzeClaims(file('837', [claim('SIGNED-TOTAL', '100.00', 1)]), [
     { ...file('835', [claim('SIGNED-TOTAL', '120.00', 1, '100.00', '20.00')]), filename: 'first.835' },
     { ...file('835', [claim('SIGNED-TOTAL', '-20.00', 1, '-10.00', '-10.00')]), filename: 'second.835' },
@@ -272,7 +316,7 @@ try {
     // Observe every committed render, including the one before passive fetch effects.
     comparisonCommits.push({
       active: document.querySelector('[aria-label="Claim status"] [aria-pressed="true"]')?.textContent,
-      claims: [...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim),
+      claims: [...document.querySelectorAll('[data-analysis-claim]')].map(displayedClaim),
     });
   } }, React.createElement(Analysis))));
   assert.equal(calls.length, 1, 'Analysis loads only its isolated staging endpoint');
@@ -298,7 +342,7 @@ try {
   assert.equal(document.querySelectorAll('table time').length, 0);
   assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
     ['837 · CLM02', '835 · Latest CLP03', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
-  assert.equal(document.querySelector('[data-analysis-claim="SYNTHETIC-1002"]'), null, 'Both-match claim excluded from table');
+  assert.equal(findClaim('SYNTHETIC-1002'), undefined, 'Both-match claim excluded from table');
   assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
   assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));
   for (const [billed, allowed, expected] of [['Match', 'Mismatch', true], ['Mismatch', 'Match', true], ['Match', 'Match', false], ['Match', 'Amount unavailable', true]]) {
@@ -328,7 +372,7 @@ try {
   assert.equal(document.querySelector('.cu-analysis-skeleton'), null);
   assert.ok(calls.at(-1).url.includes('category=matched'));
   assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
-  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002']);
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(displayedClaim), ['SYNTHETIC-1002']);
   assert.deepEqual([...document.querySelectorAll('.cu-analysis-result strong')].map(item => item.textContent), ['Match', 'Match']);
   await click('Download Excel');
   assert.equal(downloads.at(-1), 'Claims-Reconciliation.xlsx');
@@ -344,7 +388,7 @@ try {
   await click('Matched amount');
   assert.equal(abandonedRequest.signal.aborted, true);
   await act(async () => resolveAbandoned(abandonedResponse));
-  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1002'],
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(displayedClaim), ['SYNTHETIC-1002'],
     'Rapid tab switches cannot display a late response for the abandoned tab');
   holdComparison = true;
   await click('Missing in 835');
@@ -352,7 +396,7 @@ try {
   assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Failed tab loads do not restore rows from another tab');
   assert.equal(document.querySelector('.cu-analysis-skeleton'), null);
   await click('Retry loading');
-  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(item => item.dataset.analysisClaim), ['SYNTHETIC-1004']);
+  assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(displayedClaim), ['SYNTHETIC-1004']);
   await click('Mismatch amount');
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH);
   await act(async () => {
@@ -381,12 +425,12 @@ try {
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$90.00'));
   assert.ok(!document.querySelector('.cu-analysis-detail').textContent.includes('$657.00'), 'Other claim amounts must not leak into detail');
   assert.equal(calls.length, beforeDetail + 1, 'Detail loads only on demand');
-  assert.ok(calls.at(-1).url.includes('view=claim&claim=SYNTHETIC-1003'));
+  assert.deepEqual(JSON.parse(new URL(calls.at(-1).url, 'http://localhost').searchParams.get('claim')), ['SYNTHETIC-1003', 'id:REF-TEST']);
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-claim.html'));
   await click('← Back to Analysis');
   assert.equal(document.querySelector('input[type="search"]').value, 'SYNTHETIC-1003');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
-  assert.equal(document.activeElement.dataset.analysisClaim, 'SYNTHETIC-1003');
+  assert.equal(JSON.parse(document.activeElement.dataset.analysisClaim)[0], 'SYNTHETIC-1003');
   await act(async () => document.activeElement.click());
   assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'), 'Native claim button provides keyboard-accessible navigation');
   await click('← Back to Analysis');
@@ -539,7 +583,7 @@ try {
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 3.*Claims rejected 1/);
   await act(async () => root.render(React.createElement(Analysis, { key: 'partial-reload' })));
   assert.equal(document.querySelector('.cu-analysis-claim-results'), null, 'Loading saved history must not show historical totals as a current upload run');
-  assert.ok(document.querySelector('[data-analysis-claim="SYNTHETIC-1001"]'), 'Saved comparison claims remain available after reload');
+  assert.ok(findClaim('SYNTHETIC-1001'), 'Saved comparison claims remain available after reload');
   // A large saved history still makes exactly one initial request. Only the
   // requested rows arrive, and navigation/search/export stay server-driven.
   savedFiles.clear();
@@ -552,7 +596,7 @@ try {
   assert.ok(document.body.textContent.includes('Page 1 of 4'));
   await click('Next');
   assert.ok(calls.at(-1).url.includes('page=2'));
-  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-10');
+  assert.equal(displayedClaim(document.querySelector('[data-analysis-claim]')), 'PAGE-10');
   const beforeBatch = calls.length;
   await upload('837', 'batch-page-preserved.837');
   assert.equal(calls.slice(beforeBatch).filter(call => call.url.includes('view=comparison')).length, 1,
@@ -572,10 +616,10 @@ try {
   const oldRequest = calls.at(-1);
   await searchFor('PAGE-30');
   assert.equal(oldRequest.signal.aborted, true, 'Replacing a query cancels the previous request');
-  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30');
+  assert.equal(displayedClaim(document.querySelector('[data-analysis-claim]')), 'PAGE-30');
   await act(async () => deferredComparison(json({ success: true, rows: [], total: 0, page: 1, pages: 1,
     counts: { both: 0, matched: 0, '837-only': 0 }, file_counts: { '837': 0, '835': 0 }, category: '837-only' })));
-  assert.equal(document.querySelector('[data-analysis-claim]').dataset.analysisClaim, 'PAGE-30', 'Stale responses cannot replace current results');
+  assert.equal(displayedClaim(document.querySelector('[data-analysis-claim]')), 'PAGE-30', 'Stale responses cannot replace current results');
   await click('Download Excel');
   assert.ok(calls.at(-1).url.includes('view=excel'));
   assert.ok(calls.at(-1).url.includes('search=PAGE-30'));

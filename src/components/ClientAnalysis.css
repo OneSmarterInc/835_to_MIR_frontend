@@ -131,3 +131,5 @@
 }
 .cu-analysis-excel { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .cu-analysis-excel svg { flex: 0 0 auto; }
+
+.cu-analysis-references { display: inline-flex; flex-direction: column; gap: 4px; }

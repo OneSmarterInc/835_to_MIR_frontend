@@ -19,7 +19,8 @@ export function ComparisonResult({ status, difference, basis }: { status: Compar
     {status === "Match" && basis === "payment" && <small>Total payments match</small>}
     {difference !== null && <small>Difference {money(difference)}</small>}
     {status === "Amount unavailable" && <small>Source amounts need reprocessing</small>}
-    {status === "Latest 835 needs review" && <small>Missing payment dates or conflicting latest amounts</small>}
+    {status === "Reversed — review" && <small>Latest CLP reverses the previous payment; review the source entries</small>}
+    {status === "Latest 835 needs review" && <small>Conflicting CLP03 amounts in the latest uploaded file</small>}
   </div>;
 }
 
@@ -46,9 +47,9 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             data-analysis-claim={row.key} aria-label={`Open claim ${safe(row.claim)}`}
             onClick={event => { event.stopPropagation(); onOpenClaim(row.key); }}>{safe(row.claim)}</button></th>
           <td>{(() => {
-            if (row.reference_count !== undefined) return row.reference_count > 1 ? `Multiple (${row.reference_count})` : safe(row.internal_number);
-            const references = [...new Set(row.occurrences.filter(item => item.source_type === "835").map(item => item.internal_number).filter(Boolean))];
-            return references.length > 1 ? `Multiple (${references.length})` : safe(references[0] || "");
+            const references = row.internal_numbers ?? [...new Set(row.occurrences.filter(item => item.source_type === "835").map(item => item.internal_number).filter(Boolean))];
+            if (!references.length) return safe(row.internal_number);
+            return <span className="cu-analysis-references">{references.map(reference => <span key={reference}>{safe(reference)}</span>)}</span>;
           })()}</td>
           {(["billed_837", "billed_835", "payment", "patient_responsibility", "allowed"] as const).map(key => {
             const summary = row.display_amounts?.[key];
