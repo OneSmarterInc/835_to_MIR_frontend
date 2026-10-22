@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { encodeDemoValue } from "../utils/demoEncoder";
 import { showAppConfirm } from "../components/AppDialog";
+import { withCsrf } from "../utils/api";
 import "./ClientUserPortal.css";
 
 const safe = v => v ? encodeDemoValue(String(v), true) : "—";
@@ -16,7 +17,7 @@ export default function ClientReviewQueue() {
   const reload = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const response = await fetch("/edi835/api/client-portal/actions/", { credentials:"include" });
+      const response = await fetch("/edi835/api/client-portal/actions/", withCsrf({ credentials:"include" }));
       const body = await response.json();
       if (!response.ok || !body.success) throw new Error(body.error || "Failed to load review requests");
       setItems(body.actions || []);
@@ -29,9 +30,9 @@ export default function ClientReviewQueue() {
     if (!await showAppConfirm("Mark this request reviewed? This will not change claim data, code dictionaries or SFTP files.", { title: "Confirm Review", confirmLabel: "Mark reviewed" })) return;
     setBusy(row.id); setError(""); setMessage("");
     try {
-      const response = await fetch("/edi835/api/client-portal/actions/" + row.id + "/review/", {
+      const response = await fetch("/edi835/api/client-portal/actions/" + row.id + "/review/", withCsrf({
         method: "POST", credentials:"include",
-      });
+      }));
       const body = await response.json();
       if (!response.ok || !body.success) throw new Error(body.error || "Unable to mark reviewed");
       setMessage(body.message);
@@ -43,27 +44,29 @@ export default function ClientReviewQueue() {
   return <section className="cu-main cu-admin-requests">
     <header className="cu-heading"><div><span className="eyebrow">CLIENT ADMIN · OPERATIONS</span>
       <h1>Client review requests</h1>
-      <p>Correction requests, resend requests, file decisions and notes from your Client Users.</p></div>
-      <button className="cu-btn" onClick={reload}>Refresh</button></header>
-    {error&&<p className="cu-error" role="alert">{error}</p>}
-    {message&&<p className="cu-success" role="status">{message}</p>}
-    <div className="cu-kpis"><section className="cu-card cu-kpi"><span className="eyebrow">Open requests</span><strong>{open.length}</strong></section>
-      <section className="cu-card cu-kpi"><span className="eyebrow">Recent activity</span><strong>{items.length}</strong><small>Latest 200 actions</small></section></div>
-    <section className="cu-card">
-      <div className="cu-section-title"><h2>Items needing your review</h2><span>Requests are not automatic fixes or retransmissions.</span></div>
-      {loading&&<p>Loading review queue…</p>}
-      <div className="cu-table-scroll"><table className="cu-table"><thead><tr>
-        <th>Created</th><th>File</th><th>Action</th><th>Details</th><th>Submitted by</th><th>Status</th><th>Decision</th>
-      </tr></thead><tbody>
-        {items.map(row=><tr key={row.id}>
-          <td>{when(row.at)}</td><td>{safe(row.file_name)}</td><td>{row.label}</td>
-          <td>{row.message||"—"}</td><td>{row.by}</td><td>{row.status}</td>
-          <td>{row.status==="OPEN"?
-            <button className="cu-btn" disabled={busy===row.id} onClick={()=>reviewed(row)}>{busy===row.id?"Saving…":"Mark reviewed"}</button>
-            :"Reviewed"}</td>
-        </tr>)}
-        {!loading&&!items.length&&<tr><td colSpan="7">No client review requests have been recorded yet.</td></tr>}
-      </tbody></table></div>
-    </section>
+      <p>Operational review queue for actions submitted by Client Users.</p></div>
+      <button type="button" className="cu-btn cu-secondary" onClick={reload} disabled={loading}>Refresh</button>
+    </header>
+    {message && <p className="cu-message" role="status">{message}</p>}
+    {error && <p className="cu-error" role="alert">{error}</p>}
+    {loading ? <p role="status">Loading requests…</p> : open.length === 0 ?
+      <div className="cu-card cu-empty-card">No review requests are currently pending.</div> :
+      <div className="cu-card cu-table-wrap">
+        <table className="cu-table">
+          <thead><tr><th>Type</th><th>Client note</th><th>Original file</th><th>Highmark claim</th><th>Requested</th><th>Action</th></tr></thead>
+          <tbody>
+            {open.map(row => <tr key={row.id}>
+              <td><span className="cu-chip">{row.action_type}</span></td>
+              <td>{row.note || "—"}</td>
+              <td><code>{safe(row.original_filename)}</code></td>
+              <td><code>{safe(row.highmark_claim_number)}</code></td>
+              <td>{when(row.created_at)}</td>
+              <td><button type="button" className="cu-btn cu-primary" disabled={busy === row.id} onClick={()=>reviewed(row)}>
+                {busy === row.id ? "Saving…" : "Mark reviewed"}
+              </button></td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>}
   </section>;
 }

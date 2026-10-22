@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { withCsrf } from "../utils/api";
 import { splitClaimNumber } from "../utils/claimNumber";
 import { pushEdiFileToSftp } from "../onesmarter_admin/services/api";
 import WorkspaceHeader from "../components/WorkspaceHeader";
@@ -160,11 +161,12 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/validate/", {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+      const res = await fetch("/api/validate/", withCsrf({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+      }));
 
       const data = await res.json();
       if (data.file_id) setActiveValidatedFileId(data.file_id);
@@ -224,11 +226,12 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/convert/", {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+      const res = await fetch("/api/convert/", withCsrf({
         method: "POST",
         headers: { "Content-Type": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify(payload),
-      });
+      }));
 
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -266,11 +269,12 @@ export default function ConversionsView({
       return;
     }
     try {
-      const res = await fetch("/api/convert/", {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+      const res = await fetch("/api/convert/", withCsrf({
         method: "POST",
         headers: { "Content-Type": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify({ file_id: fileId, client_id: selectedClientId || undefined }),
-      });
+      }));
       const data = await res.json();
       if (!res.ok || data.error) {
         captureHeldClaims(data, fileId, "ERROR");
@@ -402,12 +406,13 @@ export default function ConversionsView({
     }
     setBatchAlert(null);
     try {
-      const res = await fetch("/api/start-batch-conversion/", {
+      // 2026-09-25 - Yash: Task 6b - Wrap raw POST fetch with withCsrf
+      const res = await fetch("/api/start-batch-conversion/", withCsrf({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", "Accept": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify({ client_id: selectedClientId || undefined, ...(isClientUser ? { automation_type: "835" } : {}) }),
-      });
+      }));
 
       const data = await res.json().catch(() => ({}));
       const jobId = data.job_id;

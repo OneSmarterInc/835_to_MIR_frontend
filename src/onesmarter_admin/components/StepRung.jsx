@@ -14,11 +14,16 @@ import {
   scheduleTimeZoneOptions,
 } from '../../utils/timezone';
 import './StepUploadModal.css';
+import { withCsrf } from '../../utils/api';
+
+// 2026-09-25 - Yash: Task 6b - Include X-CSRFToken in getAuthHeaders for StepRung
+function readCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
 
 function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem('onesmarter_admin_token');
-  const headers = { ...extra };
-  if (token) headers['Authorization'] = `Token ${token}`;
+  const headers = { ...extra, 'X-CSRFToken': readCookie('csrftoken') };
   return headers;
 }
 
@@ -866,11 +871,12 @@ export default function StepRung({ step, clientId, roles, onRefresh, onOpenNotes
                             setS6UseDefaultSftp(checked);
                             if (checked) {
                               try {
-                                await fetch('/edi835/api/sftp/save/', {
+                                // 2026-10-01 - Yash: Wrap SFTP save fetch with withCsrf for Task B3
+                                await fetch('/edi835/api/sftp/save/', withCsrf({
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ use_default: true, client_id: clientId, connection_type: 'UNIFIED' })
-                                });
+                                }));
                                 setS6SftpVerified(true);
                                 await postStepData(`/clients/${encodeURIComponent(clientId)}/steps/${encodeURIComponent(step.key)}/complete/`, {});
                                 await onRefresh();

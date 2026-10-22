@@ -1,4 +1,5 @@
 import { encodeDemoValue, getDemoRevealValue } from '../../utils/demoEncoder.js';
+import { withCsrf } from '../../utils/api';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('onesmarter_admin_token');
@@ -14,9 +15,11 @@ async function getClaimsPage(clientId, page, pageSize, signal) {
     client_id: clientId, q: '', field: 'all',
     page: String(page), page_size: String(pageSize),
   });
-  const res = await fetch(`/edi835/api/837/search/?${params}`, {
-    credentials: 'include', headers: getAuthHeaders(), signal,
-  });
+  const res = await fetch(`/edi835/api/837/search/?${params}`, withCsrf({
+    credentials: 'include',
+    headers: getAuthHeaders(),
+    signal,
+  }));
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load universal claims.');
   return data;
