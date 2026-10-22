@@ -9,7 +9,7 @@ type Data = { rows?: Row[]; page?: number; pages?: number; total?: number; count
   disk?: { total_bytes: number; free_bytes: number }; targets?: Row; policy?: Row;
   eligible_sample_count?: number; scope?: string; last_worker_heartbeat?: string };
 type Bootstrap = { clients: { id: string; name: string; client_code: string }[]; staff: { id: string; email: string }[]; can_approve: boolean };
-type Field = { key: string; label: string; type?: 'text' | 'number' | 'select' | 'multi' | 'check' | 'textarea';
+type Field = { key: string; label: string; type?: 'text' | 'number' | 'select' | 'multi' | 'check' | 'textarea' | 'storage';
   options?: { value: string; label: string }[]; value?: string | string[] | boolean; optional?: boolean; min?: number; max?: number };
 type FormSpec = { title: string; action: string; fixed?: Row; fields: Field[]; partner?: Row; operation?: string; note?: string };
 type Values = Record<string, string | string[] | boolean>;
@@ -19,6 +19,13 @@ const endpoint = '/admin-panel/api/intake-control/';
 const text = (v: unknown) => v == null || v === '' ? '—' : String(v);
 const time = (v: unknown) => v ? new Date(String(v)).toLocaleString() : '—';
 const options = (values: string[]) => values.map(value => ({ value, label: value }));
+const storageUnits = { B: 1, KB: 1000, MB: 1000 ** 2, GB: 1000 ** 3, TB: 1000 ** 4 };
+type StorageUnit = keyof typeof storageUnits;
+function storageValue(bytes: number) {
+  const unit = (Object.keys(storageUnits) as StorageUnit[]).reverse().find(u => bytes >= storageUnits[u]) || 'B';
+  return { amount: String(bytes / storageUnits[unit]), unit };
+}
+const storageText = (bytes: unknown) => { const value = storageValue(Number(bytes)); return `${value.amount} ${value.unit}`; };
 const integerKeys = new Set(['days', 'source_days', 'output_days', 'quarantine_days', 'audit_days', 'backup_days',
   'queue_age_seconds', 'rpo_seconds', 'rto_seconds', 'requests_per_minute', 'concurrent_jobs', 'storage_limit_bytes']);
 
@@ -31,14 +38,60 @@ async function api(params: URLSearchParams, signal?: AbortSignal, body?: Row) {
 }
 
 function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (body: Row) => Promise<void>; onClose: () => void; busy: boolean }) {
-  const [values, setValues] = useState<Values>(() => Object.fromEntries(spec.fields.map(f => [f.key, f.value ?? (f.type === 'check' ? false : f.type === 'multi' ? [] : '')])));
+  const [values, setValues] = useState<Values>(() => Object.fromEntries(spec.fields.map(f => [f.key,
+    f.type === 'storage' ? storageValue(Number(f.value)).amount : f.value ?? (f.type === 'check' ? false : f.type === 'multi' ? [] : '')])));
+  const [units, setUnits] = useState<Record<string, StorageUnit>>(() => Object.fromEntries(spec.fields.filter(f => f.type === 'storage').map(f => [f.key, storageValue(Number(f.value)).unit])));
+  const [validationError, setValidationError] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [routes, setRoutes] = useState<Record<string, string>[]>([]);
+  const [routeChoice, setRouteChoice] = useState('');
+  const [extractionMessage, setExtractionMessage] = useState('');
+  const extraction = useRef<AbortController | null>(null);
+  useEffect(() => () => extraction.current?.abort(), []);
+  async function extractFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    extraction.current?.abort();
+    const controller = new AbortController(); extraction.current = controller;
+    setValidationError(''); setExtractionMessage(''); setRoutes([]); setRouteChoice('');
+    setValues(current => ({ ...current, ...Object.fromEntries(spec.fields.filter(f => f.key !== 'client_id').map(f => [f.key, ''])) }));
+    if (!file.size || file.size > 10 * 1024 * 1024) { setValidationError('Choose one 835 or 837 file up to 10 MiB.'); return; }
+    setExtracting(true);
+    try {
+      const body = new FormData(); body.append('action', 'route_preview'); body.append('partner_id', String(spec.partner?.id)); body.append('file', file);
+      const response = await fetch(endpoint, { method: 'POST', credentials: 'include', cache: 'no-store', body, signal: controller.signal });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not read the file envelope.');
+      if (controller.signal.aborted) return;
+      if (!Array.isArray(result.routes) || !result.routes.length) throw new Error('No supported route was found.');
+      setRoutes(result.routes);
+      if (result.routes.length === 1) {
+        setValues(current => ({ ...current, ...result.routes[0] })); setRouteChoice('0');
+        setExtractionMessage('Fields filled from the file. Review the client and values, then save.');
+      } else setExtractionMessage(`${result.routes.length} different routes found. Select one to review and save.`);
+    } catch (issue) {
+      if (!controller.signal.aborted) setValidationError(issue instanceof Error ? issue.message : 'Could not read the file envelope.');
+    } finally { if (!controller.signal.aborted) setExtracting(false); }
+  }
   const [reason, setReason] = useState('');
   const first = useRef<HTMLHeadingElement>(null);
   useEffect(() => { first.current?.focus(); }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (extracting) return;
+    setValidationError('');
+    const missing = spec.fields.find(f => f.type === 'multi' && !f.optional && !(values[f.key] as string[]).length);
+    if (missing) { setValidationError(`Select at least one option for ${missing.label.toLowerCase()}.`); return; }
     const data: Row = Object.fromEntries(Object.entries(values).map(([key, value]) =>
       [key, integerKeys.has(key) ? value === '' ? null : Number(value) : value]));
+    for (const field of spec.fields.filter(f => f.type === 'storage')) {
+      const bytes = Number(values[field.key]) * storageUnits[units[field.key]];
+      if (!Number.isFinite(bytes) || bytes < 1 || bytes > 10 ** 15) {
+        setValidationError('Storage limit must be between 1 byte and 1,000 TB.'); return;
+      }
+      data[field.key] = Math.round(bytes);
+    }
     if (spec.operation) {
       if (spec.operation === 'PERMISSIONS') {
         data.permissions = (data.permissions as string[]).map(value => { const [workflow, action] = value.split(':'); return { workflow, action, channel: 'PARTNER' }; });
@@ -49,11 +102,30 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
   return <section className="ic-form-panel" aria-label={spec.title}>
     <div className="ic-heading"><h3 ref={first} tabIndex={-1}>{spec.title}</h3><button type="button" onClick={onClose} disabled={busy}>Cancel</button></div>
     {spec.note && <p className="ic-muted">{spec.note}</p>}
-    <form onSubmit={submit}><fieldset disabled={busy} className="ic-fieldset"><div className="ic-fields">
-      {spec.fields.map(f => <label key={f.key} className={f.type === 'textarea' ? 'ic-wide' : ''}><span>{f.label}</span>
-        {f.type === 'select' || f.type === 'multi' ? <select multiple={f.type === 'multi'} required={!f.optional}
-          value={values[f.key] as string | string[]} onChange={e => setValues({ ...values, [f.key]: f.type === 'multi' ? [...e.target.selectedOptions].map(o => o.value) : e.target.value })}>
-          {f.type !== 'multi' && <option value="">Select…</option>}{f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+    {spec.operation === 'ROUTE' && <div className="ic-route-import">
+      <label><span>Fill from an 835 or 837 file</span><input type="file" disabled={busy || extracting} onChange={extractFile} /></label>
+      <p className="ic-muted">Choose a sample file to fill the fields below, or enter them manually. The file is only inspected; it is not added to processing or saved as an intake upload.</p>
+      {extracting && <p role="status">Reading envelope…</p>}
+      {extractionMessage && <p role="status">{extractionMessage}</p>}
+      {routes.length > 1 && <label><span>Route to review</span><select value={routeChoice} disabled={busy} onChange={e => {
+        const index = e.target.value; setRouteChoice(index);
+        if (index !== '') setValues(current => ({ ...current, ...routes[Number(index)] }));
+      }}><option value="">Select a route…</option>{routes.map((route, index) => <option key={index} value={index}>{index + 1}. {route.workflow} · {route.isa_sender} → {route.isa_receiver} · {route.gs_version}</option>)}</select></label>}
+    </div>}
+    {validationError && <p role="alert" className="ic-error">{validationError}</p>}
+    <form onSubmit={submit}><fieldset disabled={busy || extracting} className="ic-fieldset"><div className="ic-fields">
+      {spec.fields.map(f => f.type === 'multi' ? <fieldset key={f.key} className="ic-choices ic-wide"><legend>{f.label}</legend><div className="ic-choice-grid">
+        {f.options?.map(o => <label key={o.value} className="ic-choice"><input type="checkbox" checked={(values[f.key] as string[]).includes(o.value)} onChange={e => {
+          const checked = e.target.checked;
+          setValues(current => ({ ...current, [f.key]: checked ? [...(current[f.key] as string[]), o.value] : (current[f.key] as string[]).filter(v => v !== o.value) }));
+        }} /><span>{o.label}</span></label>)}
+      </div></fieldset> : f.type === 'storage' ? <fieldset key={f.key} className="ic-storage-field"><legend>{f.label}</legend><div className="ic-storage-input">
+        <input aria-label={f.label} type="number" required min={1 / storageUnits[units[f.key]]} max={10 ** 15 / storageUnits[units[f.key]]} step="any" value={String(values[f.key])} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />
+        <select aria-label={`${f.label} unit`} value={units[f.key]} onChange={e => setUnits({ ...units, [f.key]: e.target.value as StorageUnit })}>{Object.keys(storageUnits).map(unit => <option key={unit}>{unit}</option>)}</select>
+      </div><small>1 GB = 1,000 MB · 1 TB = 1,000 GB</small></fieldset> : <label key={f.key} className={f.type === 'textarea' ? 'ic-wide' : ''}><span>{f.label}</span>
+        {f.type === 'select' ? <select required={!f.optional}
+          value={values[f.key] as string} onChange={e => setValues({ ...values, [f.key]: e.target.value })}>
+          <option value="">Select…</option>{f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
         : f.type === 'check' ? <input type="checkbox" checked={Boolean(values[f.key])} onChange={e => setValues({ ...values, [f.key]: e.target.checked })} />
         : f.type === 'textarea' ? <textarea rows={5} required={!f.optional} maxLength={16384} value={String(values[f.key])} onChange={e => setValues({ ...values, [f.key]: e.target.value })} />
         : <input type={f.type || 'text'} min={f.min ?? 1} max={f.max} step={f.type === 'number' ? 1 : undefined} required={!f.optional}
@@ -61,6 +133,35 @@ function ActionForm({ spec, onSave, onClose, busy }: { spec: FormSpec; onSave: (
       </label>)}
       <label className="ic-wide"><span>Reason</span><input required minLength={3} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Business reason or change ticket; omit patient information" /></label>
     </div><button className="ic-primary" type="submit">{busy ? 'Saving…' : 'Save change'}</button></fieldset></form>
+  </section>;
+}
+
+function TokenNotice({ token, onDismiss }: { token: string; onDismiss: () => void }) {
+  const [copyState, setCopyState] = useState<'idle' | 'copying' | 'copied' | 'failed'>('idle');
+  async function copyToken() {
+    if (copyState === 'copying') return;
+    setCopyState('copying');
+    try {
+      await window.navigator.clipboard.writeText(token);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
+  }
+  return <section className="ic-secret" aria-label="New token">
+    <strong>New token — displayed once</strong>
+    <p>Store it in the approved secret manager. It will not appear in history.</p>
+    <code>{token}</code>
+    <div className="ic-actions">
+      <button type="button" className="ic-primary" onClick={() => void copyToken()} disabled={copyState === 'copying'}>
+        {copyState === 'copying' ? 'Copying…' : copyState === 'copied' ? 'Copied!' : 'Copy token'}
+      </button>
+      <button type="button" onClick={onDismiss}>Dismiss token</button>
+    </div>
+    <p role="status" className="ic-muted">
+      {copyState === 'copied' ? 'Token copied to clipboard.' : copyState === 'failed'
+        ? 'Could not copy automatically. Select the token above and copy it manually.' : ''}
+    </p>
   </section>;
 }
 
@@ -79,6 +180,13 @@ export default function IntakeControl({ readOnly = false }: { readOnly?: boolean
   const [selected, setSelected] = useState('');
   const [detail, setDetail] = useState('');
   const [token, setToken] = useState('');
+  const partnerHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (selected) {
+      partnerHeading.current?.focus({ preventScroll: true });
+      partnerHeading.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selected]);
   const key = `${tab}:${clientId}:${state}:${page}:${revision}`;
   const data = loaded?.key === key ? loaded.data : null;
   useEffect(() => {
@@ -129,9 +237,33 @@ export default function IntakeControl({ readOnly = false }: { readOnly?: boolean
     <header className="ic-heading"><div><small>ADMINISTRATION</small><h1>{readOnly ? 'Operations' : 'Intake Control'}</h1><p>Monitor intake and manage approved partner, access and retention controls.</p></div>
       <button disabled={busy} onClick={() => { setError(''); setRevision(v => v + 1); }}>Refresh</button></header>
     {!readOnly && <nav className="ic-tabs" aria-label="Intake sections">{tabs.map(([value, label]) => <button key={value} aria-current={tab === value ? 'page' : undefined} onClick={() => navigate(value)} disabled={busy}>{label}</button>)}</nav>}
+    {partner && tab === 'partners' && <section className="ic-partner ic-partner-selected" aria-label="Selected partner"><div className="ic-heading"><h2 ref={partnerHeading} tabIndex={-1}>{text(partner.name)}</h2><button onClick={() => { setSelected(''); setToken(''); setForm(null); }}>Close partner</button></div>
+      <div className="ic-toolbar">
+        <button onClick={() => partnerForm(partner.active ? 'Suspend partner' : 'Activate partner', partner.active ? 'SUSPEND' : 'ACTIVATE', [])}>{partner.active ? 'Suspend' : 'Activate'}</button>
+        <button onClick={() => partnerForm('Approved client scopes', 'CLIENTS', [{ key: 'client_ids', label: 'Permitted clients', type: 'multi', options: clients, value: partner.client_ids as string[] }], undefined, 'Multi-client submissions must supply an explicit client_id matching an approved envelope route. Removing a client revokes new reads and queued processing for that client.')}>Client scopes</button>
+        <button onClick={() => partnerForm('Partner quotas', 'QUOTAS', [{ key: 'requests_per_minute', label: 'Requests per minute', type: 'number', max: 10000, value: String(partner.requests_per_minute) }, { key: 'concurrent_jobs', label: 'Concurrent processing jobs', type: 'number', max: 100, value: String(partner.concurrent_jobs) }, { key: 'storage_limit_bytes', label: 'Partner storage limit', type: 'storage', value: String(partner.storage_limit_bytes) }])}>Quotas</button>
+        <button onClick={() => partnerForm('Partner permissions', 'PERMISSIONS', [{ key: 'permissions', label: 'Workflow permissions', type: 'multi', optional: true,
+          options: (partner.workflows as string[]).flatMap(w => ['SUBMIT', 'READ', 'DOWNLOAD'].map(a => ({ value: `${w}:${a}`, label: `${w} · ${a}` }))), value: (partner.permissions as Row[]).map(p => `${p.workflow}:${p.action}`) }])}>Permissions</button>
+        <button onClick={() => partnerForm('Authentication policy', 'POLICY', [{ key: 'auth_mode', label: 'Authentication', type: 'select', options: options(['TOKEN', 'MTLS']), value: String(partner.auth_mode) }, { key: 'routing_required', label: 'Require approved envelope routing', type: 'check', value: Boolean(partner.routing_required) }])}>Authentication</button>
+        <button onClick={() => partnerForm('Register client certificate', 'CERTIFICATE', [{ key: 'certificate', label: 'Public leaf certificate (PEM)', type: 'textarea' }, { key: 'reference', label: 'Credential reference', optional: true }, { key: 'replaces', label: 'Replacement for credential ID', optional: true }], undefined, 'Paste the public client-auth certificate only. Private keys stay with the partner. Existing credentials remain active until retired or revoked.')}>Add certificate</button>
+        <button onClick={() => partnerForm('Issue token', 'TOKEN', [{ key: 'days', label: 'Validity in days', type: 'number', max: 90 }, { key: 'reference', label: 'Credential reference', optional: true }, { key: 'replaces', label: 'Replacement for credential ID', optional: true }])}>Issue token</button>
+        <button onClick={() => partnerForm('Approve envelope route', 'ROUTE', [{ key: 'client_id', label: 'Client', type: 'select', options: clients.filter(c => (partner.client_ids as string[]).includes(c.value)), value: (partner.client_ids as string[]).length === 1 ? (partner.client_ids as string[])[0] : '' }, { key: 'workflow', label: 'Workflow', type: 'select', options: options(partner.workflows as string[]) },
+          ...[['isa_sender_qualifier', 'ISA sender qualifier'], ['isa_sender', 'ISA sender ID'], ['isa_receiver_qualifier', 'ISA receiver qualifier'], ['isa_receiver', 'ISA receiver ID'], ['isa_version', 'ISA version'], ['gs_sender', 'GS sender'], ['gs_receiver', 'GS receiver'], ['gs_version', 'GS version'], ['st_version', 'ST version (blank when absent)']].map(([key, label]) => ({ key, label, optional: key === 'st_version' }))])}>Add route</button>
+      </div>
+      <dl className="ic-partner-settings" aria-label="Saved partner settings">
+        <div><dt>State</dt><dd>{partner.active ? 'Active' : 'Suspended'}</dd></div>
+        <div><dt>Approved clients</dt><dd>{(partner.client_ids as string[]).map(clientName).join(', ') || 'None'}</dd></div>
+        <div><dt>Authentication</dt><dd>{text(partner.auth_mode)}</dd></div>
+        <div><dt>Envelope routing</dt><dd>{partner.routing_required || partner.auth_mode === 'MTLS' ? 'Required' : 'Optional'}</dd></div>
+        <div><dt>Requests per minute</dt><dd>{text(partner.requests_per_minute)}</dd></div>
+        <div><dt>Concurrent jobs</dt><dd>{text(partner.concurrent_jobs)}</dd></div>
+        <div><dt>Storage limit</dt><dd>{storageText(partner.storage_limit_bytes)}</dd></div>
+        <div><dt>Retained storage</dt><dd>{storageText(partner.stored_bytes)}</dd></div>
+        {(partner.workflows as string[]).map(workflow => <div key={workflow}><dt>{workflow} permissions</dt><dd>{(partner.permissions as Row[]).filter(p => p.workflow === workflow).map(p => text(p.action)).join(', ') || 'No permissions'}</dd></div>)}
+      </dl><p className="ic-muted">Saved settings. Edits take effect after you save the change.</p>
+    </section>}
     {error && <p className="ic-error" role="alert">{error}</p>}{message && <p className="ic-success" role="status">{message}</p>}
-    {token && <section className="ic-secret"><strong>New token — displayed once</strong><p>Store it in the approved secret manager. It will not appear in history.</p><code>{token}</code><button onClick={() => setToken('')}>Dismiss token</button></section>}
-    {form && <ActionForm key={`${form.title}:${selected}`} spec={form} onSave={save} onClose={() => setForm(null)} busy={busy} />}
+    {token && <TokenNotice key={token} token={token} onDismiss={() => setToken('')} />}
     <div className="ic-toolbar">
       {!readOnly && (tab === 'operations' || tab === 'retention') && <label>Client <select value={clientId} onChange={e => { setClientId(e.target.value); setPage(1); setForm(null); setDetail(''); }}><option value="">{tab === 'retention' ? 'Select a client' : 'All clients'}</option>{clients.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label>}
       {(tab === 'operations' || tab === 'quarantine') && <label>Status <select value={state} onChange={e => { setState(e.target.value); setPage(1); }}><option value="">All</option>{(tab === 'operations' ? ['FAILED', 'REJECTED', 'QUEUED', 'PROCESSING', 'VALIDATING'] : ['OPEN', 'REVIEWED', 'REVALIDATING']).map(s => <option key={s}>{s}</option>)}</select></label>}
@@ -154,6 +286,7 @@ export default function IntakeControl({ readOnly = false }: { readOnly?: boolean
           { key: 'evidence_reference', label: 'Approval / measurement reference' }], note: 'Record approved targets only. Setting a target does not certify measured production acceptance.' })}>Set targets</button>
       </>}
     </div>
+    {form && <ActionForm key={`${form.title}:${selected}`} spec={form} onSave={save} onClose={() => setForm(null)} busy={busy} />}
     {tab === 'retention' && !clientId ? <p className="ic-empty">Select a client to review its policy and legal holds.</p> : !data ? <p className="ic-empty" role="status">{error ? 'Unable to load this view.' : 'Loading current data…'}</p> : <>
       {tab === 'operations' && <>
         <div className="ic-metrics">{[['Queued', data.counts?.QUEUED || 0], ['Processing', (data.counts?.PROCESSING || 0) + (data.counts?.VALIDATING || 0)], ['Failed', data.counts?.FAILED || 0], ['Completed', data.counts?.COMPLETED || 0], ['Duplicates', data.counts?.DUPLICATE || 0], ['Quarantine open', data.quarantine_open || 0]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{Number(value).toLocaleString()}</strong></div>)}</div>
@@ -178,19 +311,7 @@ export default function IntakeControl({ readOnly = false }: { readOnly?: boolean
       <div className="ic-pagination"><span>{data.total || 0} records · Page {data.page || 1} of {data.pages || 1}</span><button disabled={page <= 1 || busy} onClick={() => setPage(p => p - 1)}>Previous</button><button disabled={page >= (data.pages || 1) || busy} onClick={() => setPage(p => p + 1)}>Next</button></div>
     </>}
     {detail && <section><div className="ic-heading"><h3>Receipt details — explicit client access required</h3><button onClick={() => setDetail('')}>Close details</button></div><TransferDetail receiptId={detail} onRetried={() => setRevision(v => v + 1)} /></section>}
-    {partner && tab === 'partners' && <section className="ic-partner"><div className="ic-heading"><h2>{text(partner.name)}</h2><button onClick={() => { setSelected(''); setToken(''); }}>Close partner</button></div>
-      <div className="ic-toolbar">
-        <button onClick={() => partnerForm(partner.active ? 'Suspend partner' : 'Activate partner', partner.active ? 'SUSPEND' : 'ACTIVATE', [])}>{partner.active ? 'Suspend' : 'Activate'}</button>
-        <button onClick={() => partnerForm('Approved client scopes', 'CLIENTS', [{ key: 'client_ids', label: 'Permitted clients', type: 'multi', options: clients, value: partner.client_ids as string[] }], undefined, 'Multi-client submissions must supply an explicit client_id matching an approved envelope route. Removing a client revokes new reads and queued processing for that client.')}>Client scopes</button>
-        <button onClick={() => partnerForm('Partner quotas', 'QUOTAS', ['requests_per_minute', 'concurrent_jobs', 'storage_limit_bytes'].map(key => ({ key, label: ({ requests_per_minute: 'Requests per minute', concurrent_jobs: 'Concurrent processing jobs', storage_limit_bytes: 'Retained private bytes limit' } as Record<string, string>)[key], type: 'number', value: String(partner[key]) })))}>Quotas</button>
-        <button onClick={() => partnerForm('Partner permissions', 'PERMISSIONS', [{ key: 'permissions', label: 'Workflow permissions', type: 'multi', optional: true,
-          options: (partner.workflows as string[]).flatMap(w => ['SUBMIT', 'READ', 'DOWNLOAD'].map(a => ({ value: `${w}:${a}`, label: `${w} · ${a}` }))), value: (partner.permissions as Row[]).map(p => `${p.workflow}:${p.action}`) }])}>Permissions</button>
-        <button onClick={() => partnerForm('Authentication policy', 'POLICY', [{ key: 'auth_mode', label: 'Authentication', type: 'select', options: options(['TOKEN', 'MTLS']), value: String(partner.auth_mode) }, { key: 'routing_required', label: 'Require approved envelope routing', type: 'check', value: true }])}>Authentication</button>
-        <button onClick={() => partnerForm('Register client certificate', 'CERTIFICATE', [{ key: 'certificate', label: 'Public leaf certificate (PEM)', type: 'textarea' }, { key: 'reference', label: 'Credential reference', optional: true }, { key: 'replaces', label: 'Replacement for credential ID', optional: true }], undefined, 'Paste the public client-auth certificate only. Private keys stay with the partner. Existing credentials remain active until retired or revoked.')}>Add certificate</button>
-        <button onClick={() => partnerForm('Issue token', 'TOKEN', [{ key: 'days', label: 'Validity in days', type: 'number', max: 90 }, { key: 'reference', label: 'Credential reference', optional: true }, { key: 'replaces', label: 'Replacement for credential ID', optional: true }])}>Issue token</button>
-        <button onClick={() => partnerForm('Approve envelope route', 'ROUTE', [{ key: 'client_id', label: 'Client', type: 'select', options: clients.filter(c => (partner.client_ids as string[]).includes(c.value)) }, { key: 'workflow', label: 'Workflow', type: 'select', options: options(partner.workflows as string[]) },
-          ...[['isa_sender_qualifier', 'ISA sender qualifier'], ['isa_sender', 'ISA sender ID'], ['isa_receiver_qualifier', 'ISA receiver qualifier'], ['isa_receiver', 'ISA receiver ID'], ['isa_version', 'ISA version'], ['gs_sender', 'GS sender'], ['gs_receiver', 'GS receiver'], ['gs_version', 'GS version'], ['st_version', 'ST version (blank when absent)']].map(([key, label]) => ({ key, label, optional: key === 'st_version' }))])}>Add route</button>
-      </div><p className="ic-muted">Retained private storage: {(Number(partner.stored_bytes) / 2 ** 20).toFixed(2)} MiB · Limits: {text(partner.requests_per_minute)} requests/min, {text(partner.concurrent_jobs)} concurrent jobs.</p>
+    {partner && tab === 'partners' && <section className="ic-partner" aria-label="Partner credentials and routes">
       <h3>Credentials</h3><div className="ic-table-wrap"><table><thead><tr><th>Credential</th><th>Type</th><th>Reference</th><th>Expires</th><th>State / actions</th></tr></thead><tbody>{(partner.credentials as Row[]).map(c => <tr key={String(c.id)}><td><code>{text(c.id)}</code></td><td>{text(c.kind)}</td><td>{text(c.reference)}</td><td>{time(c.expires_at)}</td><td>{c.active ? <><button onClick={() => partnerForm('Retire credential', 'RETIRE', [], { credential_id: c.id })}>Retire</button><button onClick={() => partnerForm('Revoke credential', 'REVOKE', [], { credential_id: c.id })}>Revoke</button></> : c.revoked_at ? 'Revoked' : 'Retired'}</td></tr>)}</tbody></table></div>
       <h3>Envelope routes</h3><div className="ic-table-wrap"><table><thead><tr><th>Client</th><th>Workflow</th><th>ISA sender → receiver</th><th>GS sender → receiver</th><th>Versions (ISA / GS / ST)</th><th>State</th></tr></thead><tbody>{(partner.routes as Row[]).map(r => <tr key={String(r.id)}><td>{clientName(r.client_id)}</td><td>{text(r.workflow)}</td><td>{text(r.isa_sender_qualifier)}:{text(r.isa_sender)} → {text(r.isa_receiver_qualifier)}:{text(r.isa_receiver)}</td><td>{text(r.gs_sender)} → {text(r.gs_receiver)}</td><td>{text(r.isa_version)} / {text(r.gs_version)} / {text(r.st_version)}</td><td>{r.active ? <button onClick={() => partnerForm('Retire envelope route', 'RETIRE_ROUTE', [], { route_id: r.id })}>Retire</button> : 'Retired'}</td></tr>)}</tbody></table></div>
     </section>}
