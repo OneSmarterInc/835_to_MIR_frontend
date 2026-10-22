@@ -1,0 +1,14 @@
+/* Static page text can receive a caret when browser caret browsing is enabled.
+   Keep selection and keyboard focus intact; only editable fields show a caret. */
+body {
+  caret-color: transparent;
+}
+
+:read-write {
+  caret-color: auto;
+}
+
+/* A read-only island inside an editor must not inherit its visible caret. */
+[contenteditable="false"] {
+  caret-color: transparent;
+}
