@@ -6,10 +6,10 @@ import { analysisValues, type AnalysisRow, type AnalysisSortKey, type Comparison
 const columns: [AnalysisSortKey, string, string][] = [
   ["claim", "Claim", "837 / 835"],
   ["internal_number", "Internal claim", "835 · CLP07"],
-  ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · CLP03"],
-  ["payment", "Claim payment", "835 · CLP04"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR"],
-  ["allowed", "Allowed amount", "835 · Payment + responsibility"],
-  ["difference", "Billed comparison", "CLM02 vs CLP03"], ["allowed_difference", "Allowed comparison", "CLM02 vs allowed"],
+  ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · CLP03 total"],
+  ["payment", "Claim payment", "835 · CLP04 total"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR total"],
+  ["allowed", "Allowed amount", "835 · Payment + responsibility totals"],
+  ["difference", "Billed comparison", "CLM02 vs billed total"], ["allowed_difference", "Allowed comparison", "CLM02 vs allowed total"],
 ];
 const safe = (value: string) => value ? encodeDemoValue(value, true) : "—";
 

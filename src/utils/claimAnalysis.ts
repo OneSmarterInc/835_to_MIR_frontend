@@ -44,7 +44,8 @@ function distinctClaims(claims: SourceClaim[]): SourceClaim[] {
 }
 
 export function analysisValues(row: AnalysisRow, key: "billed_837" | "billed_835" | "payment" | "patient_responsibility" | "allowed"): (string | null)[] {
-  const kind = key === "billed_837" ? "837" : "835";
+  if (key !== "billed_837") return [row[key]];
+  const kind = "837";
   return [...new Set(row.occurrences.filter(item => item.source_type === kind).map(item => item[key]))];
 }
 
@@ -80,10 +81,23 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
   for (const [number, submittedClaims] of submissions) {
     const claims = distinctClaims(submittedClaims);
     const matches = distinctClaims(remittances.get(number) || []);
-    const ambiguous = matches.length > 0 && (matches.length > 1 || claims.length > 1);
-    const paired = matches.length === 1 && claims.length === 1;
-    const allowed = paired ? allowedAmount(matches[0].claim) : null;
-    const difference = paired ? differenceAmount(claims[0].claim.billed, matches[0].claim.billed) : null;
+    const ambiguous = matches.length > 0 && claims.length > 1;
+    const paired = matches.length > 0 && claims.length === 1;
+    const sum = (value: (claim: AnalysisClaim) => string | null | undefined): string | null => {
+      if (!matches.length) return null;
+      let total = 0n;
+      for (const { claim } of matches) {
+        const amount = value(claim);
+        if (amount == null) return null;
+        total += cents(amount);
+      }
+      return decimal(total);
+    };
+    const billed835 = sum(claim => claim.billed);
+    const payment = sum(claim => claim.payment);
+    const responsibility = sum(claim => claim.patient_responsibility);
+    const allowed = sum(allowedAmount);
+    const difference = paired ? differenceAmount(claims[0].claim.billed, billed835) : null;
     const allowedDifference = paired ? differenceAmount(claims[0].claim.billed, allowed) : null;
     const comparisonStatus = (delta: string | null): ComparisonStatus => ambiguous ? "Multiple occurrences — review" :
       !matches.length ? receivedFiles.length ? "Not in uploaded 835" : "Awaiting 835 upload" :
@@ -91,10 +105,10 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
     rows.push({ key: number, claim: number, internal_number: matches[0]?.claim.internal_number || "", waiting_days: 0,
       category: matches.length ? "both" : "837-only", ambiguous,
       billed_837: claims.length === 1 ? claims[0].claim.billed : null,
-      billed_835: matches.length === 1 ? matches[0].claim.billed : null,
+      billed_835: billed835,
       difference, allowed_difference: allowedDifference, allowed,
-      payment: paired ? matches[0].claim.payment ?? null : null,
-      patient_responsibility: paired ? matches[0].claim.patient_responsibility ?? null : null,
+      payment,
+      patient_responsibility: responsibility,
       billed_status: comparisonStatus(difference), allowed_status: comparisonStatus(allowedDifference),
       status: comparisonStatus(difference),
       source_837: claims[0].file.filename, source_835: matches.length ? matches[0].file.filename : "", record_835_id: null,

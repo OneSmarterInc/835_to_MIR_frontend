@@ -67,7 +67,7 @@ globalThis.fetch = async (url, options) => {
       const refs = [...new Set(row.occurrences.map(item => item.internal_number).filter(Boolean))];
       const display_amounts = Object.fromEntries(['billed_837', 'billed_835', 'payment', 'patient_responsibility', 'allowed'].map(key => {
         const values = [...new Set(row.occurrences.filter(item => item.source_type === (key === 'billed_837' ? '837' : '835')).map(item => item[key]))];
-        return [key, { count: values.length, value: values[0] ?? null }];
+        return [key, key === 'billed_837' ? { count: values.length, value: values[0] ?? null } : { count: row.category === 'both' ? 1 : 0, value: row[key] }];
       }));
       return { ...row, occurrences: [], source_837: '', source_835: '', reference_count: refs.length, display_amounts };
     });
@@ -132,6 +132,36 @@ try {
     assert.deepEqual(result.rows.map(row => row.claim), ['FIRST-1234', 'SECOND-1234']);
   }
   localStorage.clear();
+  const totalSources = [
+    { ...file('835', [claim('TOTAL', '400.00', 1, '350.00', '50.00')]), id: 'first', filename: 'first.835' },
+    { ...file('835', [claim('TOTAL', '224.00', 1, '200.00', '24.00')]), id: 'second', filename: 'second.835' },
+  ];
+  const totals = analyzeClaims(file('837', [claim('TOTAL', '624.00', 1)]), totalSources)[0];
+  assert.deepEqual([totals.billed_835, totals.payment, totals.patient_responsibility, totals.allowed], ['624.00', '550.00', '74.00', '624.00']);
+  assert.equal(totals.billed_status, 'Match');
+  assert.equal(totals.allowed_status, 'Match');
+  assert.equal(totals.ambiguous, false);
+  assert.equal(totals.occurrences.length, 3);
+  assert.ok(analysisCsv([totals]).includes('"624.00","624.00","550.00","74.00","624.00"'));
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const { default: TotalsTable } = await server.ssrLoadModule('/src/components/AnalysisComparisonTable.tsx');
+  const totalHtml = renderToStaticMarkup(React.createElement(TotalsTable, {
+    rows: [totals], sort: 'claim', direction: 'asc', onSort() {}, onOpenClaim() {}, emptyMessage: '',
+  }));
+  assert.ok(totalHtml.includes('$550.00') && totalHtml.includes('$74.00'));
+  assert.ok(!totalHtml.includes('Multiple occurrences') && !totalHtml.includes('Multiple ('));
+  const signedTotal = analyzeClaims(file('837', [claim('SIGNED-TOTAL', '100.00', 1)]), [
+    { ...file('835', [claim('SIGNED-TOTAL', '120.00', 1, '100.00', '20.00')]), filename: 'first.835' },
+    { ...file('835', [claim('SIGNED-TOTAL', '-20.00', 1, '-10.00', '-10.00')]), filename: 'second.835' },
+  ])[0];
+  assert.equal(signedTotal.allowed, '100.00');
+  assert.equal(signedTotal.allowed_status, 'Match');
+  const unknownTotal = analyzeClaims(file('837', [claim('TOTAL', '624.00', 1)]), [
+    totalSources[0], { ...totalSources[1], claims: [claim('TOTAL', '224.00', 1, '200.00', null)] },
+  ])[0];
+  assert.equal(unknownTotal.billed_status, 'Match');
+  assert.equal(unknownTotal.allowed_status, 'Amount unavailable');
+  assert.equal(unknownTotal.patient_responsibility, null);
   const compared = analyzeClaims(submission, remittance);
   assert.equal(compared.length, 4);
   assert.equal(compared[0].difference, '20.00');
@@ -245,7 +275,7 @@ try {
   assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
   assert.equal(document.querySelectorAll('table time').length, 0);
   assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
-    ['837 · CLM02', '835 · CLP03', '835 · CLP04', '835 · CLP05 / PR', '835 · Payment + responsibility']);
+    ['837 · CLM02', '835 · CLP03 total', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
   assert.equal(document.querySelector('[data-analysis-claim="SYNTHETIC-1002"]'), null, 'Both-match claim excluded from table');
   assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
   assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));

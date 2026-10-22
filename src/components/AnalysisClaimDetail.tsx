@@ -28,8 +28,9 @@ export default function AnalysisClaimDetail({ row, onBack }: { row: AnalysisRow;
         <div><h3>Allowed comparison <small>CLM02 vs payment + responsibility</small></h3>
           <ComparisonResult status={row.allowed_status} difference={row.allowed_difference} /></div>
       </div>
-      {row.ambiguous && <p className="cu-help">This claim has multiple distinct source records. Review the amounts below; no records have been summed or chosen as a match.</p>}
+      {row.ambiguous && <p className="cu-help">This claim has multiple 837 source records, so the submission needs review. The 835 amounts are summed; individual source amounts appear below.</p>}
     </div>
+    <p className="cu-help">835 billed, payment, patient responsibility and allowed amounts are summed across distinct records for this claim. The source files below show each contribution.</p>
     <h2 className="cu-analysis-files-heading">Claim source files</h2>
     {[...sources].map(([key, records]) => {
       const source = records[0], is835 = source.source_type === "835";

@@ -216,7 +216,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
         <details className="cu-analysis-explainer"><summary>Comparison details</summary>
-          <p>Compare 837 billed charges (CLM02) with 835 billed charges (CLP03) and allowed amount (payment + patient responsibility). When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Matched amount shows claims where both comparisons match. Differences and unresolved comparisons appear under Mismatch amount.</p>
+          <p>Compare 837 billed charges (CLM02) with the totals of all distinct 835 records for the claim: billed charges (CLP03) and allowed amount (payment + patient responsibility). Negative amounts reduce the totals. When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Matched amount shows claims where both comparisons match. Differences and unresolved comparisons appear under Mismatch amount.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>
