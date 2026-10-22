@@ -6,10 +6,10 @@ import { analysisValues, type AnalysisRow, type AnalysisSortKey, type Comparison
 const columns: [AnalysisSortKey, string, string][] = [
   ["claim", "Claim", "837 / 835"],
   ["internal_number", "Internal claim", "835 · CLP07"],
-  ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · Latest CLP03"],
+  ["billed_837", "837 billed", "837 · CLM02"],
   ["payment", "Claim payment", "835 · CLP04 total"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR total"],
   ["allowed", "Allowed amount", "835 · Payment + responsibility totals"],
-  ["difference", "Billed comparison", "CLM02 vs latest CLP03"], ["allowed_difference", "Allowed comparison", "CLM02 vs payments / allowed"],
+  ["allowed_difference", "Allowed comparison", "CLM02 vs payments / allowed"],
 ];
 const safe = (value: string) => value ? encodeDemoValue(value, true) : "—";
 
@@ -51,13 +51,12 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             if (!references.length) return safe(row.internal_number);
             return <span className="cu-analysis-references">{references.map(reference => <span key={reference}>{safe(reference)}</span>)}</span>;
           })()}</td>
-          {(["billed_837", "billed_835", "payment", "patient_responsibility", "allowed"] as const).map(key => {
+          {(["billed_837", "payment", "patient_responsibility", "allowed"] as const).map(key => {
             const summary = row.display_amounts?.[key];
             if (summary) return <td key={key} className="cu-num">{summary.count > 1 ? <span className="cu-analysis-multiple">Multiple ({summary.count})</span> : money(summary.value)}</td>;
             const values = analysisValues(row, key);
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}
-          <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.billed_status} difference={row.difference} /></td>
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} basis={row.allowed_basis} /></td>
         </tr>
       </tbody>)}

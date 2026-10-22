@@ -232,9 +232,9 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
       {loadFailed && <button className="cu-btn" onClick={() => setLoadVersion(value => value + 1)}>Retry loading</button>}
     </section>
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
-      <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
+      <div className="cu-section-title cu-comparison-heading"><div><h2>Claim reconciliation</h2>
         <details className="cu-analysis-explainer"><summary>Comparison details</summary>
-          <p>Billed comparison uses 837 CLM02 and CLP03 from the most recently uploaded 835 file, without adding billed charges across files. Allowed comparison matches when CLM02 equals either cumulative CLP04 payments or cumulative payments plus patient responsibility. Negative amounts reduce totals. When CLP05 is omitted, responsibility comes from PR adjustments, or zero when none are present. Both comparisons must match for Matched amount. Rows are grouped by full internal claim number. Within the latest upload, the final CLP sequence supplies CLP03; a final reversal remains for review.</p>
+          <p>Allowed comparison matches when 837 billed charges equal either total 835 payments or payments plus patient responsibility. This comparison determines the Matched amount and Mismatch amount tabs. Claims without an 835 appear in Missing in 835. Each claim has one row listing its distinct internal claim numbers; open it for internal-claim totals and file-by-file details. Negative amounts reduce totals. Unknown amounts and unresolved reversals remain for review.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>
@@ -263,7 +263,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);
         }} emptyMessage={loading ? "Loading Analysis results…" : loadFailed ? "Analysis results could not be loaded." : !fileCounts["837"] ? busy ? "Validating uploaded claims…" : fileCounts["835"] ? "835 data saved. Upload an 837 file to compare claims." : "Upload a file to begin." :
-          displayedCategory !== "837-only" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "matched" ? "No claims match both billed and allowed amounts with these filters." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching both comparisons are excluded." : "No claims missing in 835 match these filters."} />
+          displayedCategory !== "837-only" && !fileCounts["835"] ? "Upload an 835 file to compare claim amounts." : displayedCategory === "matched" ? "No claims match the allowed comparison with these filters." : displayedCategory === "both" ? "No mismatches or unresolved comparisons match these filters. Claims matching the allowed comparison are excluded." : "No claims missing in 835 match these filters."} />
       <div className="cu-comparison-footer"><p className="cu-help">Open a claim for source files and amounts. — means unavailable.</p>
         <div className="cu-comparison-pager"><label>Claims per page <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
           {[10, 25, 50].map(value => <option key={value}>{value}</option>)}</select></label><span>{loading ? "Loading page…" : loadFailed ? "Page unavailable" : `Page ${currentPage} of ${pages}`}</span>

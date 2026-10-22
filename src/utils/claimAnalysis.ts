@@ -48,6 +48,7 @@ const newestFirst = (left: SourceClaim, right: SourceClaim) =>
 function distinctClaims(claims: SourceClaim[]): SourceClaim[] {
   const seen = new Set<string>();
   return [...claims].sort(newestFirst).filter(({ file, claim }) => {
+    if (file.kind === "835" && !normalizeInternal(claim.internal_number)) return true;
     const key = JSON.stringify([file.filename, normalizeInternal(claim.internal_number), claim.billed, claim.payment ?? null, claim.patient_responsibility ?? null, claim.payment_date ?? null, claim.claim_status ?? ""]);
     if (seen.has(key)) return false;
     seen.add(key); return true;
@@ -93,59 +94,55 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
   const rows: AnalysisRow[] = [];
   for (const [number, submittedClaims] of submissions) {
     const claims = distinctClaims(submittedClaims);
-    const allMatches = distinctClaims(remittances.get(number) || []);
-    const internalGroups = new Map<string, SourceClaim[]>();
-    for (const item of allMatches) {
-      const internal = normalizeInternal(item.claim.internal_number);
-      const identity = internal ? `id:${internal}` : `missing:${item.file.id}:${item.claim.sequence}`;
-      internalGroups.set(identity, [...(internalGroups.get(identity) || []), item]);
+    const matches = distinctClaims(remittances.get(number) || []);
+    const ambiguous = matches.length > 0 && claims.length > 1;
+    const paired = matches.length > 0 && claims.length === 1;
+    const sum = (value: (claim: AnalysisClaim) => string | null | undefined): string | null => {
+      if (!matches.length) return null;
+      let total = 0n;
+      for (const { claim } of matches) {
+        const amount = value(claim);
+        if (amount == null) return null;
+        total += cents(amount);
+      }
+      return decimal(total);
+    };
+    const references = [...new Set(matches.map(({ claim }) => normalizeInternal(claim.internal_number)).filter(Boolean))].sort();
+    const latest = matches[0];
+    const latestFile = latest?.file;
+    const latestDate = latest?.claim.payment_date ?? null;
+    const billed835 = latest?.claim.billed ?? null;
+    const latestByInternal = new Map<string, SourceClaim>();
+    for (const item of matches) {
+      const internal = normalizeInternal(item.claim.internal_number) || `${item.file.id}:${item.claim.sequence}`;
+      if (!latestByInternal.has(internal)) latestByInternal.set(internal, item);
     }
-    if (!internalGroups.size) internalGroups.set("", []);
-    for (const [identity, matches] of internalGroups) {
-      const ambiguous = matches.length > 0 && claims.length > 1;
-      const paired = matches.length > 0 && claims.length === 1;
-      const sum = (value: (claim: AnalysisClaim) => string | null | undefined): string | null => {
-        if (!matches.length) return null;
-        let total = 0n;
-        for (const { claim } of matches) {
-          const amount = value(claim);
-          if (amount == null) return null;
-          total += cents(amount);
-        }
-        return decimal(total);
-      };
-      const references = [...new Set(matches.map(({ claim }) => normalizeInternal(claim.internal_number)).filter(Boolean))].sort();
-      const latest = matches[0];
-      const latestFile = latest?.file;
-      const latestDate = latest?.claim.payment_date ?? null;
-      const billed835 = latest?.claim.billed ?? null;
-      const reversedClaim = latest?.claim.claim_status === "22";
-      const payment = sum(claim => claim.payment);
-      const responsibility = sum(claim => claim.patient_responsibility);
-      const allowed = sum(allowedAmount);
-      const difference = paired ? differenceAmount(claims[0].claim.billed, billed835) : null;
-      const paymentsMatch = paired && payment === claims[0].claim.billed;
-      const allowedDifference = paymentsMatch ? "0.00" : paired ? differenceAmount(claims[0].claim.billed, allowed) : null;
-      const comparisonStatus = (delta: string | null): ComparisonStatus => reversedClaim ? "Reversed — review" : ambiguous ? "Multiple occurrences — review" :
-        !matches.length ? receivedFiles.length ? "Not in uploaded 835" : "Awaiting 835 upload" :
-        delta === null ? "Amount unavailable" : delta === "0.00" ? "Match" : "Mismatch";
-      const billedStatus = paired && billed835 === null ? "Latest 835 needs review" : comparisonStatus(difference);
-      rows.push({ key: matches.length ? JSON.stringify([number, identity]) : number, claim: number, internal_number: references[0] || "", reference_count: references.length, internal_numbers: references, waiting_days: 0,
-        latest_uploaded_at: latestFile?.uploaded_at ?? null, latest_claim_status: latest?.claim.claim_status ?? "",
-        latest_payment_date: latestDate, allowed_basis: paymentsMatch ? "payment" : "payment_and_responsibility",
-        category: matches.length ? "both" : "837-only", ambiguous,
-        billed_837: claims.length === 1 ? claims[0].claim.billed : null,
-        billed_835: billed835,
-        difference, allowed_difference: allowedDifference, allowed,
-        payment,
-        patient_responsibility: responsibility,
-        billed_status: billedStatus, allowed_status: comparisonStatus(allowedDifference),
-        status: billedStatus,
-        source_837: claims[0].file.filename, source_835: matches.length ? matches[0].file.filename : "", record_835_id: null,
-        occurrences: [...claims.map(({ file, claim }) => occurrence(file, claim)),
-          ...matches.map(({ file, claim }) => occurrence(file, claim))],
-      });
-    }
+    const reversedClaim = [...latestByInternal.values()].some(item => item.claim.claim_status === "22");
+    const payment = sum(claim => claim.payment);
+    const responsibility = sum(claim => claim.patient_responsibility);
+    const allowed = sum(allowedAmount);
+    const difference = paired ? differenceAmount(claims[0].claim.billed, billed835) : null;
+    const paymentsMatch = paired && payment === claims[0].claim.billed;
+    const allowedDifference = paymentsMatch ? "0.00" : paired ? differenceAmount(claims[0].claim.billed, allowed) : null;
+    const comparisonStatus = (delta: string | null): ComparisonStatus => reversedClaim ? "Reversed — review" : ambiguous ? "Multiple occurrences — review" :
+      !matches.length ? receivedFiles.length ? "Not in uploaded 835" : "Awaiting 835 upload" :
+      delta === null ? "Amount unavailable" : delta === "0.00" ? "Match" : "Mismatch";
+    const billedStatus = paired && billed835 === null ? "Latest 835 needs review" : comparisonStatus(difference);
+    rows.push({ key: number, claim: number, internal_number: references.join(" | "), reference_count: references.length, internal_numbers: references, waiting_days: 0,
+      latest_uploaded_at: latestFile?.uploaded_at ?? null, latest_claim_status: latest?.claim.claim_status ?? "",
+      latest_payment_date: latestDate, allowed_basis: paymentsMatch ? "payment" : "payment_and_responsibility",
+      category: matches.length ? "both" : "837-only", ambiguous,
+      billed_837: claims.length === 1 ? claims[0].claim.billed : null,
+      billed_835: billed835,
+      difference, allowed_difference: allowedDifference, allowed,
+      payment,
+      patient_responsibility: responsibility,
+      billed_status: billedStatus, allowed_status: comparisonStatus(allowedDifference),
+      status: billedStatus,
+      source_837: claims[0].file.filename, source_835: matches.length ? matches[0].file.filename : "", record_835_id: null,
+      occurrences: [...claims.map(({ file, claim }) => occurrence(file, claim)),
+        ...matches.map(({ file, claim }) => occurrence(file, claim))],
+    });
   }
   return rows;
 }
@@ -175,5 +172,5 @@ export function analysisCsv(rows: AnalysisRow[]): string {
 }
 
 export function isAnalysisMismatch(row: AnalysisRow): boolean {
-  return row.category === "both" && (row.billed_status !== "Match" || row.allowed_status !== "Match");
+  return row.category === "both" && row.allowed_status !== "Match";
 }

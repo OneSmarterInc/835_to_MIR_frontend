@@ -73,7 +73,7 @@ globalThis.fetch = async (url, options) => {
     const search = (params.get('search') || '').toUpperCase();
     const found = rows.filter(row => !search || row.claim.includes(search) || row.occurrences.some(item =>
       item.internal_number.toUpperCase().includes(search) || item.filename.toUpperCase().includes(search)));
-    const matched = row => row.category === 'both' && row.billed_status === 'Match' && row.allowed_status === 'Match';
+    const matched = row => row.category === 'both' && row.allowed_status === 'Match';
     const counts = { both: found.filter(mismatch).length, matched: found.filter(matched).length, '837-only': found.filter(row => row.category === '837-only').length };
     const filtered = found.filter(row => category === 'both' ? mismatch(row) : category === 'matched' ? matched(row) : row.category === '837-only');
     const sort = params.get('sort') || 'claim', direction = params.get('direction') === 'desc' ? -1 : 1;
@@ -130,11 +130,11 @@ const uploadMany = async (kind, selected) => act(async () => {
 });
 const uploadCounts = kind => Object.fromEntries([...document.querySelectorAll(`[aria-label="${kind} upload status"] [data-stage]`)]
   .map(item => [item.dataset.stage, Number(item.querySelector('b').textContent)]));
-async function capturePreview(path) {
+async function capturePreview(path, markup = document.getElementById('root').innerHTML) {
   if (path) {
     const fs = await import('node:fs/promises');
     const styles = await Promise.all(['src/index.css', 'src/pages/ClientUserPortal.css', 'src/components/ClientClaimComparison.css', 'src/components/Client835837Status.css', 'src/components/ClientAnalysis.css'].map(path => fs.readFile(path, 'utf8')));
-    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div></header>${document.getElementById('root').innerHTML}</main></div></body></html>`);
+    await fs.writeFile(path, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analysis preview</title><style>${styles.join('\n')}</style></head><body><div class="cu-shell"><main class="cu-main cu-compact"><header class="cu-heading"><div class="cu-heading-copy"><span class="eyebrow">Example client</span><h1>Analysis</h1></div></header>${markup}</main></div></body></html>`);
   }
 }
 try {
@@ -194,9 +194,10 @@ try {
   const separate = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
     paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], internal_number: 'DIFFERENT' }] },
   ]);
-  assert.equal(separate.length, 2, 'Different full internal IDs remain separate claims');
-  assert.equal(new Set(separate.map(row => row.key)).size, 2);
-  assert.deepEqual(separate.map(row => row.payment).sort(), ['117.00', '507.00']);
+  assert.equal(separate.length, 1, 'One parent claim row lists both internal IDs');
+  assert.equal(separate[0].internal_numbers.length, 2);
+  assert.equal(separate[0].payment, '624.00');
+  assert.equal(separate[0].allowed_status, 'Match');
   const reversed = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
     paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], claim_status: '22', billed: '-117.00', payment: '-117.00' }] },
   ])[0];
@@ -216,6 +217,18 @@ try {
   assert.ok(!distinctHtml.includes('Multiple ('));
   const referencesDom = new JSDOM(distinctHtml);
   assert.equal(referencesDom.window.document.querySelectorAll('.cu-analysis-references > span').length, 2);
+  assert.equal(referencesDom.window.document.querySelectorAll('thead th').length, 7);
+  assert.ok(!referencesDom.window.document.querySelector('thead').textContent.includes('835 billed'));
+  assert.ok(!referencesDom.window.document.querySelector('thead').textContent.includes('Billed comparison'));
+  const { default: ClaimDetail } = await server.ssrLoadModule('/src/components/AnalysisClaimDetail.tsx');
+  const detailDom = new JSDOM(renderToStaticMarkup(React.createElement(ClaimDetail, { row: separate[0], onBack() {} })));
+  const internalSections = [...detailDom.window.document.querySelectorAll('.cu-internal-claim')];
+  assert.equal(internalSections.length, 2, 'Each full internal ID has its own detail section');
+  assert.deepEqual(internalSections.map(section => section.querySelectorAll('tbody tr').length), [1, 1]);
+  assert.ok(internalSections.some(section => section.textContent.includes('$507.00')));
+  assert.ok(internalSections.some(section => section.textContent.includes('$117.00')));
+  assert.ok(detailDom.window.document.querySelector('.cu-analysis-detail-summary').textContent.includes('$624.00'));
+  await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-internal.html'), detailDom.window.document.body.innerHTML);
   const signedTotal = analyzeClaims(file('837', [claim('SIGNED-TOTAL', '100.00', 1)]), [
     { ...file('835', [claim('SIGNED-TOTAL', '120.00', 1, '100.00', '20.00')]), filename: 'first.835' },
     { ...file('835', [claim('SIGNED-TOTAL', '-20.00', 1, '-10.00', '-10.00')]), filename: 'second.835' },
@@ -333,19 +346,19 @@ try {
   assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1]);
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
-  assert.equal(document.querySelectorAll('thead th').length, 9);
+  assert.equal(document.querySelectorAll('thead th').length, 7);
   assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
   assert.equal(document.querySelectorAll('tbody button[data-analysis-claim]').length, 2);
   assert.ok(!document.querySelector('table').textContent.includes('submitted-claims.837'));
   assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
   assert.equal(document.querySelectorAll('table time').length, 0);
-  assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
-    ['837 · CLM02', '835 · Latest CLP03', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
+  assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 6).map(cell => cell.textContent),
+    ['837 · CLM02', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
   assert.equal(findClaim('SYNTHETIC-1002'), undefined, 'Both-match claim excluded from table');
   assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
   assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));
-  for (const [billed, allowed, expected] of [['Match', 'Mismatch', true], ['Mismatch', 'Match', true], ['Match', 'Match', false], ['Match', 'Amount unavailable', true]]) {
+  for (const [billed, allowed, expected] of [['Match', 'Mismatch', true], ['Mismatch', 'Match', false], ['Match', 'Match', false], ['Match', 'Amount unavailable', true]]) {
     assert.equal(isAnalysisMismatch({ ...compared[0], billed_status: billed, allowed_status: allowed }), expected);
   }
   assert.ok(button('Mismatch amount').textContent.endsWith('2'));
@@ -373,7 +386,7 @@ try {
   assert.ok(calls.at(-1).url.includes('category=matched'));
   assert.equal(button('Matched amount').getAttribute('aria-pressed'), 'true');
   assert.deepEqual([...document.querySelectorAll('[data-analysis-claim]')].map(displayedClaim), ['SYNTHETIC-1002']);
-  assert.deepEqual([...document.querySelectorAll('.cu-analysis-result strong')].map(item => item.textContent), ['Match', 'Match']);
+  assert.deepEqual([...document.querySelectorAll('.cu-analysis-result strong')].map(item => item.textContent), ['Match']);
   await click('Download Excel');
   assert.equal(downloads.at(-1), 'Claims-Reconciliation.xlsx');
   await act(async () => document.querySelector('[data-analysis-claim]').click());
@@ -415,22 +428,21 @@ try {
   await act(async () => duplicateRow.querySelector('td').click());
   assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'));
   assert.equal(document.querySelector('.cu-analysis-detail h2'), document.activeElement, 'Detail heading receives keyboard focus');
-  assert.equal(document.querySelectorAll('.cu-analysis-detail-file').length, 2);
-  assert.deepEqual([...document.querySelectorAll('.cu-analysis-detail-file h3')].map(item => item.textContent),
-    ['837 submitted-claims.837', '835 payer-response.835']);
-  const sourceCards = [...document.querySelectorAll('.cu-analysis-detail-file')];
-  assert.ok(!sourceCards[0].querySelector('thead').textContent.includes('Internal claim'));
-  assert.ok(sourceCards[1].querySelector('thead').textContent.includes('Internal claim'));
+  assert.equal(document.querySelectorAll('.cu-claim-source').length, 2);
+  assert.deepEqual([...document.querySelectorAll('.cu-claim-source h4')].map(item => item.textContent),
+    ['payer-response.835', 'submitted-claims.837']);
+  assert.equal(document.querySelectorAll('.cu-internal-claim').length, 1);
+  assert.ok(document.querySelector('.cu-internal-claim summary').textContent.includes('Internal claim'));
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$80.00'));
   assert.ok(document.querySelector('.cu-analysis-detail').textContent.includes('$90.00'));
   assert.ok(!document.querySelector('.cu-analysis-detail').textContent.includes('$657.00'), 'Other claim amounts must not leak into detail');
   assert.equal(calls.length, beforeDetail + 1, 'Detail loads only on demand');
-  assert.deepEqual(JSON.parse(new URL(calls.at(-1).url, 'http://localhost').searchParams.get('claim')), ['SYNTHETIC-1003', 'id:REF-TEST']);
+  assert.equal(new URL(calls.at(-1).url, 'http://localhost').searchParams.get('claim'), 'SYNTHETIC-1003');
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-claim.html'));
   await click('← Back to Analysis');
   assert.equal(document.querySelector('input[type="search"]').value, 'SYNTHETIC-1003');
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
-  assert.equal(JSON.parse(document.activeElement.dataset.analysisClaim)[0], 'SYNTHETIC-1003');
+  assert.equal(document.activeElement.dataset.analysisClaim, 'SYNTHETIC-1003');
   await act(async () => document.activeElement.click());
   assert.ok(document.querySelector('[aria-label="Analysis claim detail"]'), 'Native claim button provides keyboard-accessible navigation');
   await click('← Back to Analysis');
@@ -439,7 +451,7 @@ try {
   assert.equal(document.querySelectorAll('tbody tr').length, 1);
   assert.ok(document.body.textContent.includes('Not in uploaded 835'));
   await act(async () => document.querySelector('tbody button').click());
-  assert.equal(document.querySelectorAll('.cu-analysis-detail-file').length, 1);
+  assert.equal(document.querySelectorAll('.cu-claim-source').length, 1);
   assert.ok(document.body.textContent.includes('No matching 835'));
   await click('← Back to Analysis');
   fail = true; await upload('835');

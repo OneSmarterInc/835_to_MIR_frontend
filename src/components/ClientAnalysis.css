@@ -15,20 +15,20 @@
 .cu-analysis-file:focus-within { outline: 2px solid #087f73; outline-offset: 2px; }
 .cu-analysis-search { margin: 0; }
 .cu-analysis-count { display: inline-block; margin-left: 8px; font-size: 11px; opacity: .8; }
-.cu-analysis .cu-comparison .cu-analysis-table { min-width: 1080px; table-layout: fixed; }
-.cu-analysis-table thead th:nth-child(1) { width: 12%; }
-.cu-analysis-table thead th:nth-child(2) { width: 10%; }
-.cu-analysis-table thead th:nth-child(n+3):nth-child(-n+7) { width: 10%; }
-.cu-analysis .cu-analysis-table thead th:nth-child(6) { width: 14%; }
-.cu-analysis-table thead th:nth-last-child(-n+2) { width: 12%; }
+.cu-analysis .cu-comparison .cu-analysis-table { min-width: 900px; table-layout: fixed; }
+.cu-analysis-table thead th:nth-child(1) { width: 15%; }
+.cu-analysis-table thead th:nth-child(2) { width: 15%; }
+.cu-analysis-table thead th:nth-child(n+3):nth-child(-n+6) { width: 10%; }
+.cu-analysis .cu-analysis-table thead th:nth-child(5) { width: 16%; }
+.cu-analysis-table thead th:last-child { width: 18%; }
 .cu-analysis .cu-analysis-table th, .cu-analysis .cu-analysis-table td { border-right: 1px solid #dce3eb; }
 .cu-analysis .cu-analysis-table th:last-child, .cu-analysis .cu-analysis-table td:last-child { border-right: 0; }
 .cu-analysis .cu-analysis-table thead th { background: #f3f6fa; }
 .cu-analysis .cu-analysis-table thead th button { position: relative; display: block; padding: 10px; min-height: 74px; text-transform: none; letter-spacing: 0; color: #25364b; font: 650 12px/1.4 var(--body); }
 .cu-analysis .cu-analysis-table thead th button > span:first-child { display: block; padding-right: 12px; }
 .cu-analysis .cu-analysis-table thead th button > span:last-child { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; }
-.cu-analysis .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+7) button > span:first-child { text-align: right; padding: 0 0 0 10px; }
-.cu-analysis .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+7) button > span:last-child { left: 5px; right: auto; }
+.cu-analysis .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+6) button > span:first-child { text-align: right; padding: 0 0 0 10px; }
+.cu-analysis .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+6) button > span:last-child { left: 5px; right: auto; }
 .cu-analysis-table thead th small { display: block; margin-top: 5px; color: #53677f; font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.4; }
 .cu-analysis .cu-analysis-table tbody td, .cu-analysis .cu-analysis-table tbody th { padding: 10px !important; vertical-align: middle; }
 .cu-analysis-table tbody .cu-analysis-claim { text-transform: none; letter-spacing: 0; white-space: normal; color: var(--ink); background: #fff; }
@@ -116,7 +116,7 @@
 .cu-analysis .cu-comparison-scroll { min-height: 0; }
 .cu-analysis .cu-analysis-skeleton td { height: 58px; box-sizing: border-box; }
 .cu-analysis-skeleton td > span { display: block; height: 12px; width: 75%; border-radius: 3px; background: #e7edf3; }
-.cu-analysis-skeleton td:nth-child(n+3):nth-child(-n+7) > span { margin-left: auto; width: 65%; }
+.cu-analysis-skeleton td:nth-child(n+3):nth-child(-n+6) > span { margin-left: auto; width: 65%; }
 .cu-analysis .cu-comparison-footer { margin-top: 0; padding-top: 10px; gap: 8px; }
 .cu-analysis .cu-comparison-footer .cu-help { margin: 0; font-size: 11px; }
 @media (max-width: 750px) {
@@ -133,3 +133,24 @@
 .cu-analysis-excel svg { flex: 0 0 auto; }
 
 .cu-analysis-references { display: inline-flex; flex-direction: column; gap: 4px; }
+.cu-claim-overview { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.cu-claim-overview h2, .cu-claim-overview h3 { margin: 0 0 6px; }
+.cu-claim-overview p, .cu-claim-source-date { margin: 4px 0 10px; color: #53677f; font-size: 12px; }
+.cu-claim-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0 4px; border-top: 1px solid #dce3eb; }
+.cu-claim-metrics > div { padding: 12px 16px 8px 0; }
+.cu-claim-metrics dt { font-size: 12px; color: #53677f; }
+.cu-claim-metrics dd { margin: 5px 0 0; font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cu-internal-claim { margin: 12px 0; }
+.cu-internal-claim > summary { cursor: pointer; font-weight: 650; padding: 4px 0; }
+.cu-internal-claim > summary > span:last-child { margin-left: 18px; font-size: 12px; font-weight: 400; color: #53677f; }
+.cu-claim-source { border-top: 1px solid #dce3eb; padding-top: 14px; margin-top: 14px; }
+.cu-claim-source header { display: flex; align-items: center; gap: 9px; }
+.cu-claim-source .cu-analysis-file-type { background: #172231; color: white; border-radius: 3px; padding: 4px 8px; font-size: 12px; font-weight: 650; }
+.cu-claim-source h4 { margin: 0; overflow-wrap: anywhere; font-size: 13px; }
+.cu-claim-source header > span:last-child { margin-left: auto; white-space: nowrap; color: #53677f; font-size: 12px; }
+.cu-claim-detail-table { min-width: 760px; }
+.cu-analysis .cu-claim-detail-table th, .cu-analysis .cu-claim-detail-table td { padding: 10px 12px; }
+.cu-claim-detail-table th small { display: block; margin-top: 4px; font-size: 10px; color: #53677f; font-weight: 400; }
+.cu-claim-reversal { color: #a33516; font-weight: 600; }
+.cu-claim-submissions { margin-top: 16px; }
+@media (max-width: 650px) { .cu-claim-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cu-claim-overview { flex-direction: column; gap: 10px; } }
