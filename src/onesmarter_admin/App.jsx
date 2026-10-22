@@ -7,6 +7,7 @@ import DocumentsView from './components/DocumentsView';
 import FilesView from './components/FilesView';
 import GoLiveView from './components/GoLiveView';
 import AccessView from './components/AccessView';
+import IntakeControl from './components/IntakeControl';
 import DefaultConfigsView from './components/DefaultConfigsView';
 import AuditLogView from './components/AuditLogView';
 import WorkspaceHeader from '../components/WorkspaceHeader';
@@ -464,6 +465,9 @@ export default function App({ user, onLogout }) {
           </button>}
 
           <div className="grp eyebrow" style={{ paddingTop: '18px' }}>Operations</div>
+          {canView('intake-control') && <button className={`navitem ${activeNav === 'intake-control' ? 'on' : ''}`} onClick={() => setActiveNav('intake-control')}>
+            <span>Intake Control</span>
+          </button>}
           {canView('ops') && <button className={`navitem ${activeNav === 'ops' ? 'on' : ''}`} onClick={() => setActiveNav('ops')}>
             <span>Operations</span>
           </button>}
@@ -676,33 +680,8 @@ export default function App({ user, onLogout }) {
             <AuditLogView clients={clients} />
           )}
 
-          {activeNav === 'ops' && (
-            <section className="view on" id="v-ops">
-              <WorkspaceHeader eyebrow="Reliability workspace" title="Operations & Delivery" description="File delivery metrics, silent folder monitoring, and SLA tracking." />
-              <div className="metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                <div className="metric">
-                  <div className="v">1,248</div>
-                  <div className="l">Total Files Processed</div>
-                  <div className="d" style={{ color: 'var(--teal, #0d9488)', fontWeight: 600 }}>100% processed</div>
-                </div>
-                <div className="metric">
-                  <div className="v">1,245</div>
-                  <div className="l">Total Successful Push to Outbound</div>
-                  <div className="d" style={{ color: 'var(--teal, #0d9488)', fontWeight: 600 }}>99.76% successful push</div>
-                </div>
-                <div className="metric">
-                  <div className="v">1,248</div>
-                  <div className="l">Pulled from Inbound</div>
-                  <div className="d" style={{ color: 'var(--teal, #0d9488)', fontWeight: 600 }}>100% successfully pulled</div>
-                </div>
-                <div className="metric">
-                  <div className="v" style={{ color: 'var(--teal, #0d9488)' }}>3,741</div>
-                  <div className="l">Total Operations (All Cycles)</div>
-                  <div className="d" style={{ color: 'var(--teal, #0d9488)', fontWeight: 600 }}>99.92% overall success</div>
-                </div>
-              </div>
-            </section>
-          )}
+          {activeNav === 'ops' && <IntakeControl key="operations" readOnly />}
+          {activeNav === 'intake-control' && <IntakeControl key="intake-control" />}
 
           {activeNav === 'offboard' && (
             <ClientOffboarding 
