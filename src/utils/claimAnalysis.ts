@@ -1,14 +1,16 @@
 import type { Occurrence, Row } from "../components/ClaimOccurrenceTable";
 
 export type AnalysisClaim = { claim: string; internal_number: string; billed: string; sequence: number;
-  payment?: string | null; patient_responsibility?: string | null; allowed?: string | null };
+  payment?: string | null; patient_responsibility?: string | null; allowed?: string | null; payment_date?: string | null };
 export type AnalysisFile = { id: string; filename: string; kind: "837" | "835"; uploaded_at: string; claims: AnalysisClaim[];
   status?: "SAVED" | "PARTIAL" | "REJECTED"; accepted_count?: number; rejected_count?: number;
   rejections?: { sequence: number; claim_number: string; reason: string }[] };
-export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — review" | "Awaiting 835 upload" | "Not in uploaded 835" | "Amount unavailable";
-export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null };
+export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — review" | "Latest 835 needs review" | "Awaiting 835 upload" | "Not in uploaded 835" | "Amount unavailable";
+export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null; payment_date?: string | null };
 export type AnalysisRow = Omit<Row, "occurrences"> & { category: "both" | "837-only";
   reference_count?: number;
+  allowed_basis?: "payment" | "payment_and_responsibility";
+  latest_payment_date?: string | null;
   display_amounts?: Record<"billed_837" | "billed_835" | "payment" | "patient_responsibility" | "allowed", { count: number; value: string | null }>;
   payment: string | null; patient_responsibility: string | null; allowed: string | null;
   billed_status: ComparisonStatus; allowed_status: ComparisonStatus; allowed_difference: string | null;
@@ -23,6 +25,7 @@ const decimal = (value: bigint) => {
   return `${value < 0n ? "-" : ""}${magnitude / 100n}.${(magnitude % 100n).toString().padStart(2, "0")}`;
 };
 const normalize = (value: string) => value.trim().toUpperCase();
+const normalizeInternal = (value: string) => normalize(value).replace(/^ZZ:/, "").trim();
 const allowedAmount = (claim: AnalysisClaim): string | null => claim.payment == null || claim.patient_responsibility == null
   ? null : decimal(cents(claim.payment) + cents(claim.patient_responsibility));
 const differenceAmount = (left: string, right: string | null): string | null => {
@@ -37,7 +40,7 @@ type SourceClaim = { file: AnalysisFile; claim: AnalysisClaim };
 function distinctClaims(claims: SourceClaim[]): SourceClaim[] {
   const seen = new Set<string>();
   return claims.filter(({ file, claim }) => {
-    const key = JSON.stringify([file.filename, normalize(claim.internal_number), claim.billed, claim.payment ?? null, claim.patient_responsibility ?? null]);
+    const key = JSON.stringify([file.filename, normalizeInternal(claim.internal_number), claim.billed, claim.payment ?? null, claim.patient_responsibility ?? null, claim.payment_date ?? null]);
     if (seen.has(key)) return false;
     seen.add(key); return true;
   });
@@ -71,7 +74,8 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
   const occurrence = (file: AnalysisFile, claim: AnalysisClaim): AnalysisOccurrence => ({
     key: `${file.id}:${claim.sequence}`, record_id: claim.sequence, file_id: file.id,
     source_type: file.kind, filename: file.filename, received_at: file.uploaded_at,
-    internal_number: file.kind === "835" ? claim.internal_number : "", claim_sequence: claim.sequence,
+    internal_number: file.kind === "835" ? normalizeInternal(claim.internal_number) : "", claim_sequence: claim.sequence,
+    payment_date: file.kind === "835" ? claim.payment_date ?? null : null,
     billed_837: file.kind === "837" ? claim.billed : null, billed_835: file.kind === "835" ? claim.billed : null,
     payment: file.kind === "835" ? claim.payment ?? null : null,
     patient_responsibility: file.kind === "835" ? claim.patient_responsibility ?? null : null,
@@ -93,24 +97,31 @@ export function analyzeClaims(submitted: AnalysisFile | AnalysisFile[] | null, r
       }
       return decimal(total);
     };
-    const billed835 = sum(claim => claim.billed);
+    const references = [...new Set(matches.map(({ claim }) => normalizeInternal(claim.internal_number)).filter(Boolean))].sort();
+    const latestDate = matches.map(({ claim }) => claim.payment_date).filter((value): value is string => !!value).sort().at(-1) ?? null;
+    const allBilled = [...new Set(matches.map(({ claim }) => claim.billed))];
+    const latestBilled = [...new Set(matches.filter(({ claim }) => claim.payment_date === latestDate).map(({ claim }) => claim.billed))];
+    const billed835 = allBilled.length === 1 ? allBilled[0] : matches.every(({ claim }) => claim.payment_date) && latestBilled.length === 1 ? latestBilled[0] : null;
     const payment = sum(claim => claim.payment);
     const responsibility = sum(claim => claim.patient_responsibility);
     const allowed = sum(allowedAmount);
     const difference = paired ? differenceAmount(claims[0].claim.billed, billed835) : null;
-    const allowedDifference = paired ? differenceAmount(claims[0].claim.billed, allowed) : null;
+    const paymentsMatch = paired && payment === claims[0].claim.billed;
+    const allowedDifference = paymentsMatch ? "0.00" : paired ? differenceAmount(claims[0].claim.billed, allowed) : null;
     const comparisonStatus = (delta: string | null): ComparisonStatus => ambiguous ? "Multiple occurrences — review" :
       !matches.length ? receivedFiles.length ? "Not in uploaded 835" : "Awaiting 835 upload" :
       delta === null ? "Amount unavailable" : delta === "0.00" ? "Match" : "Mismatch";
-    rows.push({ key: number, claim: number, internal_number: matches[0]?.claim.internal_number || "", waiting_days: 0,
+    const billedStatus = paired && billed835 === null ? "Latest 835 needs review" : comparisonStatus(difference);
+    rows.push({ key: number, claim: number, internal_number: references[0] || "", reference_count: references.length, waiting_days: 0,
+      latest_payment_date: latestDate, allowed_basis: paymentsMatch ? "payment" : "payment_and_responsibility",
       category: matches.length ? "both" : "837-only", ambiguous,
       billed_837: claims.length === 1 ? claims[0].claim.billed : null,
       billed_835: billed835,
       difference, allowed_difference: allowedDifference, allowed,
       payment,
       patient_responsibility: responsibility,
-      billed_status: comparisonStatus(difference), allowed_status: comparisonStatus(allowedDifference),
-      status: comparisonStatus(difference),
+      billed_status: billedStatus, allowed_status: comparisonStatus(allowedDifference),
+      status: billedStatus,
       source_837: claims[0].file.filename, source_835: matches.length ? matches[0].file.filename : "", record_835_id: null,
       occurrences: [...claims.map(({ file, claim }) => occurrence(file, claim)),
         ...matches.map(({ file, claim }) => occurrence(file, claim))],

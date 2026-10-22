@@ -18,7 +18,7 @@ let holdComparison = false, deferredComparison, deferredComparisonResponse;
 const comparisonCommits = [];
 const summary = ({ claims = [], rejections: _rejections, ...file }) => ({ ...file, accepted_count: file.accepted_count ?? claims.length, rejected_count: file.rejected_count ?? 0 });
 const savedFiles = new Map();
-const claim = (id, billed, sequence, payment = null, patient_responsibility = null) => ({ claim: id, billed, sequence, payment, patient_responsibility, internal_number: 'REF-TEST' });
+const claim = (id, billed, sequence, payment = null, patient_responsibility = null, payment_date = null) => ({ claim: id, billed, sequence, payment, patient_responsibility, payment_date, internal_number: 'REF-TEST' });
 const file = (kind, claims) => ({ id: 'file-' + kind, filename: kind === '837' ? 'submitted-claims.837' : 'payer-response.835', kind, uploaded_at: '2026-10-17T12:00:00Z', claims });
 const submission = file('837', [claim('SYNTHETIC-1001', '100.00', 1), claim('SYNTHETIC-1002', '657.00', 2),
   claim('SYNTHETIC-1003', '80.00', 3), claim('SYNTHETIC-1003', '90.00', 4), claim('SYNTHETIC-1004', '45.00', 5)]);
@@ -134,8 +134,8 @@ try {
   }
   localStorage.clear();
   const totalSources = [
-    { ...file('835', [claim('TOTAL', '400.00', 1, '350.00', '50.00')]), id: 'first', filename: 'first.835' },
-    { ...file('835', [claim('TOTAL', '224.00', 1, '200.00', '24.00')]), id: 'second', filename: 'second.835' },
+    { ...file('835', [claim('TOTAL', '400.00', 1, '350.00', '50.00', '2026-09-01')]), id: 'first', filename: 'first.835' },
+    { ...file('835', [claim('TOTAL', '624.00', 1, '200.00', '24.00', '2026-09-02')]), id: 'second', filename: 'second.835' },
   ];
   const totals = analyzeClaims(file('837', [claim('TOTAL', '624.00', 1)]), totalSources)[0];
   assert.deepEqual([totals.billed_835, totals.payment, totals.patient_responsibility, totals.allowed], ['624.00', '550.00', '74.00', '624.00']);
@@ -143,6 +143,27 @@ try {
   assert.equal(totals.allowed_status, 'Match');
   assert.equal(totals.ambiguous, false);
   assert.equal(totals.occurrences.length, 3);
+  assert.equal(totals.reference_count, 1);
+  const paidSources = [
+    { ...file('835', [{ ...claim('PAID', '624.00', 1, '507.00', '20.00', '2026-09-14'), internal_number: ' ref ' }]), filename: 'first-upload.835' },
+    { ...file('835', [{ ...claim('PAID', '117.00', 1, '117.00', '0.00', '2026-09-03'), internal_number: 'REF' }]), filename: 'second-upload.835' },
+  ];
+  const paid = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), paidSources)[0];
+  assert.equal(paid.reference_count, 1, 'Identical complete references display once');
+  assert.equal(paid.billed_835, '624.00', 'Payment date determines latest, not input/upload order');
+  assert.equal(paid.allowed, '644.00');
+  assert.equal(paid.allowed_status, 'Match');
+  assert.equal(paid.allowed_basis, 'payment');
+  assert.equal(paid.allowed_difference, '0.00');
+  const undated = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
+    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], payment_date: null }] },
+  ])[0];
+  assert.equal(undated.billed_835, null);
+  assert.equal(undated.billed_status, 'Latest 835 needs review');
+  const tied = analyzeClaims(file('837', [claim('PAID', '624.00', 1)]), [
+    paidSources[0], { ...paidSources[1], claims: [{ ...paidSources[1].claims[0], payment_date: '2026-09-14' }] },
+  ])[0];
+  assert.equal(tied.billed_status, 'Latest 835 needs review');
   assert.ok(analysisCsv([totals]).includes('"624.00","624.00","550.00","74.00","624.00"'));
   const { renderToStaticMarkup } = await import('react-dom/server');
   const { default: TotalsTable } = await server.ssrLoadModule('/src/components/AnalysisComparisonTable.tsx');
@@ -158,7 +179,7 @@ try {
   assert.equal(signedTotal.allowed, '100.00');
   assert.equal(signedTotal.allowed_status, 'Match');
   const unknownTotal = analyzeClaims(file('837', [claim('TOTAL', '624.00', 1)]), [
-    totalSources[0], { ...totalSources[1], claims: [claim('TOTAL', '224.00', 1, '200.00', null)] },
+    totalSources[0], { ...totalSources[1], claims: [claim('TOTAL', '624.00', 1, '200.00', null, '2026-09-02')] },
   ])[0];
   assert.equal(unknownTotal.billed_status, 'Match');
   assert.equal(unknownTotal.allowed_status, 'Amount unavailable');
@@ -276,7 +297,7 @@ try {
   assert.ok(!document.querySelector('table').textContent.includes('payer-response.835'));
   assert.equal(document.querySelectorAll('table time').length, 0);
   assert.deepEqual([...document.querySelectorAll('thead th small')].slice(2, 7).map(cell => cell.textContent),
-    ['837 · CLM02', '835 · CLP03 total', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
+    ['837 · CLM02', '835 · Latest CLP03', '835 · CLP04 total', '835 · CLP05 / PR total', '835 · Payment + responsibility totals']);
   assert.equal(document.querySelector('[data-analysis-claim="SYNTHETIC-1002"]'), null, 'Both-match claim excluded from table');
   assert.deepEqual(compared.filter(isAnalysisMismatch).map(row => row.claim), ['SYNTHETIC-1001', 'SYNTHETIC-1003']);
   assert.ok(!analysisCsv(compared.filter(isAnalysisMismatch)).includes('SYNTHETIC-1002'));
@@ -288,6 +309,7 @@ try {
   assert.ok(analysisCsv(compared).includes('Allowed comparison status'));
   assert.ok(analysisCsv(compared).includes('Claim payment (835 CLP04)'));
   await click('Download Excel'); assert.deepEqual(downloads, ['Claims-Reconciliation.xlsx']);
+  assert.ok(button('Download Excel').querySelector('svg[aria-hidden="true"]'), 'Excel icon accompanies its accessible text');
   assert.deepEqual([...document.querySelectorAll('[aria-label="Claim status"] button')].map(item => item.childNodes[0].textContent.trim()),
     ['Mismatch amount', 'Matched amount', 'Missing in 835']);
   assert.ok(button('Matched amount').textContent.endsWith('1'));

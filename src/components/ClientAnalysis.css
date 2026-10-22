@@ -129,3 +129,5 @@
   .cu-analysis .cu-analysis-file { flex-direction: row; align-items: center; }
   .cu-analysis .cu-analysis-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
+.cu-analysis-excel { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.cu-analysis-excel svg { flex: 0 0 auto; }

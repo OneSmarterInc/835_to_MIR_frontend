@@ -216,11 +216,13 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     <section className="cu-card cu-comparison" aria-label="Uploaded claim comparison" aria-busy={loading}>
       <div className="cu-section-title cu-comparison-heading"><div><h2>Billed and allowed comparison</h2>
         <details className="cu-analysis-explainer"><summary>Comparison details</summary>
-          <p>Compare 837 billed charges (CLM02) with the totals of all distinct 835 records for the claim: billed charges (CLP03) and allowed amount (payment + patient responsibility). Negative amounts reduce the totals. When CLP05 is omitted, patient responsibility comes from PR adjustments, or zero when none are present. Matched amount shows claims where both comparisons match. Differences and unresolved comparisons appear under Mismatch amount.</p>
+          <p>Billed comparison uses 837 CLM02 and CLP03 from the latest 835 payment date (BPR16), without adding billed charges across files. Allowed comparison matches when CLM02 equals either cumulative CLP04 payments or cumulative payments plus patient responsibility. Negative amounts reduce totals. When CLP05 is omitted, responsibility comes from PR adjustments, or zero when none are present. Both comparisons must match for Matched amount. Missing dates or conflicting latest amounts remain for review.</p>
           <p>Valid claims are saved; rejected claims are available for review. Invalid X12 envelopes prevent processing. Each upload adds to this analysis.</p>
         </details></div>
         <div className="cu-comparison-header-actions"><span role="status">{loading ? "Loading claims…" : loadFailed ? "Results unavailable" : `${total.toLocaleString()} claims`}</span>
-          <button className="cu-btn" title="Download all three claim statuses with the current search" disabled={!Object.values(data.counts).some(value => value > 0) || !!busy || loading || exporting || loadFailed} onClick={download}>{exporting ? "Downloading…" : "Download Excel"}</button></div>
+          <button className="cu-btn cu-analysis-excel" title="Download all three claim statuses with the current search" disabled={!Object.values(data.counts).some(value => value > 0) || !!busy || loading || exporting || loadFailed} onClick={download}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h12v18H8z" fill="#107C41"/><path d="M12 7h5M12 11h5M12 15h5" stroke="white" strokeWidth="1.2"/><rect x="2" y="6" width="11" height="12" rx="1" fill="#185C37"/><path d="m5 9 5 6m0-6-5 6" stroke="white" strokeWidth="1.6"/></svg>
+            {exporting ? "Downloading…" : "Download Excel"}</button></div>
       </div>
       <div className="cu-analysis-toolbar">
         <div className="cu-analysis-status-filter"><span>Claim status</span>

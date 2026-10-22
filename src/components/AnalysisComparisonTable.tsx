@@ -6,18 +6,20 @@ import { analysisValues, type AnalysisRow, type AnalysisSortKey, type Comparison
 const columns: [AnalysisSortKey, string, string][] = [
   ["claim", "Claim", "837 / 835"],
   ["internal_number", "Internal claim", "835 · CLP07"],
-  ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · CLP03 total"],
+  ["billed_837", "837 billed", "837 · CLM02"], ["billed_835", "835 billed", "835 · Latest CLP03"],
   ["payment", "Claim payment", "835 · CLP04 total"], ["patient_responsibility", "Patient responsibility", "835 · CLP05 / PR total"],
   ["allowed", "Allowed amount", "835 · Payment + responsibility totals"],
-  ["difference", "Billed comparison", "CLM02 vs billed total"], ["allowed_difference", "Allowed comparison", "CLM02 vs allowed total"],
+  ["difference", "Billed comparison", "CLM02 vs latest CLP03"], ["allowed_difference", "Allowed comparison", "CLM02 vs payments / allowed"],
 ];
 const safe = (value: string) => value ? encodeDemoValue(value, true) : "—";
 
-export function ComparisonResult({ status, difference }: { status: ComparisonStatus; difference: string | null }) {
+export function ComparisonResult({ status, difference, basis }: { status: ComparisonStatus; difference: string | null; basis?: string }) {
   const tone = status === "Match" ? "match" : status === "Mismatch" ? "mismatch" : "review";
   return <div className={`cu-analysis-result is-${tone}`}><strong>{status}</strong>
+    {status === "Match" && basis === "payment" && <small>Total payments match</small>}
     {difference !== null && <small>Difference {money(difference)}</small>}
     {status === "Amount unavailable" && <small>Source amounts need reprocessing</small>}
+    {status === "Latest 835 needs review" && <small>Missing payment dates or conflicting latest amounts</small>}
   </div>;
 }
 
@@ -55,7 +57,7 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.billed_status} difference={row.difference} /></td>
-          <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} /></td>
+          <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} basis={row.allowed_basis} /></td>
         </tr>
       </tbody>)}
       {!loading && !rows.length && <tbody><tr><td colSpan={columns.length} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
