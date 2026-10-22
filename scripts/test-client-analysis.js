@@ -456,10 +456,10 @@ try {
   hold = true; await upload('835');
   assert.equal(button('Upload 837').disabled, false, 'Other source can upload while 835 is saving');
   assert.equal(button('Upload 835').disabled, true);
-  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 1, saved: 0, failed: 0 });
+  assert.deepEqual(uploadCounts('835'), { queued: 0, uploading: 0, processing: 1, saved: 0, failed: 0 });
   await upload('837', 'replacement.837');
-  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
-  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 1, saved: 0, failed: 0 });
+  assert.deepEqual(uploadCounts('837'), { queued: 0, uploading: 0, processing: 0, saved: 1, failed: 0 });
+  assert.deepEqual(uploadCounts('835'), { queued: 0, uploading: 0, processing: 1, saved: 0, failed: 0 });
   assert.equal(button('Upload 835').disabled, true);
   await act(async () => deferred(json({ success: true, saved: true, file: summary(remittance) })));
   await click('Missing in 835');
@@ -501,13 +501,13 @@ try {
     await upload(kind, `CLAIMS_${kind}_20261017`);
     assert.equal(calls.filter(call => call.method === 'POST').at(-1).body.get('file').name, `CLAIMS_${kind}_20261017`);
     assert.equal(document.querySelector(`#analysis-${kind}`).value, '', 'Successful extensionless upload clears the picker');
-    assert.deepEqual(uploadCounts(kind), { queued: 0, processing: 0, saved: 1, failed: 0 });
+    assert.deepEqual(uploadCounts(kind), { queued: 0, uploading: 0, processing: 0, saved: 1, failed: 0 });
   }
 
   const batchStart = calls.length;
   fail = true;
   await uploadMany('837', [new File(['synthetic'], 'batch-a.837'), new File(['synthetic'], 'batch-b.837')]);
-  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 1 });
+  assert.deepEqual(uploadCounts('837'), { queued: 0, uploading: 0, processing: 0, saved: 1, failed: 1 });
   assert.ok(!savedFiles.has('batch-a.837'));
   assert.ok(savedFiles.has('batch-b.837'), 'Later files continue after an earlier validation failure');
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('batch-a.837'));
@@ -526,23 +526,23 @@ try {
   const liveStart = calls.length;
   hold = true;
   await uploadMany('835', ['batch-live-a.835', 'batch-live-b.835', 'batch-live-c.835'].map(name => new File(['synthetic'], name)));
-  assert.deepEqual(uploadCounts('835'), { queued: 2, processing: 1, saved: 0, failed: 0 });
+  assert.deepEqual(uploadCounts('835'), { queued: 2, uploading: 0, processing: 1, saved: 0, failed: 0 });
   assert.ok(document.querySelector('[aria-label="835 upload status"]').textContent.includes('batch-live-a.835'));
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-progress.html'));
   hold = true;
   await act(async () => deferred(json({ success: false, error: 'Database write failed' }, 503)));
-  assert.deepEqual(uploadCounts('835'), { queued: 1, processing: 1, saved: 0, failed: 1 });
+  assert.deepEqual(uploadCounts('835'), { queued: 1, uploading: 0, processing: 1, saved: 0, failed: 1 });
   assert.ok(document.querySelector('[role="alert"]').textContent.includes('Database write failed'), 'Failure is visible before the remaining queue finishes');
   assert.ok(document.querySelector('[aria-label="835 upload status"]').textContent.includes('batch-live-b.835'));
   const liveSaved = { ...file('835', [claim('BATCH-LIVE-B', '90.00', 1, '70.00', '10.00')]), id: 'batch-live-b.835', filename: 'batch-live-b.835' };
   savedFiles.set(liveSaved.id, liveSaved);
   await act(async () => deferred(json({ success: true, saved: true, file: summary(liveSaved) })));
-  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 2, failed: 1 });
+  assert.deepEqual(uploadCounts('835'), { queued: 0, uploading: 0, processing: 0, saved: 2, failed: 1 });
   assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 2.*Claims rejected 0/,
     'Batch totals exclude historical uploads and failed requests');
   assert.equal(document.querySelector('.cu-analysis-processing-file'), null);
   await click('Retry 835');
-  assert.deepEqual(uploadCounts('835'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  assert.deepEqual(uploadCounts('835'), { queued: 0, uploading: 0, processing: 0, saved: 1, failed: 0 });
   assert.match(document.querySelector('[aria-label="835 claim results"]').textContent, /Claims accepted 1.*Claims rejected 0/,
     'Retry totals include only files processed by that retry');
   assert.equal(document.querySelector('#analysis-835').value, '');
@@ -556,7 +556,7 @@ try {
   await act(async () => deferred(json({ success: true, saved: true, file: summary(partialFile) })));
   assert.equal(document.querySelector('#analysis-837').value, '', 'A committed partial file clears the picker');
   assert.match(document.querySelector('[aria-label="837 claim results"]').textContent, /Claims accepted 2.*Claims rejected 1/);
-  assert.deepEqual(uploadCounts('837'), { queued: 0, processing: 0, saved: 1, failed: 0 });
+  assert.deepEqual(uploadCounts('837'), { queued: 0, uploading: 0, processing: 0, saved: 1, failed: 0 });
   await act(async () => {
     const details = document.querySelector('.cu-analysis-rejections'); details.open = true;
     details.dispatchEvent(new Event('toggle'));

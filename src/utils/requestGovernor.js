@@ -128,6 +128,7 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
   let startData = {};
   try { startData = await startResponse.clone().json(); }
   catch (_) {}
+  options.onIntakeProgress?.(startData);
 
   if ((!startResponse.ok && startResponse.status !== 202) || !startData?.job_id) {
     return responseFromJson(
@@ -150,6 +151,7 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
     let statusData = {};
     try {
       statusData = await statusResponse.json();
+      options.onIntakeProgress?.(statusData);
     } catch (_) {
       if (!statusResponse.ok) {
         return responseFromJson({ error: `Unable to read conversion status (${statusResponse.status}).` }, statusResponse.status || 500);
@@ -161,7 +163,9 @@ async function runAsyncConversion(nativeFetch, input, options = {}) {
 
     if (statusData.state === 'COMPLETED') {
       cache.clear();
-      return responseFromJson(statusData.result || { success: true }, Number(statusData.status_code || 200));
+      return responseFromJson({ ...(statusData.result || { success: true }),
+        ...(statusData.receipts?.length ? { receipts: statusData.result?.receipts || statusData.receipts } : {}) },
+        Number(statusData.status_code || 200));
     }
 
     if (statusData.state === 'FAILED') {

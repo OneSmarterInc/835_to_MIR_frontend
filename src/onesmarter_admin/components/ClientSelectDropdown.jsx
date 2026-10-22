@@ -1,7 +1,7 @@
 import React from 'react';
 import Select from 'react-select';
 
-export default function ClientSelectDropdown({ clients, value, onChange, id, includeGlobal = false, fullWidth = false }) {
+export default function ClientSelectDropdown({ clients, value, onChange, id, includeGlobal = false, fullWidth = false, disabled = false }) {
   const options = [
     ...(includeGlobal ? [{ value: '', label: '-- None (Global System Default) --' }] : []),
     ...clients.map(c => ({
@@ -55,6 +55,7 @@ export default function ClientSelectDropdown({ clients, value, onChange, id, inc
 
   return (
     <Select
+      isDisabled={disabled}
       id={id}
       options={options}
       value={selectedOption}

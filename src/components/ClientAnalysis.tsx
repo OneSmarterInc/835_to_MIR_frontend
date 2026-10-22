@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import AnalysisComparisonTable from "./AnalysisComparisonTable";
 import AnalysisClaimDetail from "./AnalysisClaimDetail";
 import AnalysisUploadResults from "./AnalysisUploadResults";
+import IntakeReceipts, { type Receipt } from "./IntakeReceipts";
+import { uploadRequest } from "../utils/uploadRequest";
 import type { AnalysisRow, AnalysisSortKey } from "../utils/claimAnalysis";
 import { analysisEndpoint as endpoint, readAnalysis, downloadAnalysis, type AnalysisPage, type AnalysisUploadSummary } from "../utils/analysisApi";
 import "./ClientAnalysis.css";
 
 const maxBytes = 10 * 1024 * 1024;
-type UploadProgress = { queued: number; processing: number; saved: number; failed: number; filename: string };
+type UploadProgress = { queued: number; uploading?: number; processing: number; saved: number; failed: number; filename: string };
 
 export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   claimNumber?: string | null; onClaimChange?: (claim: string | null) => void;
@@ -25,6 +27,8 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
   const [pending, setPending] = useState<Partial<Record<"837" | "835", File[]>>>({});
   const [notices, setNotices] = useState<Partial<Record<"837" | "835", string>>>({});
   const [progress, setProgress] = useState<Partial<Record<"837" | "835", UploadProgress>>>({});
+  const [transfer, setTransfer] = useState<Partial<Record<"837" | "835", { stage: string; percent: number | null }>>>({});
+  const [receipts, setReceipts] = useState<Partial<Record<"837" | "835", Receipt[]>>>({});
   const [runFiles, setRunFiles] = useState<Partial<Record<"837" | "835", AnalysisUploadSummary[]>>>({});
   const [uploadErrors, setUploadErrors] = useState<Partial<Record<"837" | "835", string[]>>>({});
   const [localClaim, setLocalClaim] = useState<string | null>(null);
@@ -94,6 +98,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
     setPending(current => ({ ...current, [kind]: selected }));
     setUploadErrors(current => ({ ...current, [kind]: [] }));
     setRunFiles(current => ({ ...current, [kind]: [] }));
+    setReceipts(current => ({ ...current, [kind]: [] }));
     setNotices(current => ({ ...current, [kind]: "" }));
     setBusyKinds(current => ({ ...current, [kind]: true }));
     setProgress(current => ({ ...current, [kind]: { queued: selected.length, processing: 0, saved: 0, failed: 0, filename: "" } }));
@@ -105,7 +110,8 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
       let csrfToken: string | null = null;
       for (const [index, file] of selected.entries()) {
         if (controller.signal.aborted) break;
-        setProgress(current => ({ ...current, [kind]: { queued: selected.length - index - 1, processing: 1, saved: savedCount, failed: failures.length, filename: file.name } }));
+        setTransfer(current => ({ ...current, [kind]: { stage: 'uploading', percent: 0 } }));
+        setProgress(current => ({ ...current, [kind]: { queued: selected.length - index - 1, uploading: 1, processing: 0, saved: savedCount, failed: failures.length, filename: file.name } }));
         try {
           if (!file.size || file.size > maxBytes) throw new Error("Choose a non-empty file up to 10 MB.");
           if (!csrfToken) {
@@ -115,9 +121,17 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
             csrfToken = token.csrf_token;
           }
           const body = new FormData(); body.append("file", file); body.append("kind", kind);
-          const response = await fetch(`${endpoint}?compact=1`, { method: "POST", body, credentials: "include",
-            headers: { "X-CSRFToken": csrfToken! }, signal: controller.signal });
+          const response = await uploadRequest(`${endpoint}?compact=1`, { body, csrfToken,
+            signal: controller.signal, onProgress: (value: { stage: string; percent: number | null }) => {
+              if (!controller.signal.aborted) setTransfer(current => ({ ...current, [kind]: value }));
+              if (!controller.signal.aborted && value.stage === 'processing') setProgress(current => ({ ...current,
+                [kind]: { queued: selected.length - index - 1, uploading: 0, processing: 1, saved: savedCount, failed: failures.length, filename: file.name },
+              }));
+            } });
           const result = await response.json().catch(() => ({}));
+          if (!controller.signal.aborted && Array.isArray(result.receipts)) {
+            setReceipts(current => ({ ...current, [kind]: [...(current[kind] || []), ...result.receipts] }));
+          }
           if (!response.ok || !result.success || result.saved !== true) throw new Error(result.error || "The file could not be saved. Please retry.");
           if (controller.signal.aborted) break;
           setRunFiles(current => ({ ...current,
@@ -198,12 +212,16 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
             {status && <div className="cu-analysis-progress" role="status" aria-live="polite" aria-atomic="true" aria-label={`${kind} upload status`}>
               <div className="cu-analysis-progress-counts">
                 <span data-stage="queued">Queued <b>{status.queued}</b></span>
+                <span data-stage="uploading">Uploading <b>{status.uploading || 0}</b></span>
                 <span data-stage="processing">Processing <b>{status.processing}</b></span>
                 <span data-stage="saved">Saved <b>{status.saved}</b></span>
                 <span data-stage="failed" className={status.failed ? "has-failures" : ""}>Failed <b>{status.failed}</b></span>
               </div>
-              {status.filename && <small className="cu-analysis-processing-file">Processing: {status.filename}</small>}
+              {status.filename && <small className="cu-analysis-processing-file">{transfer[kind]?.stage === 'uploading'
+                ? `Uploading ${transfer[kind]?.percent == null ? '' : `${transfer[kind]?.percent}%`}`
+                : 'Validating and saving'}: {status.filename}</small>}
             </div>}
+            <IntakeReceipts receipts={receipts[kind] || []} />
             {notices[kind] && <p className="cu-analysis-upload-notice" role="status">{notices[kind]}</p>}
             {!!runFiles[kind]?.length && <AnalysisUploadResults files={runFiles[kind]!} kind={kind} />}
             {!!uploadErrors[kind]?.length && <div className="cu-error cu-analysis-upload-errors" role="alert">{uploadErrors[kind]?.map((message, index) => <p key={index}>{message}</p>)}</div>}

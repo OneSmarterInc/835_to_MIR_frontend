@@ -4,6 +4,8 @@ import { pushEdiFileToSftp } from "../onesmarter_admin/services/api";
 import WorkspaceHeader from "../components/WorkspaceHeader";
 import { showAppConfirm } from "../components/AppDialog";
 import ClientSelectDropdown from "../onesmarter_admin/components/ClientSelectDropdown";
+import IntakeReceipts, { IntakeHistory } from "../components/IntakeReceipts";
+import { uploadRequest } from "../utils/uploadRequest";
 
 export default function ConversionsView({
   trackedFiles,
@@ -18,12 +20,15 @@ export default function ConversionsView({
   const [selectedClientId, setSelectedClientId] = useState(activeClientId || "");
   // Conversion Form State
   const [selectedFilesList, setSelectedFilesList] = useState([]);
+  const [uploadFiles, setUploadFiles] = useState([]);
   const [ediText, setEdiText] = useState("");
   const [currentFileName, setCurrentFileName] = useState("uploaded_file.x12");
   const [file835Subtext, setFile835Subtext] = useState("No 835 files selected.");
   const [activeValidatedFileId, setActiveValidatedFileId] = useState(null);
 
   const [validating, setValidating] = useState(false);
+  const [transfer, setTransfer] = useState(null);
+  const [receipts, setReceipts] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
   const [pushingSftpId, setPushingSftpId] = useState(null);
@@ -57,7 +62,10 @@ export default function ConversionsView({
   }, [activeClientId]);
 
   const handleClientChange = (clientId) => {
+    if (validating || processing) return;
     setSelectedClientId(clientId);
+    setReceipts([]);
+    setTransfer(null);
     setCurrentPage(1);
     setSearchText("");
     if (onSelectClient && clientId) onSelectClient(clientId);
@@ -67,6 +75,7 @@ export default function ConversionsView({
   const handle835FileChange = async (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
+    setUploadFiles(files);
 
     if (files.length === 1) {
       const file = files[0];
@@ -101,6 +110,8 @@ export default function ConversionsView({
   };
 
   const resetConversionForm = () => {
+    setTransfer(null);
+    setReceipts([]);
     setValidationError(null);
     setValidationReport(null);
     setIsValidated(false);
@@ -160,13 +171,18 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/validate/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const multipart = new FormData();
+      uploadFiles.forEach(file => multipart.append('edi_files', file));
+      if (selectedClientId) multipart.append('client_id', selectedClientId);
+      const res = await uploadRequest("/api/validate/", {
+        headers: uploadFiles.length ? {} : { "Content-Type": "application/json" },
+        body: uploadFiles.length ? multipart : JSON.stringify(payload),
+        onProgress: setTransfer,
       });
 
       const data = await res.json();
+      setTransfer(null);
+      setReceipts(data.receipts || []);
       if (data.file_id) setActiveValidatedFileId(data.file_id);
 
       if (!res.ok || data.error) {
@@ -195,6 +211,7 @@ export default function ConversionsView({
       if (onRefreshData) onRefreshData();
     } finally {
       setValidating(false);
+      setTransfer(null);
     }
   };
 
@@ -224,13 +241,24 @@ export default function ConversionsView({
         client_id: selectedClientId || undefined
       };
 
-      const res = await fetch("/api/convert/", {
+      const multipart = new FormData();
+      uploadFiles.forEach(file => multipart.append('edi_files', file));
+      if (selectedClientId) multipart.append('client_id', selectedClientId);
+      const res = selectedFilesList.length > 1 && uploadFiles.length
+        ? await uploadRequest('/api/convert/', { body: multipart, onProgress: setTransfer,
+            headers: isClientUser ? { 'X-FileX-Confirm-Send': 'yes' } : {} })
+        : await fetch("/api/convert/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(isClientUser ? { "X-FileX-Confirm-Send": "yes" } : {}) },
         body: JSON.stringify(payload),
+        onIntakeProgress: data => {
+          setTransfer({ stage: data.state === 'QUEUED' ? 'queued' : 'processing', percent: data.progress_percent });
+          if (data.receipts?.length) setReceipts(data.receipts);
+        },
       });
 
       const data = await res.json();
+      setReceipts(data.receipts || []);
       if (!res.ok || data.error) {
         captureHeldClaims(data, activeValidatedFileId, "ERROR");
         throw new Error(data.error || "Conversion failed");
@@ -251,6 +279,7 @@ export default function ConversionsView({
       if (onRefreshData) onRefreshData();
     } finally {
       setProcessing(false);
+      setTransfer(null);
     }
   };
 
@@ -536,7 +565,7 @@ export default function ConversionsView({
   return (
     <section className="view on table-screen" id="v-batches">
       {!isClientUser && <WorkspaceHeader eyebrow="Conversion workspace" title="Conversions" description="Upload, validate, convert, and deliver healthcare transaction files.">
-        {isAdmin && clients?.length > 0 && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={handleClientChange} includeGlobal fullWidth /></div>}
+        {isAdmin && clients?.length > 0 && <div className="workspace-header-client"><label>Client</label><ClientSelectDropdown clients={clients} value={selectedClientId} onChange={handleClientChange} includeGlobal fullWidth disabled={validating || processing} /></div>}
       </WorkspaceHeader>}
 
       {/* START A CONVERSION CARD */}
@@ -562,9 +591,16 @@ export default function ConversionsView({
               type="file"
               accept=".835,.853,.x12,.txt,.edi,*/*"
               multiple
+              disabled={validating || processing}
               onChange={handle835FileChange}
             />
             <div className="subtext">{file835Subtext}</div>
+            <small>Uncompressed X12 835 (.835, .x12, .edi or .txt).</small>
+            {transfer && <p role="status">{transfer.stage === 'uploading'
+              ? `Uploading${transfer.percent == null ? '' : ` ${transfer.percent}%`}`
+              : transfer.stage === 'queued' ? 'Received · queued for processing' : 'Upload complete · processing…'}</p>}
+            <IntakeReceipts receipts={receipts} />
+            {isAdmin && selectedClientId && <IntakeHistory key={selectedClientId} clientId={selectedClientId} />}
             {Number(partialDetails?.held_claims_count || 0) > 0 && (
               <div
                 style={{
