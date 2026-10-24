@@ -9,6 +9,8 @@ export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — 
 export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null; payment_date?: string | null; claim_status?: string };
 export type AnalysisRow = Omit<Row, "occurrences"> & { category: "both" | "837-only";
   denial_codes?: string[];
+  carc_codes?: { code: string; description: string | null }[];
+  rarc_codes?: { code: string; description: string | null }[];
   denial_reasons?: { code: string; reason: string | null }[];
   reference_count?: number;
   internal_numbers?: string[];

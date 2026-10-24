@@ -95,7 +95,9 @@ globalThis.fetch = async (url, options) => {
       }));
       return { ...row, occurrences: [], source_837: '', source_835: '', reference_count: refs.length, display_amounts,
         denial_codes: row.category === 'both' && row.claim === 'SYNTHETIC-1001' ? ['CO-45', 'PR-1', 'OA-99999'] : [],
-        denial_reasons: [{ code: 'PR-1', reason: 'Deductible Amount' }, { code: 'OA-99999', reason: null }] };
+        denial_reasons: [{ code: 'PR-1', reason: 'Deductible Amount' }, { code: 'OA-99999', reason: null }],
+        carc_codes: row.claim === 'SYNTHETIC-1001' ? [{ code: '1', description: 'Deductible Amount' }, { code: '99999', description: null }] : [],
+        rarc_codes: row.claim === 'SYNTHETIC-1001' ? [{ code: 'N643', description: 'Not covered' }] : [] };
     });
     const response = json({ success: true, rows: pageRows, total: filtered.length, counts, page, pages, category,
       file_counts: { '837': files.filter(file => file.kind === '837').length, '835': files.filter(file => file.kind === '835').length } });
@@ -349,12 +351,12 @@ try {
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
   assert.equal(document.querySelectorAll('thead th').length, 9);
-  assert.equal(document.querySelector('thead th:last-child').textContent, 'Denial reason');
-  assert.match(document.querySelector('thead th:nth-last-child(2)').textContent, /Denial code.*835 · CAS/);
-  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-codes > div')].map(item => item.textContent),
-    ['CO-45', 'PR-1', 'OA-99999']);
-  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-reasons > div')].map(item => item.textContent),
-    ['—', 'Deductible Amount', '—']);
+  assert.equal(document.querySelector('thead th:last-child').textContent, 'RARC code');
+  assert.match(document.querySelector('thead th:nth-last-child(2)').textContent, /CARC code.*835 · CAS/);
+  const codeTips = [...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-code')];
+  assert.deepEqual(codeTips.map(item => item.textContent), ['1', '99999', 'N643']);
+  assert.deepEqual(codeTips.map(item => item.title), ['Deductible Amount', 'Description unavailable', 'Not covered']);
+  assert.ok(codeTips.every(item => item.tabIndex === 0 && item.getAttribute('aria-label').includes(item.title)));
   assert.equal(findClaim('SYNTHETIC-1003').closest('tr').querySelector('.cu-analysis-denial-codes').textContent, '—');
   assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
