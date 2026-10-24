@@ -36,7 +36,7 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
           <span>{label}<small>{source}</small></span><span aria-hidden="true">{key === sort ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
         </button>
       </th>)}{showDenials ? <><th scope="col" className="cu-analysis-denial-heading">CAS</th>
-        <th scope="col" className="cu-analysis-denial-heading">CARC code<small>835 · CAS</small></th>
+        <th scope="col" className="cu-analysis-denial-heading">Denial reason</th>
         <th scope="col" className="cu-analysis-denial-heading">RARC code</th></> : null}</tr></thead>
       {loading && <tbody className="cu-analysis-skeleton" aria-hidden="true">
         {Array.from({ length: loadingRows }, (_, index) => <tr key={index}>
@@ -64,11 +64,14 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
           {showDenials && <td className="cu-analysis-denial-codes cu-analysis-cas-codes">
             {row.denial_codes?.length ? row.denial_codes.map(code => <div key={code}>{code}</div>) : "—"}
           </td>}
-          {showDenials ? (["carc_codes", "rarc_codes"] as const).map(key => <td key={key} className="cu-analysis-denial-codes">
-            {row[key]?.length ? row[key]!.map(item => <div key={item.code}><span className="cu-analysis-code"
+          {showDenials && <td className="cu-analysis-denial-reasons">
+            {row.carc_codes?.length ? row.carc_codes.map(item => <div key={item.code}>{item.description || "—"}</div>) : "—"}
+          </td>}
+          {showDenials ? <td className="cu-analysis-denial-codes">
+            {row.rarc_codes?.length ? row.rarc_codes.map(item => <div key={item.code}><span className="cu-analysis-code"
               tabIndex={0} title={item.description || "Description unavailable"}
               aria-label={`${item.code}: ${item.description || "Description unavailable"}`}>{item.code}</span></div>) : "—"}
-          </td>) : null}
+          </td> : null}
         </tr>
       </tbody>)}
       {!loading && !rows.length && <tbody><tr><td colSpan={columns.length + (showDenials ? 3 : 0)} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}

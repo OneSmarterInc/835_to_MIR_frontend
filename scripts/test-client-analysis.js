@@ -354,10 +354,11 @@ try {
   assert.equal(document.querySelector('thead th:nth-last-child(3)').textContent, 'CAS');
   assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-cas-codes div')].map(item => item.textContent), ['CO-45', 'PR-1', 'OA-99999']);
   assert.equal(document.querySelector('thead th:last-child').textContent, 'RARC code');
-  assert.match(document.querySelector('thead th:nth-last-child(2)').textContent, /CARC code.*835 · CAS/);
+  assert.equal(document.querySelector('thead th:nth-last-child(2)').textContent, 'Denial reason');
+  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-reasons div')].map(item => item.textContent), ['Deductible Amount', '—']);
   const codeTips = [...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-code')];
-  assert.deepEqual(codeTips.map(item => item.textContent), ['1', '99999', 'N643']);
-  assert.deepEqual(codeTips.map(item => item.title), ['Deductible Amount', 'Description unavailable', 'Not covered']);
+  assert.deepEqual(codeTips.map(item => item.textContent), ['N643']);
+  assert.deepEqual(codeTips.map(item => item.title), ['Not covered']);
   assert.ok(codeTips.every(item => item.tabIndex === 0 && item.getAttribute('aria-label').includes(item.title)));
   assert.equal(findClaim('SYNTHETIC-1003').closest('tr').querySelector('.cu-analysis-denial-codes').textContent, '—');
   assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
