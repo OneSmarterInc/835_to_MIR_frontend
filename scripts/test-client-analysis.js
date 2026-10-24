@@ -219,7 +219,7 @@ try {
   assert.ok(!distinctHtml.includes('Multiple ('));
   const referencesDom = new JSDOM(distinctHtml);
   assert.equal(referencesDom.window.document.querySelectorAll('.cu-analysis-references > span').length, 2);
-  assert.equal(referencesDom.window.document.querySelectorAll('thead th').length, 8);
+  assert.equal(referencesDom.window.document.querySelectorAll('thead th').length, 7);
   assert.ok(!referencesDom.window.document.querySelector('thead').textContent.includes('835 billed'));
   assert.ok(!referencesDom.window.document.querySelector('thead').textContent.includes('Billed comparison'));
   const { default: ClaimDetail } = await server.ssrLoadModule('/src/components/AnalysisClaimDetail.tsx');
@@ -348,10 +348,13 @@ try {
   assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1]);
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
-  assert.equal(document.querySelectorAll('thead th').length, 8);
-  assert.match(document.querySelector('thead th:last-child').textContent, /Denial code and denial reason.*835 · CAS/);
+  assert.equal(document.querySelectorAll('thead th').length, 9);
+  assert.equal(document.querySelector('thead th:last-child').textContent, 'Denial reason');
+  assert.match(document.querySelector('thead th:nth-last-child(2)').textContent, /Denial code.*835 · CAS/);
   assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-codes > div')].map(item => item.textContent),
-    ['CO-45', 'PR-1 — Deductible Amount', 'OA-99999']);
+    ['CO-45', 'PR-1', 'OA-99999']);
+  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-reasons > div')].map(item => item.textContent),
+    ['—', 'Deductible Amount', '—']);
   assert.equal(findClaim('SYNTHETIC-1003').closest('tr').querySelector('.cu-analysis-denial-codes').textContent, '—');
   assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
@@ -380,6 +383,8 @@ try {
   const previousRowCount = document.querySelectorAll('[data-analysis-claim]').length;
   holdComparison = true;
   await click('Matched amount');
+  assert.equal(document.querySelectorAll('thead th').length, 7);
+  assert.equal(document.querySelector('.cu-analysis-denial-heading'), null);
   assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0, 'Old claims disappear immediately while the new tab loads');
   assert.equal(document.querySelectorAll('.cu-analysis-skeleton tr').length, previousRowCount, 'Loading preserves the existing row slots');
   assert.equal(button('Download Excel').disabled, true);
@@ -402,6 +407,8 @@ try {
   await capturePreview(process.env.ANALYSIS_PREVIEW_PATH?.replace('.html', '-matched.html'));
   holdComparison = true;
   await click('Missing in 835');
+  assert.equal(document.querySelectorAll('thead th').length, 7);
+  assert.equal(document.querySelector('.cu-analysis-denial-heading'), null);
   assert.equal(document.querySelectorAll('[data-analysis-claim]').length, 0);
   const abandonedRequest = calls.at(-1), resolveAbandoned = deferredComparison, abandonedResponse = deferredComparisonResponse;
   await click('Matched amount');

@@ -259,6 +259,7 @@ export default function ClientAnalysis({ claimNumber = null, onClaimChange }: {
         </form>
       </div>
       <AnalysisComparisonTable rows={loading || loadFailed ? [] : rows} loading={loading} loadingRows={rows.length || Math.min(pageSize, 10)}
+        showDenials={displayedCategory === "both"}
         onOpenClaim={setSelectedClaim} disabled={!!busy || loading || loadFailed}
         sort={sort} direction={direction} onSort={key => {
           setSort(key); setDirection(sort === key && direction === "asc" ? "desc" : "asc"); setPage(1);

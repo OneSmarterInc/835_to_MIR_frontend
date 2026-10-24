@@ -16,15 +16,22 @@
 .cu-analysis-search { margin: 0; }
 .cu-analysis-count { display: inline-block; margin-left: 8px; font-size: 11px; opacity: .8; }
 .cu-analysis .cu-comparison .cu-analysis-table { min-width: 1100px; table-layout: fixed; }
-.cu-analysis-table thead th:nth-child(1) { width: 13%; }
-.cu-analysis-table thead th:nth-child(2) { width: 13%; }
+.cu-analysis-table thead th:nth-child(1) { width: 16%; }
+.cu-analysis-table thead th:nth-child(2) { width: 16%; }
 .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+6) { width: 10%; }
 .cu-analysis .cu-analysis-table thead th:nth-child(5) { width: 14%; }
 .cu-analysis-table thead th:nth-child(7) { width: 16%; }
-.cu-analysis-table thead th:last-child { width: 14%; }
+.cu-analysis-table:not(.has-denials) thead th:last-child { width: 24%; }
+.cu-analysis .cu-comparison .cu-analysis-table.has-denials { min-width: 1500px; }
+.cu-analysis-table.has-denials thead th:nth-child(-n+2) { width: 10%; }
+.cu-analysis-table.has-denials thead th:nth-child(n+3):nth-child(-n+6) { width: 8%; }
+.cu-analysis .cu-analysis-table.has-denials thead th:nth-child(5) { width: 12%; }
+.cu-analysis-table.has-denials thead th:nth-child(7) { width: 14%; }
+.cu-analysis-table.has-denials thead th:nth-child(8) { width: 8%; }
+.cu-analysis-table.has-denials thead th:nth-child(9) { width: 22%; }
 .cu-analysis .cu-analysis-table thead .cu-analysis-denial-heading { padding: 10px; white-space: normal; text-transform: none; letter-spacing: 0; color: #25364b; font: 650 12px/1.4 var(--body); }
-.cu-analysis-denial-codes { white-space: normal; overflow-wrap: anywhere; }
-.cu-analysis-denial-codes > div + div { margin-top: 8px; }
+.cu-analysis-denial-codes, .cu-analysis-denial-reasons { white-space: normal; overflow-wrap: anywhere; }
+.cu-analysis-denial-codes > div + div, .cu-analysis-denial-reasons > div + div { margin-top: 8px; }
 .cu-analysis .cu-analysis-table th, .cu-analysis .cu-analysis-table td { border-right: 1px solid #dce3eb; }
 .cu-analysis .cu-analysis-table th:last-child, .cu-analysis .cu-analysis-table td:last-child { border-right: 0; }
 .cu-analysis .cu-analysis-table thead th { background: #f3f6fa; }

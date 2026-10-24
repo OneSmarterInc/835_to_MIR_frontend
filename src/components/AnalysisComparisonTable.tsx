@@ -24,22 +24,23 @@ export function ComparisonResult({ status, difference, basis }: { status: Compar
   </div>;
 }
 
-export default function AnalysisComparisonTable({ rows, sort, direction, onSort, onOpenClaim, disabled, emptyMessage, loading = false, loadingRows = 10 }: {
+export default function AnalysisComparisonTable({ rows, sort, direction, onSort, onOpenClaim, disabled, emptyMessage, loading = false, loadingRows = 10, showDenials = false }: {
   rows: AnalysisRow[]; sort: AnalysisSortKey; direction: string; onSort: (key: AnalysisSortKey) => void; emptyMessage: string;
-  onOpenClaim: (key: string) => void; disabled?: boolean; loading?: boolean; loadingRows?: number;
+  onOpenClaim: (key: string) => void; disabled?: boolean; loading?: boolean; loadingRows?: number; showDenials?: boolean;
 }) {
   return <div className="cu-table-scroll cu-comparison-scroll" tabIndex={0} role="region" aria-label="Claim amount comparisons">
-    <table className="cu-table cu-comparison-table cu-analysis-table">
+    <table className={`cu-table cu-comparison-table cu-analysis-table${showDenials ? " has-denials" : ""}`}>
       <thead><tr>{columns.map(([key, label, source]) => <th key={key} scope="col"
         aria-sort={key === sort ? direction === "asc" ? "ascending" : "descending" : "none"}>
         <button type="button" onClick={() => onSort(key)}>
           <span>{label}<small>{source}</small></span><span aria-hidden="true">{key === sort ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
         </button>
-      </th>)}<th scope="col" className="cu-analysis-denial-heading">Denial code and denial reason<small>835 · CAS</small></th></tr></thead>
+      </th>)}{showDenials ? <><th scope="col" className="cu-analysis-denial-heading">Denial code<small>835 · CAS</small></th>
+        <th scope="col" className="cu-analysis-denial-heading">Denial reason</th></> : null}</tr></thead>
       {loading && <tbody className="cu-analysis-skeleton" aria-hidden="true">
         {Array.from({ length: loadingRows }, (_, index) => <tr key={index}>
           {columns.map(([key]) => <td key={key}><span /></td>)}
-          <td><span /></td>
+          {showDenials ? <><td><span /></td><td><span /></td></> : null}
         </tr>)}
       </tbody>}
       {!loading && rows.map(row => <tbody key={row.key} className="cu-analysis-group" aria-label={`Claim ${safe(row.claim)}`}>
@@ -59,13 +60,14 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} basis={row.allowed_basis} /></td>
-          <td className="cu-analysis-denial-codes">{row.denial_codes?.length ? row.denial_codes.map(code => {
+          {showDenials ? <><td className="cu-analysis-denial-codes">{row.denial_codes?.length ? row.denial_codes.map(code => <div key={code}>{code}</div>) : "—"}</td>
+          <td className="cu-analysis-denial-reasons">{row.denial_codes?.length ? row.denial_codes.map(code => {
             const reason = row.denial_reasons?.find(item => item.code === code)?.reason;
-            return <div key={code}><strong>{code}</strong>{reason ? <span> — {reason}</span> : null}</div>;
-          }) : "—"}</td>
+            return <div key={code}>{reason || "—"}</div>;
+          }) : "—"}</td></> : null}
         </tr>
       </tbody>)}
-      {!loading && !rows.length && <tbody><tr><td colSpan={columns.length + 1} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
+      {!loading && !rows.length && <tbody><tr><td colSpan={columns.length + (showDenials ? 2 : 0)} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
     </table>
   </div>;
 }
