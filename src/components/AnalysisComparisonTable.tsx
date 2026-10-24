@@ -59,7 +59,10 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} basis={row.allowed_basis} /></td>
-          <td className="cu-analysis-denial-codes">{row.denial_codes?.length ? row.denial_codes.join(", ") : "—"}</td>
+          <td className="cu-analysis-denial-codes">{row.denial_codes?.length ? row.denial_codes.map(code => {
+            const reason = row.denial_reasons?.find(item => item.code === code)?.reason;
+            return <div key={code}><strong>{code}</strong>{reason ? <span> — {reason}</span> : null}</div>;
+          }) : "—"}</td>
         </tr>
       </tbody>)}
       {!loading && !rows.length && <tbody><tr><td colSpan={columns.length + 1} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}

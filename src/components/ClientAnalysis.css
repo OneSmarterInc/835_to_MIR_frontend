@@ -22,8 +22,9 @@
 .cu-analysis .cu-analysis-table thead th:nth-child(5) { width: 14%; }
 .cu-analysis-table thead th:nth-child(7) { width: 16%; }
 .cu-analysis-table thead th:last-child { width: 14%; }
-.cu-analysis .cu-analysis-table thead .cu-analysis-denial-heading { padding: 10px; text-transform: none; letter-spacing: 0; color: #25364b; font: 650 12px/1.4 var(--body); }
+.cu-analysis .cu-analysis-table thead .cu-analysis-denial-heading { padding: 10px; white-space: normal; text-transform: none; letter-spacing: 0; color: #25364b; font: 650 12px/1.4 var(--body); }
 .cu-analysis-denial-codes { white-space: normal; overflow-wrap: anywhere; }
+.cu-analysis-denial-codes > div + div { margin-top: 8px; }
 .cu-analysis .cu-analysis-table th, .cu-analysis .cu-analysis-table td { border-right: 1px solid #dce3eb; }
 .cu-analysis .cu-analysis-table th:last-child, .cu-analysis .cu-analysis-table td:last-child { border-right: 0; }
 .cu-analysis .cu-analysis-table thead th { background: #f3f6fa; }

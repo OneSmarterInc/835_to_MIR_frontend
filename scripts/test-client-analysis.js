@@ -94,7 +94,8 @@ globalThis.fetch = async (url, options) => {
         return [key, key === 'billed_837' ? { count: values.length, value: values[0] ?? null } : { count: row.category === 'both' ? 1 : 0, value: row[key] }];
       }));
       return { ...row, occurrences: [], source_837: '', source_835: '', reference_count: refs.length, display_amounts,
-        denial_codes: row.category === 'both' && row.claim === 'SYNTHETIC-1001' ? ['CO-45', 'PR-1'] : [] };
+        denial_codes: row.category === 'both' && row.claim === 'SYNTHETIC-1001' ? ['CO-45', 'PR-1', 'OA-99999'] : [],
+        denial_reasons: [{ code: 'PR-1', reason: 'Deductible Amount' }, { code: 'OA-99999', reason: null }] };
     });
     const response = json({ success: true, rows: pageRows, total: filtered.length, counts, page, pages, category,
       file_counts: { '837': files.filter(file => file.kind === '837').length, '835': files.filter(file => file.kind === '835').length } });
@@ -349,7 +350,8 @@ try {
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
   assert.equal(document.querySelectorAll('thead th').length, 8);
   assert.match(document.querySelector('thead th:last-child').textContent, /Denial code and denial reason.*835 · CAS/);
-  assert.equal(findClaim('SYNTHETIC-1001').closest('tr').querySelector('.cu-analysis-denial-codes').textContent, 'CO-45, PR-1');
+  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-denial-codes > div')].map(item => item.textContent),
+    ['CO-45', 'PR-1 — Deductible Amount', 'OA-99999']);
   assert.equal(findClaim('SYNTHETIC-1003').closest('tr').querySelector('.cu-analysis-denial-codes').textContent, '—');
   assert.equal(document.querySelectorAll('thead th small')[1].textContent, '835 · CLP07');
   assert.equal(document.querySelector('tbody a'), null, 'Staging claims must not link to production claim IDs');
