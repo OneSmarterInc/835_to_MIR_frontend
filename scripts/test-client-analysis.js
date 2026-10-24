@@ -350,7 +350,9 @@ try {
   assert.deepEqual([...document.querySelectorAll('tbody th')].map(cell => cell.rowSpan), [1, 1]);
   assert.ok(document.body.textContent.includes('$20.00'));
   assert.ok(document.body.textContent.includes('Multiple occurrences'));
-  assert.equal(document.querySelectorAll('thead th').length, 9);
+  assert.equal(document.querySelectorAll('thead th').length, 10);
+  assert.equal(document.querySelector('thead th:nth-last-child(3)').textContent, 'CAS');
+  assert.deepEqual([...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-cas-codes div')].map(item => item.textContent), ['CO-45', 'PR-1', 'OA-99999']);
   assert.equal(document.querySelector('thead th:last-child').textContent, 'RARC code');
   assert.match(document.querySelector('thead th:nth-last-child(2)').textContent, /CARC code.*835 · CAS/);
   const codeTips = [...findClaim('SYNTHETIC-1001').closest('tr').querySelectorAll('.cu-analysis-code')];
