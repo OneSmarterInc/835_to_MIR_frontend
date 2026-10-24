@@ -1,3 +1,5 @@
+import { isDemoModeEnabled } from './demoSubstitution.js';
+
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LETTER_MAP = 'PHQGIUMEAYLNOFDXJKRCVSTZWB';
 const DIGIT_MAP = '3749062815';
@@ -81,11 +83,13 @@ function isPhiKey(key) {
 }
 
 export function getDemoRevealValue(maskedValue) {
+  if (!isDemoModeEnabled()) return null;
   if (!demoRevealMap || typeof maskedValue !== 'string') return null;
   return demoRevealMap.get(maskedValue) || null;
 }
 
 export function encodeDemoValue(value, mask = true) {
+  if (!isDemoModeEnabled()) return value;
   if (typeof value !== 'string' && typeof value !== 'number') return value;
   const text = String(value);
 

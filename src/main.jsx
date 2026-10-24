@@ -14,13 +14,13 @@ import MplAnalyzeAgainAction from './components/MplAnalyzeAgainAction.jsx'
 import DemoRevealLayer from './components/DemoRevealLayer.jsx'
 import { installBrowserHistoryNavigation } from './utils/browserHistoryNavigation.js'
 import { encodeDemoData } from './utils/demoEncoder.js'
+import { initializeDemoMode } from './utils/demoSubstitution.js'
 import { createCsrfFetch } from './utils/csrfFetch.js'
 
 const demoStorageKey = 'mir-demo-substitution';
 
-// Demo masking is mandatory. Set it before the app renders or starts API
-// requests so every supported PHI field is encoded from the first response.
-localStorage.setItem(demoStorageKey, 'true');
+// Disable demo substitution before rendering or fetching any application data.
+initializeDemoMode();
 
 // Global interceptor for relative API paths when hosted independently (e.g. on Vercel)
 const BACKEND_URL = import.meta.env.VITE_API_URL || '';

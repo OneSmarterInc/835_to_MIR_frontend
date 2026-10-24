@@ -4,6 +4,9 @@ import '../utils/requestGovernor.js'
 import { createCsrfFetch } from '../utils/csrfFetch.js'
 import App from './App.jsx'
 import './index.css'
+import { initializeDemoMode } from '../utils/demoSubstitution.js'
+
+initializeDemoMode();
 
 window.fetch = createCsrfFetch(window.fetch.bind(window), {
   frontendOrigin: window.location.origin,

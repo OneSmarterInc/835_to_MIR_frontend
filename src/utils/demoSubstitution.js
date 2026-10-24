@@ -78,6 +78,11 @@ export function toggleDemoMode(enabled) {
   window.location.reload();
 }
 
+export function initializeDemoMode() {
+  // Demo controls are hidden for now. Clear earlier saved opt-ins on startup.
+  localStorage.setItem('mir-demo-substitution', 'false');
+}
+
 export function isDemoModeEnabled() {
-  return localStorage.getItem('mir-demo-substitution') === 'true';
+  return typeof window !== 'undefined' && localStorage.getItem('mir-demo-substitution') === 'true';
 }
