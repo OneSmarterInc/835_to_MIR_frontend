@@ -18,7 +18,7 @@ const extractedRoute = { workflow: '837', isa_sender_qualifier: 'ZZ', isa_sender
 let previewRoutes = [extractedRoute];
 let holdPartners = false, release;
 const partner = { id: 'partner-1', name: 'Synthetic integration', primary_client_id: 'client-a', client_ids: ['client-a', 'client-b'], active: true,
-  workflows: ['835', '837'], auth_mode: 'TOKEN', routing_required: false, requests_per_minute: 60, concurrent_jobs: 2, storage_limit_bytes: 10737418240,
+  workflows: ['835', '837'], auth_mode: 'TOKEN', routing_required: true, route_enforcement_enabled: false, requests_per_minute: 60, concurrent_jobs: 2, storage_limit_bytes: 10737418240,
   stored_bytes: 51200, permissions: [{ workflow: '835', action: 'READ', channel: 'PARTNER' }], credentials: [], routes: [] };
 const json = data => new Response(JSON.stringify(data));
 globalThis.fetch = async (url, config) => {
@@ -74,10 +74,11 @@ try {
   const panel = document.querySelector('[aria-label="Selected partner"]');
   assert.ok(panel.compareDocumentPosition(document.querySelector('.ic-table-wrap')) & window.Node.DOCUMENT_POSITION_FOLLOWING, 'Selected partner appears before directory');
   assert.match(panel.textContent, /10.73741824 GB/);
-  assert.match(panel.textContent, /Optional/);
+  assert.match(panel.textContent, /Details only — under development/);
   const checkbox = label => [...document.querySelectorAll('label')].find(l => l.textContent.trim() === label)?.querySelector('input[type="checkbox"]');
   await click('Authentication');
-  assert.equal(field('Require approved envelope routing').checked, false, 'Editor reflects saved false rather than a default');
+  assert.equal(field('Require approved envelope routing'), undefined, 'Disabled backend matching cannot be enabled from this form');
+  assert.match(document.body.textContent, /Authentication and client permissions still apply/);
   await click('Cancel');
   await click('Permissions');
   assert.equal(document.querySelector('select[multiple]'), null);
@@ -164,6 +165,7 @@ try {
     await flush();
   };
   await uploadSample();
+  assert.match(document.body.textContent, /Saved routes do not enforce header matching/);
   assert.equal(previews.length, 1);
   assert.ok(previews[0].get('file_837'));
   assert.equal(posts.length, 5, 'Preview does not save a route');
@@ -183,9 +185,10 @@ try {
   await uploadSample('835');
   assert.ok(previews.at(-1).get('file_835'));
   assert.ok(previews.at(-1).get('file_837'), 'Selecting 835 retains the selected 837');
-  assert.equal(document.querySelectorAll('[aria-label="Envelope routes to approve"] tbody tr').length, 2);
+  assert.equal(document.querySelectorAll('[aria-label="Envelope route details"] tbody tr').length, 2);
   assert.equal(field('ISA sender ID'), undefined, 'Bulk routes are reviewed together rather than overwritten');
-  assert.equal(posts.length, 6, 'Inspection does not approve routes');
+  assert.equal(posts.length, 6, 'Inspection does not save routes');
+  assert.ok([...document.querySelectorAll('button')].some(b => b.textContent === 'Save 2 routes'));
   await change(field('Client'), 'client-a');
   await change(field('Reason'), 'Reviewed both full files for the selected client');
   await submit();
