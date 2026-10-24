@@ -35,10 +35,11 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
         <button type="button" onClick={() => onSort(key)}>
           <span>{label}<small>{source}</small></span><span aria-hidden="true">{key === sort ? direction === "asc" ? "↑" : "↓" : "↕"}</span>
         </button>
-      </th>)}</tr></thead>
+      </th>)}<th scope="col" className="cu-analysis-denial-heading">Denial code and denial reason<small>835 · CAS</small></th></tr></thead>
       {loading && <tbody className="cu-analysis-skeleton" aria-hidden="true">
         {Array.from({ length: loadingRows }, (_, index) => <tr key={index}>
           {columns.map(([key]) => <td key={key}><span /></td>)}
+          <td><span /></td>
         </tr>)}
       </tbody>}
       {!loading && rows.map(row => <tbody key={row.key} className="cu-analysis-group" aria-label={`Claim ${safe(row.claim)}`}>
@@ -58,9 +59,10 @@ export default function AnalysisComparisonTable({ rows, sort, direction, onSort,
             return <td key={key} className="cu-num">{values.length > 1 ? <span className="cu-analysis-multiple">Multiple ({values.length})</span> : money(values[0] ?? null)}</td>;
           })}
           <td className="cu-analysis-comparison-cell"><ComparisonResult status={row.allowed_status} difference={row.allowed_difference} basis={row.allowed_basis} /></td>
+          <td className="cu-analysis-denial-codes">{row.denial_codes?.length ? row.denial_codes.join(", ") : "—"}</td>
         </tr>
       </tbody>)}
-      {!loading && !rows.length && <tbody><tr><td colSpan={columns.length} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
+      {!loading && !rows.length && <tbody><tr><td colSpan={columns.length + 1} className="cu-empty-comparison">{emptyMessage}</td></tr></tbody>}
     </table>
   </div>;
 }

@@ -15,12 +15,15 @@
 .cu-analysis-file:focus-within { outline: 2px solid #087f73; outline-offset: 2px; }
 .cu-analysis-search { margin: 0; }
 .cu-analysis-count { display: inline-block; margin-left: 8px; font-size: 11px; opacity: .8; }
-.cu-analysis .cu-comparison .cu-analysis-table { min-width: 900px; table-layout: fixed; }
-.cu-analysis-table thead th:nth-child(1) { width: 15%; }
-.cu-analysis-table thead th:nth-child(2) { width: 15%; }
+.cu-analysis .cu-comparison .cu-analysis-table { min-width: 1100px; table-layout: fixed; }
+.cu-analysis-table thead th:nth-child(1) { width: 13%; }
+.cu-analysis-table thead th:nth-child(2) { width: 13%; }
 .cu-analysis-table thead th:nth-child(n+3):nth-child(-n+6) { width: 10%; }
-.cu-analysis .cu-analysis-table thead th:nth-child(5) { width: 16%; }
-.cu-analysis-table thead th:last-child { width: 18%; }
+.cu-analysis .cu-analysis-table thead th:nth-child(5) { width: 14%; }
+.cu-analysis-table thead th:nth-child(7) { width: 16%; }
+.cu-analysis-table thead th:last-child { width: 14%; }
+.cu-analysis .cu-analysis-table thead .cu-analysis-denial-heading { padding: 10px; text-transform: none; letter-spacing: 0; color: #25364b; font: 650 12px/1.4 var(--body); }
+.cu-analysis-denial-codes { white-space: normal; overflow-wrap: anywhere; }
 .cu-analysis .cu-analysis-table th, .cu-analysis .cu-analysis-table td { border-right: 1px solid #dce3eb; }
 .cu-analysis .cu-analysis-table th:last-child, .cu-analysis .cu-analysis-table td:last-child { border-right: 0; }
 .cu-analysis .cu-analysis-table thead th { background: #f3f6fa; }

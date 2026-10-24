@@ -8,6 +8,7 @@ export type AnalysisFile = { id: string; filename: string; kind: "837" | "835"; 
 export type ComparisonStatus = "Match" | "Mismatch" | "Multiple occurrences — review" | "Latest 835 needs review" | "Reversed — review" | "Awaiting 835 upload" | "Not in uploaded 835" | "Amount unavailable";
 export type AnalysisOccurrence = Occurrence & { payment: string | null; patient_responsibility: string | null; allowed: string | null; payment_date?: string | null; claim_status?: string };
 export type AnalysisRow = Omit<Row, "occurrences"> & { category: "both" | "837-only";
+  denial_codes?: string[];
   reference_count?: number;
   internal_numbers?: string[];
   latest_uploaded_at?: string | null;
